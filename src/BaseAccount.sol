@@ -71,6 +71,15 @@ abstract contract BaseAccount is IAccount {
     internal virtual returns (uint256 validationData);
 
     /**
+     * Expose the internal _validateSignature method for testing.
+     * @param userOp validate the userOp.signature field
+     * @param userOpHash convenient field: the hash of the request, to check the signature against
+     */
+    function ValidateSignature(UserOperation calldata userOp, bytes32 userOpHash) external returns (uint256 validationData) {
+        return _validateSignature(userOp, userOpHash);
+    }
+
+    /**
      * Validate the nonce of the UserOperation.
      * This method may validate the nonce requirement of this account.
      * e.g.
