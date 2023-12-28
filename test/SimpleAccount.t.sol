@@ -29,9 +29,7 @@ contract SimpleAccountTest is Test {
     }
 
     function testValidateSignature() public {
-        // Define a unique salt for each account
-        uint256 salt = uint256(keccak256(abi.encodePacked("unique salt")));
-
+        uint256 salt = 0;
         // Create an account using the factory
         SimpleAccount simpleAccount = factory.createAccount(ownerAddress, salt);
 
@@ -69,5 +67,27 @@ contract SimpleAccountTest is Test {
         // Test the _validateSignature method
         uint256 result = simpleAccount.ValidateSignature(userOp, userOpHash);
         assertEq(result, 0, "Signature should be valid");
+    }
+
+    function testValidateNewSimpleAccountAddress() public {
+        // Define a unique salt for each account
+        uint256 salt = uint256(keccak256(abi.encodePacked("unique salt")));
+
+        // Create an account using the factory
+        SimpleAccount simpleAccount = factory.createAccount(ownerAddress, salt);
+
+        // Validate the account address
+        console2.log("SimpleAccount address with salt:", address(simpleAccount));
+        address expectedAddress = factory.getAddress(ownerAddress, salt);
+        assertEq(address(simpleAccount), expectedAddress, "Account address does not match expected address");
+
+        // Create an account using the factory
+        salt = 0;
+        simpleAccount = factory.createAccount(ownerAddress, salt);
+
+        // Validate the account address
+        console2.log("SimpleAccount address without salt:", address(simpleAccount));
+        expectedAddress = factory.getAddress(ownerAddress, salt);
+        assertEq(address(simpleAccount), expectedAddress, "Account address does not match expected address");
     }
 }
