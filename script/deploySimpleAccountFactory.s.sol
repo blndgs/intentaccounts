@@ -23,7 +23,7 @@ contract deploySimpleAccountFactory is Script {
         console.log("SimpleAccountFactory deployed at:", address(factory));
 
         // Create a unique salt for the account creation
-        uint256 salt = uint256(keccak256(abi.encodePacked("Unique salt for account creation")));
+        uint256 salt = 0;
 
         // Use the factory to create a new SimpleAccount instance
         SimpleAccount account = factory.createAccount(eoaOwner, salt);
