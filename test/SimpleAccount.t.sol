@@ -13,26 +13,27 @@ using Strings for bytes32;
 using UserOperationLib for UserOperation;
 
 contract SimpleAccountTest is Test {
-    address constant public ENTRYPOINT_V06 = 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789;
-    uint256 constant public MUMBAI_CHAIN_ID = 80001;
+    address public constant ENTRYPOINT_V06 = 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789;
+    uint256 public constant MUMBAI_CHAIN_ID = 80001;
 
     using ECDSA for bytes32;
 
     SimpleAccountFactory public factory;
+    SimpleAccount simpleAccount;
+    uint256 salt = 0;
     IEntryPoint public entryPoint;
     address public ownerAddress;
     uint256 public ownerPrivateKey;
 
     function setUp() public {
         vm.prank(ownerAddress);
+        vm.chainId(MUMBAI_CHAIN_ID);
 
         // Deploy the EntryPoint contract or use an existing one
         entryPoint = new EntryPoint();
 
         // Retrieve the MUMBAI_PRIVATE_KEY from the .env file
-        string memory mumbaiPrivateKeyString = vm.envString(
-            "MUMBAI_PRIVATE_KEY"
-        );
+        string memory mumbaiPrivateKeyString = vm.envString("MUMBAI_PRIVATE_KEY");
         console.log("Private Key:", mumbaiPrivateKeyString);
 
         // Derive the Ethereum address from the private key
@@ -41,47 +42,9 @@ contract SimpleAccountTest is Test {
 
         // Deploy the SimpleAccountFactory with the entry point
         factory = new SimpleAccountFactory(entryPoint);
-    }
 
-    function testValidateSignature() public {
-        uint256 salt = 0;
         // Create an account using the factory
-        SimpleAccount simpleAccount = factory.createAccount(ownerAddress, salt);
-
-        // Validate the account address
-        address expectedAddress = factory.getAddress(ownerAddress, salt);
-        assertEq(address(simpleAccount), expectedAddress, "Account address does not match expected address");
-
-        // Prepare the UserOperation object to sign
-        UserOperation memory userOp = UserOperation({
-            sender: ownerAddress,
-            nonce: 0,
-            initCode: "",
-            callData: "",
-            callGasLimit: 0,
-            verificationGasLimit: 0,
-            preVerificationGas: 0,
-            maxFeePerGas: 0,
-            maxPriorityFeePerGas: 0,
-            paymasterAndData: "",
-            signature: ""
-        });
-
-        // Get the hash of the UserOperation object from the EntryPoint contract
-        bytes32 userOpHash = entryPoint.getUserOpHash(userOp); // Modify this line to use entryPoint
-
-        // Sign the hash with the owner's private key
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(ownerPrivateKey, userOpHash.toEthSignedMessageHash());
-
-        // Combine (v, r, s) into a signature
-        bytes memory signature = abi.encodePacked(r, s, v);
-
-        // Update the user operation with the generated signature
-        userOp.signature = signature;
-
-        // Test the _validateSignature method
-        uint256 result = simpleAccount.ValidateSignature(userOp, userOpHash);
-        assertEq(result, 0, "Signature should be valid");
+        simpleAccount = factory.createAccount(ownerAddress, salt);
     }
 
     // Signature Steps:
@@ -128,27 +91,39 @@ contract SimpleAccountTest is Test {
     // 5. Sign the Eth Signed text with the owner's private key
     // vm.sign(ownerPrivateKey, ethSigned)
 
-    function getUserOpHash(
-        UserOperation calldata userOp,
-        uint256 chainID
-    ) public pure returns (bytes32) {
-        return keccak256(abi.encode(userOp.hash(), ENTRYPOINT_V06, chainID));
+    function testValidateSignature() public {
+        // Validate the account address
+        address expectedAddress = factory.getAddress(ownerAddress, salt);
+        assertEq(address(simpleAccount), expectedAddress, "Account address does not match expected address");
+
+        // Prepare the UserOperation object to sign
+        UserOperation memory userOp = UserOperation({
+            sender: ownerAddress,
+            nonce: 0,
+            initCode: "",
+            callData: "",
+            callGasLimit: 0,
+            verificationGasLimit: 0,
+            preVerificationGas: 0,
+            maxFeePerGas: 0,
+            maxPriorityFeePerGas: 0,
+            paymasterAndData: "",
+            signature: ""
+        });
+
+        // Generate the signature
+        (bytes memory generatedSignature, bytes32 userOpHash) = generateSignature(userOp, block.chainid);
+
+        // Update the user operation with the generated signature
+        userOp.signature = generatedSignature;
+
+        // Test the _validateSignature method
+        uint256 result = simpleAccount.ValidateSignature(userOp, userOpHash);
+        assertEq(result, 0, "Signature should be valid");
     }
 
     function testValidateMumbaiVanillaOp() public {
-        vm.chainId(MUMBAI_CHAIN_ID);
-
-        uint256 salt = 0;
-        // Create an account using the factory
-        SimpleAccount simpleAccount = factory.createAccount(ownerAddress, salt);
-
-        // Validate the account address
-        address expectedAddress = factory.getAddress(ownerAddress, salt);
-        assertEq(
-            address(simpleAccount),
-            expectedAddress,
-            "Account address does not match expected address"
-        );
+        assertEq(block.chainid, MUMBAI_CHAIN_ID, "chainid should be 80001");
 
         // Prepare the UserOperation object to sign
         UserOperation memory userOp = UserOperation({
@@ -164,56 +139,174 @@ contract SimpleAccountTest is Test {
             paymasterAndData: bytes(hex""),
             signature: bytes(
                 hex"92f25342760a82b7e5649ed7c6d2d7cb93c0093f66c916d7e57de4af0ae00e2b0524bf364778c6b30c491354be332a1ce521e8a57c5e26f94f8069a404520e931b"
-            )
+                )
         });
-
-        // Convert the memory object to the calldata object
-        bytes memory encodedData = abi.encodeWithSelector(
-            this.getUserOpHash.selector,
-            userOp,
-            block.chainid
-        );
-        assertEq(block.chainid, MUMBAI_CHAIN_ID, "chainid should be 80001");
-        (bool ok, bytes memory hashBytes) = address(this).call(encodedData);
-        require(ok, "call failed");
-        bytes32 userOpHash = abi.decode(hashBytes, (bytes32));
-        logBytes32Value("userOpHash:", userOpHash);
-
-        // Sign the hash with the owner's private key
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(
-            ownerPrivateKey,
-            userOpHash.toEthSignedMessageHash()
-        );
-
-        // Combine (v, r, s) into a signature
-        bytes memory signature = abi.encodePacked(r, s, v);
-
-        // Convert the generated signature to a hex string
-        string memory generatedSignatureHex = toHexString(signature);
 
         // Convert the userOp.signature from bytes to a hex string for comparison
         string memory userOpSignatureHex = toHexString(userOp.signature);
 
-        // Print the signatures
-        console2.log("Generated Signature:", generatedSignatureHex);
-        console2.log("UserOp Signature:", userOpSignatureHex);
+        // Generate the signature
+        (bytes memory generatedSignature, bytes32 userOpHash) = generateSignature(userOp, block.chainid);
+        string memory generatedSignatureHex = toHexString(generatedSignature);
 
-        assertEq(generatedSignatureHex, userOpSignatureHex, "Signatures should match");
-
-        uint256 result = simpleAccount.ValidateSignature(userOp, userOpHash);
-        assertEq(result, 0, "Signature is not valid for the userOp");
+        verifySignature(userOp, userOpHash, generatedSignatureHex, userOpSignatureHex);
     }
 
-    function hexStringToBytes32(
-        string memory hexString
-    ) public pure returns (bytes32 result) {
+    function testValidateMumbaiLongCallData() public {
+        assertEq(block.chainid, MUMBAI_CHAIN_ID, "chainid should be 80001");
+
+        // Prepare the UserOperation object to sign
+        UserOperation memory userOp = UserOperation({
+            sender: 0x6B5f6558CB8B3C8Fec2DA0B1edA9b9d5C064ca47,
+            nonce: 0xb,
+            initCode: bytes(hex""),
+            callData: bytes(
+                hex"c7cd97480000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000012000000000000000000000000066c0aee289c4d332302dda4ded0c0cdc3784939a0000000000000000000000000000000000000000000000000de0b6b3a7640000000000000000000000000000000000000000000000000000000000053a3e3f4800000000000000000000000067297ee4eb097e072b4ab6f1620268061ae804640000000000000000000000002397d2fde31c5704b02ac1ec9b770f23d70d8ec4000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002a000000000000000000000000000000000000000000000000000000000000003200000000000000000000000000000000000000000000000000000000000000149000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000006352a56caadc4f1e25cd6c75970fa768a3304e6466c0aee289c4d332302dda4ded0c0cdc3784939a562e362876c8aee4744fc2c6aac8394c312d215d1f9840a85d5af5bf1d1762f925bdaddc4201f9840000000000000000000000000000000000000000000000000000000439689a920000000000000000000000000000000000000000000000000de0b6b3a7640000000000000000000000000000000000000000000000000000000000006596a37066c0aee289c4d332302dda4ded0c0cdc3784939a1dfa0ff0b2e64429acf334d64097b28000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000004109ffe4bb46d80a7da156ae6795558927a3613cc6073ddad94296335191660e673c7696803900ccd4b4ba1012a198259f0ce8c3873247ce209a326185458cede61c00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000a0490411a32000000000000000000000000a9c0cded336699547aac4f9de5a11ada979bc59a000000000000000000000000000000000000000000000000000000000000006000000000000000000000000000000000000000000000000000000000000001c00000000000000000000000001f9840a85d5af5bf1d1762f925bdaddc4201f984000000000000000000000000562e362876c8aee4744fc2c6aac8394c312d215d000000000000000000000000dafd66636e2561b0284edde37e42d192f2844d40000000000000000000000000ead050515e10fdb3540ccd6f8236c46790508a760000000000000000000000000000000000000000000000000de0b6b3a76400000000000000000000000000000000000000000000000000000000000439689a930000000000000000000000000000000000000000000000000000000547c2c13700000000000000000000000000000000000000000000000000000000000000020000000000000000000000008ba3c3f7334375f95c128bc6a9b8fc42e870f160000000000000000000000000000000000000000000000000000000000000014000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000008000000000000000000000000000000000000000000000000000000000000001a000000000000000000000000000000000000000000000000000000000000004a000000000000000000000000000000000000000000000000000000000000005c000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000800000000000000000000000000000000000000000000000000000000000000064cac460ee00000000000000003b6d0340dafd66636e2561b0284edde37e42d192f2844d400000000000000000000000001f9840a85d5af5bf1d1762f925bdaddc4201f984000000000000000000000000a9c0cded336699547aac4f9de5a11ada979bc59a00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000008000000000000000000000000000000000000000000000000000000000000002449f865422000000000000000000000000c02aaa39b223fe8d0a0e5c4f27ead9083c756cc200000000000000000000000000000001000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000080000000000000000000000000000000000000000000000000000000000000004400000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000800000000000000000000000000000000000000000000000000000000000000104e5b07cdb0000000000000000000000004e4abd1c111c08b3a05feed46556496e6a3fd89300000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001000000000000000000000000a9c0cded336699547aac4f9de5a11ada979bc59a00000000000000000000000000000000000000000000000000000000000000a0000000000000000000000000000000000000000000000000000000000000002ec02aaa39b223fe8d0a0e5c4f27ead9083c756cc2000bb8562e362876c8aee4744fc2c6aac8394c312d215d0000010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000008000000000000000000000000000000000000000000000000000000000000000648a6a1e85000000000000000000000000562e362876c8aee4744fc2c6aac8394c312d215d000000000000000000000000353c1f0bc78fbbc245b3c93ef77b1dcc5b77d2a00000000000000000000000000000000000000000000000000000000547c2c13700000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000008000000000000000000000000000000000000000000000000000000000000001a49f865422000000000000000000000000562e362876c8aee4744fc2c6aac8394c312d215d00000000000000000000000000000001000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000080000000000000000000000000000000000000000000000000000000000000004400000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000800000000000000000000000000000000000000000000000000000000000000064d1660f99000000000000000000000000562e362876c8aee4744fc2c6aac8394c312d215d000000000000000000000000ead050515e10fdb3540ccd6f8236c46790508a760000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+                ),
+            callGasLimit: 0x88b8,
+            verificationGasLimit: 0x11170,
+            preVerificationGas: 0x5208,
+            maxFeePerGas: 0x150c428820,
+            maxPriorityFeePerGas: 0x150c428800,
+            paymasterAndData: bytes(hex""),
+            signature: bytes(
+                hex"74199499de42614e0172afc5781179682f311ed1ec8b369d5a4d8bae4e68f3387e9cab11473b4fb65932e4a8812793f6b7e80a9700855fde454109ceeac02e911b"
+                )
+        });
+
+        // Convert the userOp.signature from bytes to a hex string for comparison
+        string memory userOpSignatureHex = toHexString(userOp.signature);
+
+        // Generate the signature
+        (bytes memory generatedSignature, bytes32 userOpHash) = generateSignature(userOp, block.chainid);
+        string memory generatedSignatureHex = toHexString(generatedSignature);
+
+        verifySignature(userOp, userOpHash, generatedSignatureHex, userOpSignatureHex);
+    }
+
+    function testValidateMumbai_UnsolvedIntentOp() public {
+        assertEq(block.chainid, MUMBAI_CHAIN_ID, "chainid should be 80001");
+
+        // Prepare the UserOperation object to sign
+        UserOperation memory userOp = UserOperation({
+            sender: 0x6B5f6558CB8B3C8Fec2DA0B1edA9b9d5C064ca47,
+            nonce: 0xb,
+            initCode: bytes(hex""),
+            callData: bytes(
+                '{"chainId":80001, "sender":"0x0A7199a96fdf0252E09F76545c1eF2be3692F46b","kind":"swap","hash":"","sellToken":"TokenA","buyToken":"TokenB","sellAmount":10,"buyAmount":5,"partiallyFillable":false,"status":"Received","createdAt":0,"expirationAt":0}'
+                ),
+            callGasLimit: 0x88b8,
+            verificationGasLimit: 0x11170,
+            preVerificationGas: 0x5208,
+            maxFeePerGas: 0x150c428820,
+            maxPriorityFeePerGas: 0x150c428800,
+            paymasterAndData: bytes(hex""),
+            signature: bytes(
+                hex"8a2e15b3a0b4964c99e8929d26b081c94b0b284f9a67052019450911a9ee1dd964c862655d9ffc0b97350f5987a6793085adc8cc2297dc97e4b21666539148171b"
+                )
+        });
+
+        // Convert the userOp.signature from bytes to a hex string for comparison
+        string memory userOpSignatureHex = toHexString(userOp.signature);
+
+        // Generate the signature
+        (bytes memory generatedSignature, bytes32 userOpHash) = generateSignature(userOp, block.chainid);
+        string memory generatedSignatureHex = toHexString(generatedSignature);
+
+        verifySignature(userOp, userOpHash, generatedSignatureHex, userOpSignatureHex);
+    }
+
+    function testValidateMumbai_UnsolvedIntent0GasOp() public {
+        assertEq(block.chainid, MUMBAI_CHAIN_ID, "chainid should be 80001");
+
+        // Prepare the UserOperation object to sign
+        UserOperation memory userOp = UserOperation({
+            sender: 0x6B5f6558CB8B3C8Fec2DA0B1edA9b9d5C064ca47,
+            nonce: 0xb,
+            initCode: bytes(hex""),
+            callData: bytes(
+                '{"chainId":80001, "sender":"0x0A7199a96fdf0252E09F76545c1eF2be3692F46b","kind":"swap","hash":"","sellToken":"TokenA","buyToken":"TokenB","sellAmount":10,"buyAmount":5,"partiallyFillable":false,"status":"Received","createdAt":0,"expirationAt":0}'
+                ),
+            callGasLimit: 0,
+            verificationGasLimit: 0,
+            preVerificationGas: 0,
+            maxFeePerGas: 0,
+            maxPriorityFeePerGas: 0,
+            paymasterAndData: bytes(hex""),
+            signature: bytes(
+                hex"1b2c01e59028d70e881fc913570014ca4d693e29725dbbb5cd56cdc8b8f5007e6188fd6afd3482d65703c3a884195712c901aebf3a0964de04367e8c827340db1b"
+                )
+        });
+
+        // Convert the userOp.signature from bytes to a hex string for comparison
+        string memory userOpSignatureHex = toHexString(userOp.signature);
+
+        // Generate the signature
+        (bytes memory generatedSignature, bytes32 userOpHash) = generateSignature(userOp, block.chainid);
+        string memory generatedSignatureHex = toHexString(generatedSignature);
+
+        verifySignature(userOp, userOpHash, generatedSignatureHex, userOpSignatureHex);
+    }
+
+    function testValidateMumbai_SolvedIntentOp() public {
+        assertEq(block.chainid, MUMBAI_CHAIN_ID, "chainid should be 80001");
+
+        // Prepare the UserOperation object to sign
+        UserOperation memory userOp = UserOperation({
+            sender: 0x6B5f6558CB8B3C8Fec2DA0B1edA9b9d5C064ca47,
+            nonce: 0xb,
+            initCode: bytes(hex""),
+            callData: bytes(
+                '{"chainId":80001, "sender":"0x0A7199a96fdf0252E09F76545c1eF2be3692F46b","kind":"swap","hash":"","sellToken":"TokenA","buyToken":"TokenB","sellAmount":10,"buyAmount":5,"partiallyFillable":false,"status":"Received","createdAt":0,"expirationAt":0}'
+                ),
+            callGasLimit: 0,
+            verificationGasLimit: 0,
+            preVerificationGas: 0,
+            maxFeePerGas: 0,
+            maxPriorityFeePerGas: 0,
+            paymasterAndData: bytes(hex""),
+            signature: bytes(
+                hex"1b2c01e59028d70e881fc913570014ca4d693e29725dbbb5cd56cdc8b8f5007e6188fd6afd3482d65703c3a884195712c901aebf3a0964de04367e8c827340db1b"
+                )
+        });
+
+        // Convert the userOp.signature from bytes to a hex string for comparison
+        string memory userOpSignatureHex = toHexString(userOp.signature);
+
+        // Generate the signature
+        (bytes memory generatedSignature, bytes32 userOpHash) = generateSignature(userOp, block.chainid);
+        string memory generatedSignatureHex = toHexString(generatedSignature);
+
+        verifySignature(userOp, userOpHash, generatedSignatureHex, userOpSignatureHex);
+    }
+
+    function testValidateNewSimpleAccountAddress() public {
+        // Define a unique salt for each account
+        uint256 saltValue = uint256(keccak256(abi.encodePacked("unique salt")));
+
+        // Create an account using the factory
+        SimpleAccount simpleAccountSalted = factory.createAccount(ownerAddress, saltValue);
+
+        // Validate the account address
+        console2.log("SimpleAccount address with salt:", address(simpleAccountSalted));
+        address expectedAddress = factory.getAddress(ownerAddress, saltValue);
+        assertEq(address(simpleAccountSalted), expectedAddress, "Account address does not match expected address");
+
+        // Create an account using the factory
+        saltValue = 0;
+        simpleAccountSalted = factory.createAccount(ownerAddress, saltValue);
+
+        // Validate the account address
+        console2.log("SimpleAccount address without salt:", address(simpleAccountSalted));
+        expectedAddress = factory.getAddress(ownerAddress, saltValue);
+        assertEq(address(simpleAccountSalted), expectedAddress, "Account address does not match expected address");
+    }
+
+    function hexStringToBytes32(string memory hexString) public pure returns (bytes32 result) {
         bytes memory source = bytes(hexString);
 
         // Ensure the input string is the correct length for a bytes32 type
-        require(
-            source.length == 66,
-            "Hex string must be 66 characters long including '0x'."
-        );
+        require(source.length == 66, "Hex string must be 66 characters long including '0x'.");
 
         result = 0x0;
         assembly {
@@ -235,10 +328,10 @@ contract SimpleAccountTest is Test {
         hexString[0] = "0";
         hexString[1] = "x";
 
-        for (uint i = 0; i < b.length; i++) {
-            uint value = uint8(b[i]);
-            uint hi = value / 16;
-            uint lo = value - (hi * 16);
+        for (uint256 i = 0; i < b.length; i++) {
+            uint256 value = uint8(b[i]);
+            uint256 hi = value / 16;
+            uint256 lo = value - (hi * 16);
 
             bytes1 hiHexChar = bytes1(uint8(hi < 10 ? hi + 48 : hi + 87));
             bytes1 loHexChar = bytes1(uint8(lo < 10 ? lo + 48 : lo + 87));
@@ -250,25 +343,42 @@ contract SimpleAccountTest is Test {
         return string(hexString);
     }
 
-    function testValidateNewSimpleAccountAddress() public {
-        // Define a unique salt for each account
-        uint256 salt = uint256(keccak256(abi.encodePacked("unique salt")));
+    function getUserOpHash(UserOperation calldata userOp, uint256 chainID) public pure returns (bytes32) {
+        return keccak256(abi.encode(userOp.hash(), ENTRYPOINT_V06, chainID));
+    }
 
-        // Create an account using the factory
-        SimpleAccount simpleAccount = factory.createAccount(ownerAddress, salt);
+    function generateSignature(UserOperation memory userOp, uint256 chainID) internal returns (bytes memory, bytes32) {
+        // Convert the memory object to the calldata object
+        bytes memory encodedData = abi.encodeWithSelector(this.getUserOpHash.selector, userOp, chainID);
+        (bool ok, bytes memory hashBytes) = address(this).call(encodedData);
+        require(ok, "call failed");
+        bytes32 userOpHash = abi.decode(hashBytes, (bytes32));
+        logBytes32Value("userOpHash:", userOpHash);
 
-        // Validate the account address
-        console2.log("SimpleAccount address with salt:", address(simpleAccount));
-        address expectedAddress = factory.getAddress(ownerAddress, salt);
-        assertEq(address(simpleAccount), expectedAddress, "Account address does not match expected address");
+        // Sign the hash with the owner's private key
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(ownerPrivateKey, userOpHash.toEthSignedMessageHash());
 
-        // Create an account using the factory
-        salt = 0;
-        simpleAccount = factory.createAccount(ownerAddress, salt);
+        // Combine (v, r, s) into a signature
+        bytes memory signature = abi.encodePacked(r, s, v);
 
-        // Validate the account address
-        console2.log("SimpleAccount address without salt:", address(simpleAccount));
-        expectedAddress = factory.getAddress(ownerAddress, salt);
-        assertEq(address(simpleAccount), expectedAddress, "Account address does not match expected address");
+        return (signature, userOpHash);
+    }
+
+    function verifySignature(
+        UserOperation memory userOp,
+        bytes32 userOpHash,
+        string memory generatedSignatureHex,
+        string memory userOpSignatureHex
+    ) internal returns (uint256) {
+        // Print the signatures
+        console2.log("Generated Signature:", generatedSignatureHex);
+        console2.log("UserOp Signature:", userOpSignatureHex);
+
+        assertEq(generatedSignatureHex, userOpSignatureHex, "Signatures should match");
+
+        uint256 result = simpleAccount.ValidateSignature(userOp, userOpHash);
+        assertEq(result, 0, "Signature is not valid for the userOp");
+
+        return result;
     }
 }
