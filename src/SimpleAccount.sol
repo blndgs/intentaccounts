@@ -8,6 +8,7 @@ pragma solidity ^0.8.12;
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
+import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 
 import "./BaseAccount.sol";
 import "./TokenCallbackHandler.sol";
@@ -19,6 +20,14 @@ import "./TokenCallbackHandler.sol";
  *  has a single signer that can send requests through the entryPoint.
  */
 contract SimpleAccount is BaseAccount, TokenCallbackHandler, UUPSUpgradeable, Initializable {
+    address private constant ENTRYPOINT_V06 = 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789;
+    bytes public constant INTENT_END = "<intent-end>";
+
+    // Custom errors
+    error EndLessThanStart();
+    error EndOutOfBounds(uint256 dataLength, uint256 end);
+    error StartOutOfBounds(uint256 dataLength, uint256 start);
+
     using ECDSA for bytes32;
 
     address public owner;
@@ -86,6 +95,85 @@ contract SimpleAccount is BaseAccount, TokenCallbackHandler, UUPSUpgradeable, In
     // Require the function call went through EntryPoint or owner
     function _requireFromEntryPointOrOwner() internal view {
         require(msg.sender == address(entryPoint()) || msg.sender == owner, "account: not Owner or EntryPoint");
+    }
+
+    function getUserOpHash(UserOperation calldata userOp, uint256 chainID) public pure returns (bytes32) {
+        // Check if calldata contains an Intent JSON followed by <intent-end>
+        int256 endIndex = findIntentEndIndex(userOp.callData);
+
+        bytes memory relevantData;
+
+        if (endIndex != -1) {
+            // Intent JSON exists, so include only the part before <intent-end> for hashing
+            relevantData = slice(userOp.callData, 0, uint256(endIndex));
+        } else {
+            // No Intent JSON, use the entire calldata
+            relevantData = userOp.callData;
+        }
+
+        // Hash the relevant parts along with other userOp components
+        return keccak256(abi.encode(keccak256(relevantData), ENTRYPOINT_V06, chainID));
+    }
+
+    // Helper function to find the index of <intent-end> token in the calldata
+    // Search logic to return the index of <intent-end> or -1 if not found
+    function findIntentEndIndex(bytes memory data) public pure returns (int256) {
+        uint256 tokenLength = INTENT_END.length;
+
+        if (data.length < tokenLength) {
+            return -1;
+        }
+
+        for (uint256 i = 0; i <= data.length - tokenLength; i++) {
+            bool matchToken = true;
+            for (uint256 j = 0; j < tokenLength; j++) {
+                if (data[i + j] != INTENT_END[j]) {
+                    matchToken = false;
+                    break;
+                }
+            }
+            if (matchToken) {
+                return int256(i);
+            }
+        }
+
+        return -1; // Not found
+    }
+
+    // Helper function to slice the bytes array (calldata) up to a certain length
+    // Slicing logic to return the part of the data from start to end
+    function slice(bytes memory data, uint256 start, uint256 end) public pure returns (bytes memory) {
+        if (end <= start) revert EndLessThanStart();
+        if (end > data.length) revert EndOutOfBounds(data.length, end);
+        if (start >= data.length) revert StartOutOfBounds(data.length, start);
+
+        bytes memory result = new bytes(end - start);
+        for (uint256 i = start; i < end; i++) {
+            result[i - start] = data[i];
+        }
+        return result;
+    }
+
+    function sliceYul(bytes memory data, uint256 start, uint256 end) internal pure returns (bytes memory result) {
+        if (end <= start) revert EndLessThanStart();
+        if (end > data.length) revert EndOutOfBounds(data.length, end);
+        if (start >= data.length) revert StartOutOfBounds(data.length, start);
+
+        assembly {
+            // Allocate memory for the result
+            result := mload(0x40)
+            mstore(result, sub(end, start)) // Set the length of the result
+            let resultPtr := add(result, 0x20)
+
+            // Copy the data from the start to the end
+            for { let i := start } lt(i, end) { i := add(i, 0x20) } {
+                let dataPtr := add(add(data, 0x20), i)
+                mstore(add(resultPtr, sub(i, start)), mload(dataPtr))
+            }
+
+            // Update the free memory pointer
+            mstore(0x40, add(resultPtr, sub(end, start)))
+        }
     }
 
     /// implement template method of BaseAccount

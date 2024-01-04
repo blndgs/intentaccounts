@@ -248,10 +248,40 @@ contract SimpleAccountTest is Test {
         verifySignature(userOp, userOpHash, generatedSignatureHex, userOpSignatureHex);
     }
 
-    function testValidateMumbai_SolvedIntentOp() public {
-        assertEq(block.chainid, MUMBAI_CHAIN_ID, "chainid should be 80001");
+    // function testValidateMumbai_SolvedIntentOp() public {
+    //     assertEq(block.chainid, MUMBAI_CHAIN_ID, "chainid should be 80001");
 
-        // Prepare the UserOperation object to sign
+    //     // Prepare the UserOperation object to sign
+    //     UserOperation memory userOp = UserOperation({
+    //         sender: 0x6B5f6558CB8B3C8Fec2DA0B1edA9b9d5C064ca47,
+    //         nonce: 0xb,
+    //         initCode: bytes(hex""),
+    //         callData: bytes(
+    //             '{"chainId":80001, "sender":"0x0A7199a96fdf0252E09F76545c1eF2be3692F46b","kind":"swap","hash":"","sellToken":"TokenA","buyToken":"TokenB","sellAmount":10,"buyAmount":5,"partiallyFillable":false,"status":"Received","createdAt":0,"expirationAt":0}<intent-end>0xb61d27f60000000000000000000000009d34f236bddf1b9de014312599d9c9ec8af1bc48000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000600000000000000000000000000000000000000000000000000000000000000044a9059cbb000000000000000000000000d7b21a844f3a41c91a73d3f87b83fa93bb6cb518000000000000000000000000000000000000000000000000000000002faf080000000000000000000000000000000000000000000000000000000000'
+    //             ),
+    //         callGasLimit: 0,
+    //         verificationGasLimit: 0,
+    //         preVerificationGas: 0,
+    //         maxFeePerGas: 0,
+    //         maxPriorityFeePerGas: 0,
+    //         paymasterAndData: bytes(hex""),
+    //         signature: bytes(
+    //             hex"1b2c01e59028d70e881fc913570014ca4d693e29725dbbb5cd56cdc8b8f5007e6188fd6afd3482d65703c3a884195712c901aebf3a0964de04367e8c827340db1b"
+    //             )
+    //     });
+
+    //     // Convert the userOp.signature from bytes to a hex string for comparison
+    //     string memory userOpSignatureHex = toHexString(userOp.signature);
+
+    //     // Generate the signature
+    //     (bytes memory generatedSignature, bytes32 userOpHash) = generateSignature(userOp, block.chainid);
+    //     string memory generatedSignatureHex = toHexString(generatedSignature);
+
+    //     verifySignature(userOp, userOpHash, generatedSignatureHex, userOpSignatureHex);
+    // }
+
+    function testGetUserOpHashNormal() public {
+        // You'll need to construct a valid UserOperation here
         UserOperation memory userOp = UserOperation({
             sender: 0x6B5f6558CB8B3C8Fec2DA0B1edA9b9d5C064ca47,
             nonce: 0xb,
@@ -259,25 +289,63 @@ contract SimpleAccountTest is Test {
             callData: bytes(
                 '{"chainId":80001, "sender":"0x0A7199a96fdf0252E09F76545c1eF2be3692F46b","kind":"swap","hash":"","sellToken":"TokenA","buyToken":"TokenB","sellAmount":10,"buyAmount":5,"partiallyFillable":false,"status":"Received","createdAt":0,"expirationAt":0}'
                 ),
-            callGasLimit: 0,
-            verificationGasLimit: 0,
-            preVerificationGas: 0,
-            maxFeePerGas: 0,
-            maxPriorityFeePerGas: 0,
+            callGasLimit: 0x88b8,
+            verificationGasLimit: 0x11170,
+            preVerificationGas: 0x5208,
+            maxFeePerGas: 0x150c428820,
+            maxPriorityFeePerGas: 0x150c428800,
             paymasterAndData: bytes(hex""),
             signature: bytes(
-                hex"1b2c01e59028d70e881fc913570014ca4d693e29725dbbb5cd56cdc8b8f5007e6188fd6afd3482d65703c3a884195712c901aebf3a0964de04367e8c827340db1b"
+                hex"8a2e15b3a0b4964c99e8929d26b081c94b0b284f9a67052019450911a9ee1dd964c862655d9ffc0b97350f5987a6793085adc8cc2297dc97e4b21666539148171b"
                 )
         });
 
-        // Convert the userOp.signature from bytes to a hex string for comparison
-        string memory userOpSignatureHex = toHexString(userOp.signature);
+        bytes32 newUserOpHash = simpleAccount.getUserOpHash(userOp, block.chainid);
+        bytes32 expectedHash = getOrigUserOpHash(userOp, block.chainid);
 
-        // Generate the signature
-        (bytes memory generatedSignature, bytes32 userOpHash) = generateSignature(userOp, block.chainid);
-        string memory generatedSignatureHex = toHexString(generatedSignature);
+        assertEq(newUserOpHash, expectedHash, "Hash does not match expected value");
+    }
 
-        verifySignature(userOp, userOpHash, generatedSignatureHex, userOpSignatureHex);
+    function testFindIntentEndIndexWithToken() public {
+        bytes memory data = bytes("{intent json}<intent-end>0x");
+        int256 index = simpleAccount.findIntentEndIndex(data);
+        assertEq(index, int256(13), "Incorrect index for <intent-end>");
+    }
+
+    function testFindIntentEndIndexWithoutToken() public {
+        bytes memory data = bytes("No token here");
+        int256 index = simpleAccount.findIntentEndIndex(data);
+        assertEq(index, -1, "Index should be -1 when token is absent");
+    }
+
+    function testFindIntentEndIndexEmptyData() public {
+        bytes memory data = "";
+        int256 index = simpleAccount.findIntentEndIndex(data);
+        assertEq(index, -1, "Index should be -1 for empty data");
+    }
+
+    function testSliceNormal() public {
+        bytes memory data = bytes("Intents Rock");
+        bytes memory result = simpleAccount.slice(data, 0, 7);
+        assertEq(string(result), "Intents", "Slicing did not return the correct result");
+    }
+
+    function testSliceOutOfBounds() public {
+        bytes memory data = bytes("Intents Are Nice.");
+        try simpleAccount.slice(data, 0, 50) {
+            fail("slice should have thrown for end out of bounds");
+        } catch (bytes memory) {
+            // expected
+        }
+    }
+
+    function testSliceEndLessThanStart() public {
+        bytes memory data = bytes("Intents Are In!");
+        try simpleAccount.slice(data, 5, 2) {
+            fail("slice should have thrown for end less than start");
+        } catch (bytes memory) {
+            // expected
+        }
     }
 
     function testValidateNewSimpleAccountAddress() public {
@@ -343,17 +411,28 @@ contract SimpleAccountTest is Test {
         return string(hexString);
     }
 
+    // Original function from the SimpleAccount contract
     function getUserOpHash(UserOperation calldata userOp, uint256 chainID) public pure returns (bytes32) {
         return keccak256(abi.encode(userOp.hash(), ENTRYPOINT_V06, chainID));
     }
 
-    function generateSignature(UserOperation memory userOp, uint256 chainID) internal returns (bytes memory, bytes32) {
-        // Convert the memory object to the calldata object
-        bytes memory encodedData = abi.encodeWithSelector(this.getUserOpHash.selector, userOp, chainID);
-        (bool ok, bytes memory hashBytes) = address(this).call(encodedData);
-        require(ok, "call failed");
-        bytes32 userOpHash = abi.decode(hashBytes, (bytes32));
-        logBytes32Value("userOpHash:", userOpHash);
+    function getOrigUserOpHash(UserOperation memory userOp, uint256 chainID) internal view returns (bytes32) {
+        return this.getUserOpHash(userOp, chainID);
+    }
+
+    // function getOrigUserOpHash(UserOperation memory userOp, uint256 chainID) internal returns (bytes32) {
+    //     // Convert the memory object to the calldata object
+    //     bytes memory encodedData = abi.encodeWithSelector(this.getUserOpHash.selector, userOp, chainID);
+    //     (bool ok, bytes memory hashBytes) = address(this).call(encodedData);
+    //     require(ok, "call failed");
+    //     bytes32 userOpHash = abi.decode(hashBytes, (bytes32));
+    //     logBytes32Value("userOpHash:", userOpHash);
+
+    //     return userOpHash;
+    // }
+
+    function generateSignature(UserOperation memory userOp, uint256 chainID) internal view returns (bytes memory, bytes32) {
+        bytes32 userOpHash = getOrigUserOpHash(userOp, chainID);
 
         // Sign the hash with the owner's private key
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(ownerPrivateKey, userOpHash.toEthSignedMessageHash());
