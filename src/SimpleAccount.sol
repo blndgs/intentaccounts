@@ -20,6 +20,9 @@ import "./TokenCallbackHandler.sol";
  *  has a single signer that can send requests through the entryPoint.
  */
 contract SimpleAccount is BaseAccount, TokenCallbackHandler, UUPSUpgradeable, Initializable {
+
+    using UserOperationLib for UserOperation;
+
     address private constant ENTRYPOINT_V06 = 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789;
     bytes public constant INTENT_END = "<intent-end>";
 
@@ -97,27 +100,37 @@ contract SimpleAccount is BaseAccount, TokenCallbackHandler, UUPSUpgradeable, In
         require(msg.sender == address(entryPoint()) || msg.sender == owner, "account: not Owner or EntryPoint");
     }
 
-    function getUserOpHash(UserOperation calldata userOp, uint256 chainID) public pure returns (bytes32) {
-        // Check if calldata contains an Intent JSON followed by <intent-end>
-        int256 endIndex = findIntentEndIndex(userOp.callData);
+    /**
+     * @dev Expose _getUserOpHash for testing
+     */
+    function getUserOpHash(UserOperation calldata userOp, uint256 chainID) external pure returns (bytes32) {
+        return _getUserOpHash(userOp, chainID);
+    }
 
-        bytes memory relevantData;
+    function _getUserOpHash(UserOperation calldata userOp, uint256 chainID) internal pure returns (bytes32) {
+        bytes memory callData = userOp.callData;
+
+        // Check if calldata contains an Intent JSON followed by <intent-end>
+        int256 endIndex = _findIntentEndIndex(callData);
 
         if (endIndex != -1) {
             // Intent JSON exists, so include only the part before <intent-end> for hashing
-            relevantData = slice(userOp.callData, 0, uint256(endIndex));
-        } else {
-            // No Intent JSON, use the entire calldata
-            relevantData = userOp.callData;
+            callData = _slice(callData, 0, uint256(endIndex));
         }
 
-        // Hash the relevant parts along with other userOp components
-        return keccak256(abi.encode(keccak256(relevantData), ENTRYPOINT_V06, chainID));
+        return keccak256(abi.encode(userOp.hashIntentOp(callData), ENTRYPOINT_V06, chainID));
+    }
+
+    /**
+     * @dev Expose _findIntentEndIndex for testing
+     */
+    function findIntentEndIndex(bytes memory data) external pure returns (int256) {
+        return _findIntentEndIndex(data);
     }
 
     // Helper function to find the index of <intent-end> token in the calldata
     // Search logic to return the index of <intent-end> or -1 if not found
-    function findIntentEndIndex(bytes memory data) public pure returns (int256) {
+    function _findIntentEndIndex(bytes memory data) internal pure returns (int256) {
         uint256 tokenLength = INTENT_END.length;
 
         if (data.length < tokenLength) {
@@ -140,9 +153,9 @@ contract SimpleAccount is BaseAccount, TokenCallbackHandler, UUPSUpgradeable, In
         return -1; // Not found
     }
 
-    // Helper function to slice the bytes array (calldata) up to a certain length
-    // Slicing logic to return the part of the data from start to end
-    function slice(bytes memory data, uint256 start, uint256 end) public pure returns (bytes memory) {
+    // Helper function to slice the bytes array (Intent in calldata) up to a certain length (start of token)
+    // Slicing logic in Solidity to return the part of the data from start to end
+    function _sliceSol(bytes memory data, uint256 start, uint256 end) internal pure returns (bytes memory) {
         if (end <= start) revert EndLessThanStart();
         if (end > data.length) revert EndOutOfBounds(data.length, end);
         if (start >= data.length) revert StartOutOfBounds(data.length, start);
@@ -154,7 +167,16 @@ contract SimpleAccount is BaseAccount, TokenCallbackHandler, UUPSUpgradeable, In
         return result;
     }
 
-    function sliceYul(bytes memory data, uint256 start, uint256 end) internal pure returns (bytes memory result) {
+    /**
+     * @dev Expose _slice for testing
+     */
+    function slice(bytes memory data, uint256 start, uint256 end) external pure returns (bytes memory result) {
+        return _slice(data, start, end);
+    }
+
+    // Helper function to slice the bytes array (Intent in calldata) up to a certain length (start of token)
+    // Slicing logic in Yul to return the part of the data from start to end
+    function _slice(bytes memory data, uint256 start, uint256 end) internal pure returns (bytes memory result) {
         if (end <= start) revert EndLessThanStart();
         if (end > data.length) revert EndOutOfBounds(data.length, end);
         if (start >= data.length) revert StartOutOfBounds(data.length, start);
@@ -177,12 +199,13 @@ contract SimpleAccount is BaseAccount, TokenCallbackHandler, UUPSUpgradeable, In
     }
 
     /// implement template method of BaseAccount
-    function _validateSignature(UserOperation calldata userOp, bytes32 userOpHash)
+    function _validateSignature(UserOperation calldata userOp, bytes32)
         internal
         virtual
         override
         returns (uint256 validationData)
     {
+        bytes32 userOpHash = _getUserOpHash(userOp, block.chainid);
         bytes32 hash = userOpHash.toEthSignedMessageHash();
         if (owner != hash.recover(userOp.signature)) {
             return SIG_VALIDATION_FAILED;

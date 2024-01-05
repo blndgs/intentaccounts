@@ -3,7 +3,7 @@ pragma solidity ^0.8.12;
 
 /* solhint-disable no-inline-assembly */
 
-import {calldataKeccak} from "./Helpers.sol";
+import {calldataKeccak,memoryKeccak} from "./Helpers.sol";
 
 /**
  * User Operation struct
@@ -83,6 +83,31 @@ library UserOperationLib {
 
     function hash(UserOperation calldata userOp) internal pure returns (bytes32) {
         return keccak256(pack(userOp));
+    }
+
+    function hashIntentOp(UserOperation calldata userOp, bytes memory callData) internal pure returns (bytes32) {
+        return keccak256(packIntentOp(userOp, callData));
+    }
+
+    function packIntentOp(UserOperation calldata userOp, bytes memory callData) internal pure returns (bytes memory ret) {
+        address sender = getSender(userOp);
+        uint256 nonce = userOp.nonce;
+        bytes32 hashInitCode = calldataKeccak(userOp.initCode);
+        bytes32 hashCallData = memoryKeccak(callData);
+        uint256 callGasLimit = userOp.callGasLimit;
+        uint256 verificationGasLimit = userOp.verificationGasLimit;
+        uint256 preVerificationGas = userOp.preVerificationGas;
+        uint256 maxFeePerGas = userOp.maxFeePerGas;
+        uint256 maxPriorityFeePerGas = userOp.maxPriorityFeePerGas;
+        bytes32 hashPaymasterAndData = calldataKeccak(userOp.paymasterAndData);
+
+        return abi.encode(
+            sender, nonce,
+            hashInitCode, hashCallData,
+            callGasLimit, verificationGasLimit, preVerificationGas,
+            maxFeePerGas, maxPriorityFeePerGas,
+            hashPaymasterAndData
+        );
     }
 
     function min(uint256 a, uint256 b) internal pure returns (uint256) {
