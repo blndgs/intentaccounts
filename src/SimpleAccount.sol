@@ -20,7 +20,6 @@ import "./TokenCallbackHandler.sol";
  *  has a single signer that can send requests through the entryPoint.
  */
 contract SimpleAccount is BaseAccount, TokenCallbackHandler, UUPSUpgradeable, Initializable {
-
     using UserOperationLib for UserOperation;
 
     address private constant ENTRYPOINT_V06 = 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789;

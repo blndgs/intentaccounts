@@ -145,7 +145,11 @@ contract SimpleAccountTest is Test {
         // Generate the signature
         string memory generatedSignatureHex = toHexString(generateSignature(userOp, block.chainid));
 
-        verifySignature(userOp, generatedSignatureHex, "0x92f25342760a82b7e5649ed7c6d2d7cb93c0093f66c916d7e57de4af0ae00e2b0524bf364778c6b30c491354be332a1ce521e8a57c5e26f94f8069a404520e931b");
+        verifySignature(
+            userOp,
+            generatedSignatureHex,
+            "0x92f25342760a82b7e5649ed7c6d2d7cb93c0093f66c916d7e57de4af0ae00e2b0524bf364778c6b30c491354be332a1ce521e8a57c5e26f94f8069a404520e931b"
+        );
     }
 
     function testValidateMumbaiLongCallData() public {
@@ -173,7 +177,11 @@ contract SimpleAccountTest is Test {
         // Generate the signature
         string memory generatedSignatureHex = toHexString(generateSignature(userOp, block.chainid));
 
-        verifySignature(userOp, generatedSignatureHex, "0x74199499de42614e0172afc5781179682f311ed1ec8b369d5a4d8bae4e68f3387e9cab11473b4fb65932e4a8812793f6b7e80a9700855fde454109ceeac02e911b");
+        verifySignature(
+            userOp,
+            generatedSignatureHex,
+            "0x74199499de42614e0172afc5781179682f311ed1ec8b369d5a4d8bae4e68f3387e9cab11473b4fb65932e4a8812793f6b7e80a9700855fde454109ceeac02e911b"
+        );
     }
 
     function testValidateMumbai_UnsolvedIntentOp() public {
@@ -201,7 +209,11 @@ contract SimpleAccountTest is Test {
         // Generate the signature
         string memory generatedSignatureHex = toHexString(generateSignature(userOp, block.chainid));
 
-        verifySignature(userOp, generatedSignatureHex, "0x8a2e15b3a0b4964c99e8929d26b081c94b0b284f9a67052019450911a9ee1dd964c862655d9ffc0b97350f5987a6793085adc8cc2297dc97e4b21666539148171b");
+        verifySignature(
+            userOp,
+            generatedSignatureHex,
+            "0x8a2e15b3a0b4964c99e8929d26b081c94b0b284f9a67052019450911a9ee1dd964c862655d9ffc0b97350f5987a6793085adc8cc2297dc97e4b21666539148171b"
+        );
     }
 
     function testValidateMumbai_UnsolvedIntent0GasOp() public {
@@ -229,7 +241,11 @@ contract SimpleAccountTest is Test {
         // Generate the signature
         string memory generatedSignatureHex = toHexString(generateSignature(userOp, block.chainid));
 
-        verifySignature(userOp, generatedSignatureHex, "0x1b2c01e59028d70e881fc913570014ca4d693e29725dbbb5cd56cdc8b8f5007e6188fd6afd3482d65703c3a884195712c901aebf3a0964de04367e8c827340db1b");
+        verifySignature(
+            userOp,
+            generatedSignatureHex,
+            "0x1b2c01e59028d70e881fc913570014ca4d693e29725dbbb5cd56cdc8b8f5007e6188fd6afd3482d65703c3a884195712c901aebf3a0964de04367e8c827340db1b"
+        );
     }
 
     function testValidateMumbai_SolvedNilIntentOp() public {
@@ -240,7 +256,7 @@ contract SimpleAccountTest is Test {
             sender: address(0),
             nonce: 0,
             initCode: bytes(hex""),
-            callData: bytes('{}<intent-end>0x'),
+            callData: bytes("{}<intent-end>0x"),
             callGasLimit: 0,
             verificationGasLimit: 0,
             preVerificationGas: 0,
@@ -255,7 +271,11 @@ contract SimpleAccountTest is Test {
         // Generate the signature
         string memory generatedSignatureHex = toHexString(generateSignature(userOp, block.chainid));
 
-        verifySignature(userOp, generatedSignatureHex, "0x1b81c8280ec9fbf3009c650a67eadac8ab53ab645f55bdb927a870b40649904f7d1a5e9bd75b7e362625f05874f53d9e071cdc27baa43fc5a89b1338f24a9c7b1b");
+        verifySignature(
+            userOp,
+            generatedSignatureHex,
+            "0x1b81c8280ec9fbf3009c650a67eadac8ab53ab645f55bdb927a870b40649904f7d1a5e9bd75b7e362625f05874f53d9e071cdc27baa43fc5a89b1338f24a9c7b1b"
+        );
     }
 
     function testValidateMumbai_SolvedIntentOpNilSolution() public {
@@ -266,7 +286,9 @@ contract SimpleAccountTest is Test {
             sender: 0x6B5f6558CB8B3C8Fec2DA0B1edA9b9d5C064ca47,
             nonce: 0,
             initCode: bytes(hex""),
-            callData: bytes('{"chainId":80001, "sender":"0x0A7199a96fdf0252E09F76545c1eF2be3692F46b","kind":"swap","hash":"","sellToken":"TokenA","buyToken":"TokenB","sellAmount":10,"buyAmount":5,"partiallyFillable":false,"status":"Received","createdAt":0,"expirationAt":0}<intent-end>0x'),
+            callData: bytes(
+                '{"chainId":80001, "sender":"0x0A7199a96fdf0252E09F76545c1eF2be3692F46b","kind":"swap","hash":"","sellToken":"TokenA","buyToken":"TokenB","sellAmount":10,"buyAmount":5,"partiallyFillable":false,"status":"Received","createdAt":0,"expirationAt":0}<intent-end>0x'
+                ),
             callGasLimit: 0,
             verificationGasLimit: 0,
             preVerificationGas: 0,
@@ -281,7 +303,11 @@ contract SimpleAccountTest is Test {
         // Generate the signature
         string memory generatedSignatureHex = toHexString(generateSignature(userOp, block.chainid));
 
-        verifySignature(userOp, generatedSignatureHex, "0xe14ea21c8d6478388bfc9e5f1bf9a0d45fe1359fbfeac193e8b504be2db9fc317f6c6b06bff42328af64f6be85a31e729d2cab6c6b83ebf3ef12bc4cc344e9c31c");
+        verifySignature(
+            userOp,
+            generatedSignatureHex,
+            "0xe14ea21c8d6478388bfc9e5f1bf9a0d45fe1359fbfeac193e8b504be2db9fc317f6c6b06bff42328af64f6be85a31e729d2cab6c6b83ebf3ef12bc4cc344e9c31c"
+        );
     }
 
     function testValidateMumbai_SolvedIntentOp() public {
@@ -309,7 +335,11 @@ contract SimpleAccountTest is Test {
         // Generate the signature
         string memory generatedSignatureHex = toHexString(generateSignature(userOp, block.chainid));
 
-        verifySignature(userOp, generatedSignatureHex, "0x1b2c01e59028d70e881fc913570014ca4d693e29725dbbb5cd56cdc8b8f5007e6188fd6afd3482d65703c3a884195712c901aebf3a0964de04367e8c827340db1b");
+        verifySignature(
+            userOp,
+            generatedSignatureHex,
+            "0x1b2c01e59028d70e881fc913570014ca4d693e29725dbbb5cd56cdc8b8f5007e6188fd6afd3482d65703c3a884195712c901aebf3a0964de04367e8c827340db1b"
+        );
     }
 
     function testNilUserOpHashComparison() public {
