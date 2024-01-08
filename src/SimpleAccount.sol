@@ -22,7 +22,6 @@ import "./TokenCallbackHandler.sol";
 contract SimpleAccount is BaseAccount, TokenCallbackHandler, UUPSUpgradeable, Initializable {
     using UserOperationLib for UserOperation;
 
-    address private constant ENTRYPOINT_V06 = 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789;
     bytes private constant INTENT_END = "<intent-end>";
 
     // Custom errors
@@ -102,11 +101,11 @@ contract SimpleAccount is BaseAccount, TokenCallbackHandler, UUPSUpgradeable, In
     /**
      * @dev Expose _getUserOpHash for testing
      */
-    function getUserOpHash(UserOperation calldata userOp, uint256 chainID) external pure returns (bytes32) {
+    function getUserOpHash(UserOperation calldata userOp, uint256 chainID) external view returns (bytes32) {
         return _getUserOpHash(userOp, chainID);
     }
 
-    function _getUserOpHash(UserOperation calldata userOp, uint256 chainID) internal pure returns (bytes32) {
+    function _getUserOpHash(UserOperation calldata userOp, uint256 chainID) internal view returns (bytes32) {
         bytes memory callData = userOp.callData;
 
         // Check if calldata contains an Intent JSON followed by <intent-end>
@@ -117,7 +116,7 @@ contract SimpleAccount is BaseAccount, TokenCallbackHandler, UUPSUpgradeable, In
             callData = _slice(callData, 0, uint256(endIndex));
         }
 
-        return keccak256(abi.encode(userOp.hashIntentOp(callData), ENTRYPOINT_V06, chainID));
+        return keccak256(abi.encode(userOp.hashIntentOp(callData), address(_entryPoint), chainID));
     }
 
     /**
