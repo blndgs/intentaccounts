@@ -15,6 +15,7 @@ using UserOperationLib for UserOperation;
 contract SimpleAccountTest is Test {
     address public constant ENTRYPOINT_V06 = 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789;
     uint256 public constant MUMBAI_CHAIN_ID = 80001;
+    uint256 mumbaiFork;
 
     using ECDSA for bytes32;
 
@@ -25,12 +26,16 @@ contract SimpleAccountTest is Test {
     address public ownerAddress;
     uint256 public ownerPrivateKey;
 
+
     function setUp() public {
-        vm.prank(ownerAddress);
-        vm.chainId(MUMBAI_CHAIN_ID);
+        // Create a VM instance for the MUMBAI fork
+        mumbaiFork = vm.createSelectFork(vm.envString("MUMBAI_RPC_URL"));
+        vm.startPrank(address(0xa4BFe126D3aD137F972695dDdb1780a29065e556));
+        assertEq(MUMBAI_CHAIN_ID, block.chainid, "chainid should be 80001");
 
         // Deploy the EntryPoint contract or use an existing one
-        entryPoint = new EntryPoint();
+        entryPoint = EntryPoint(payable(ENTRYPOINT_V06));
+        console.log("EntryPoint deployed at:", address(entryPoint));
 
         // Retrieve the MUMBAI_PRIVATE_KEY from the .env file
         string memory mumbaiPrivateKeyString = vm.envString("MUMBAI_PRIVATE_KEY");
@@ -38,7 +43,6 @@ contract SimpleAccountTest is Test {
 
         // Derive the Ethereum address from the private key
         ownerPrivateKey = vm.parseUint(mumbaiPrivateKeyString);
-        ownerAddress = vm.addr(ownerPrivateKey);
 
         // Deploy the SimpleAccountFactory with the entry point
         factory = new SimpleAccountFactory(entryPoint);
