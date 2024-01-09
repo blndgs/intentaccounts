@@ -347,6 +347,30 @@ contract SimpleAccountTest is Test {
         );
     }
 
+    function testExecuteMumbai_EmptyOp() public {
+        // Prepare the UserOperation object to sign
+        UserOperation memory userOp = UserOperation({
+            sender: address(simpleAccount),
+            nonce: 0,
+            initCode: bytes(hex""),
+            callData: bytes(hex""),
+            callGasLimit: 0,
+            verificationGasLimit: 70000,
+            preVerificationGas: 0,
+            maxFeePerGas: 0,
+            maxPriorityFeePerGas: 0,
+            paymasterAndData: bytes(hex""),
+            signature: bytes(hex"")
+        });
+
+        // Generate the signature
+        userOp.signature = generateSignature(userOp, block.chainid);
+
+        UserOperation[] memory userOps = new UserOperation[](1);
+        userOps[0] = userOp;
+        entryPoint.handleOps(userOps, payable(ownerAddress));
+    }
+
     function testNilUserOpHashComparison() public {
         UserOperation memory userOp = UserOperation({
             sender: address(0),
