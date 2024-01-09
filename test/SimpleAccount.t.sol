@@ -371,6 +371,71 @@ contract SimpleAccountTest is Test {
         entryPoint.handleOps(userOps, payable(ownerAddress));
     }
 
+    function showBalances(address anAddress, string memory outMsg) public view {
+        console2.log("---------------", outMsg);
+        console2.log("For address:", anAddress);
+        console2.log("Ether balance:", anAddress.balance);
+        console2.log("Token balance:", entryPoint.balanceOf(anAddress));
+    }
+
+    function testExecuteMumbai_vanillaUserOp() public {
+        showBalances(ownerAddress, "Before userOp execution");
+        showBalances(address(simpleAccount), "Before userOp execution");
+
+        // Prepare the UserOperation object to sign
+        UserOperation memory userOp = UserOperation({
+            sender: address(simpleAccount),
+            nonce: 0,
+            initCode: bytes(hex""),
+            callData: bytes('0xb61d27f60000000000000000000000009d34f236bddf1b9de014312599d9c9ec8af1bc48000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000600000000000000000000000000000000000000000000000000000000000000044a9059cbb000000000000000000000000d7b21a844f3a41c91a73d3f87b83fa93bb6cb518000000000000000000000000000000000000000000000000000000002faf080000000000000000000000000000000000000000000000000000000000'),
+            callGasLimit: 0,
+            verificationGasLimit: 300000,
+            preVerificationGas: 300000,
+            maxFeePerGas: 0,
+            maxPriorityFeePerGas: 0,
+            paymasterAndData: bytes(hex""),
+            signature: bytes(hex"")
+        });
+
+        // Generate the signature
+        userOp.signature = generateSignature(userOp, block.chainid);
+
+        UserOperation[] memory userOps = new UserOperation[](1);
+        userOps[0] = userOp;
+        entryPoint.handleOps(userOps, payable(ownerAddress));
+
+        showBalances(ownerAddress, "After userOp execution");
+        showBalances(address(simpleAccount), "After userOp execution");
+    }
+
+    function testValidateExecuteMumbai_SolvedOp() public {
+        // Prepare the UserOperation object to sign
+        UserOperation memory userOp = UserOperation({
+            sender: address(simpleAccount),
+            nonce: 0,
+            initCode: bytes(hex""),
+            callData: bytes('{"chainId":80001, "sender":"0x0A7199a96fdf0252E09F76545c1eF2be3692F46b","kind":"swap","hash":"","sellToken":"TokenA","buyToken":"TokenB","sellAmount":10,"buyAmount":5,"partiallyFillable":false,"status":"Received","createdAt":0,"expirationAt":0}<intent-end>0xb61d27f60000000000000000000000009d34f236bddf1b9de014312599d9c9ec8af1bc48000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000600000000000000000000000000000000000000000000000000000000000000044a9059cbb000000000000000000000000d7b21a844f3a41c91a73d3f87b83fa93bb6cb518000000000000000000000000000000000000000000000000000000002faf080000000000000000000000000000000000000000000000000000000000'),
+            callGasLimit: 0,
+            verificationGasLimit: 300000,
+            preVerificationGas: 300000,
+            maxFeePerGas: 0,
+            maxPriorityFeePerGas: 0,
+            paymasterAndData: bytes(hex""),
+            signature: bytes(hex"")
+        });
+
+        // Generate the signature
+        userOp.signature = generateSignature(userOp, block.chainid);
+
+        vm.stopPrank();
+        vm.prank(ENTRYPOINT_V06);
+        simpleAccount.validateUserOp(userOp, bytes32(0), 0);
+        vm.startPrank(ownerAddress);
+        UserOperation[] memory userOps = new UserOperation[](1);
+        userOps[0] = userOp;
+        entryPoint.handleOps(userOps, payable(ownerAddress));
+    }
+
     function testNilUserOpHashComparison() public {
         UserOperation memory userOp = UserOperation({
             sender: address(0),
