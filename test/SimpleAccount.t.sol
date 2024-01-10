@@ -1,13 +1,14 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.12;
+pragma solidity ^0.8.23;
 
 import "forge-std/Test.sol";
 import "../src/SimpleAccount.sol";
-import "../src/IEntryPoint.sol"; // Ensure this import path is correct
+import "../src/IEntryPoint.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "../src/EntryPoint.sol";
 import "../src/SimpleAccountFactory.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
+import "lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 
 using Strings for bytes32;
 using UserOperationLib for UserOperation;
@@ -25,6 +26,7 @@ contract SimpleAccountTest is Test {
     IEntryPoint public entryPoint;
     address public ownerAddress;
     uint256 public ownerPrivateKey;
+    IERC20 public token;
 
     function setUp() public {
         // Retrieve the MUMBAI_PRIVATE_KEY from the .env file
@@ -375,7 +377,7 @@ contract SimpleAccountTest is Test {
         console2.log("---------------", outMsg);
         console2.log("For address:", anAddress);
         console2.log("Ether balance:", anAddress.balance);
-        console2.log("Token balance:", entryPoint.balanceOf(anAddress));
+        console2.log("Entrypoint balance:", entryPoint.balanceOf(anAddress));
     }
 
     function testExecuteMumbai_vanillaUserOp() public {
@@ -387,7 +389,9 @@ contract SimpleAccountTest is Test {
             sender: address(simpleAccount),
             nonce: 0,
             initCode: bytes(hex""),
-            callData: bytes('0xb61d27f60000000000000000000000009d34f236bddf1b9de014312599d9c9ec8af1bc48000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000600000000000000000000000000000000000000000000000000000000000000044a9059cbb000000000000000000000000d7b21a844f3a41c91a73d3f87b83fa93bb6cb518000000000000000000000000000000000000000000000000000000002faf080000000000000000000000000000000000000000000000000000000000'),
+            callData: bytes(
+                "0xb61d27f60000000000000000000000009d34f236bddf1b9de014312599d9c9ec8af1bc48000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000600000000000000000000000000000000000000000000000000000000000000044a9059cbb000000000000000000000000d7b21a844f3a41c91a73d3f87b83fa93bb6cb518000000000000000000000000000000000000000000000000000000002faf080000000000000000000000000000000000000000000000000000000000"
+                ),
             callGasLimit: 0,
             verificationGasLimit: 300000,
             preVerificationGas: 300000,
@@ -408,13 +412,15 @@ contract SimpleAccountTest is Test {
         showBalances(address(simpleAccount), "After userOp execution");
     }
 
-    function testValidateExecuteMumbai_SolvedOp() public {
+    function testValidateExecuteMumbai_SolvedOpReverted() public {
         // Prepare the UserOperation object to sign
         UserOperation memory userOp = UserOperation({
             sender: address(simpleAccount),
             nonce: 0,
             initCode: bytes(hex""),
-            callData: bytes('{"chainId":80001, "sender":"0x0A7199a96fdf0252E09F76545c1eF2be3692F46b","kind":"swap","hash":"","sellToken":"TokenA","buyToken":"TokenB","sellAmount":10,"buyAmount":5,"partiallyFillable":false,"status":"Received","createdAt":0,"expirationAt":0}<intent-end>0xb61d27f60000000000000000000000009d34f236bddf1b9de014312599d9c9ec8af1bc48000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000600000000000000000000000000000000000000000000000000000000000000044a9059cbb000000000000000000000000d7b21a844f3a41c91a73d3f87b83fa93bb6cb518000000000000000000000000000000000000000000000000000000002faf080000000000000000000000000000000000000000000000000000000000'),
+            callData: bytes(
+                '{"chainId":80001, "sender":"0x0A7199a96fdf0252E09F76545c1eF2be3692F46b","kind":"swap","hash":"","sellToken":"TokenA","buyToken":"TokenB","sellAmount":10,"buyAmount":5,"partiallyFillable":false,"status":"Received","createdAt":0,"expirationAt":0}<intent-end>0xb61d27f60000000000000000000000009d34f236bddf1b9de014312599d9c9ec8af1bc48000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000600000000000000000000000000000000000000000000000000000000000000044a9059cbb000000000000000000000000d7b21a844f3a41c91a73d3f87b83fa93bb6cb518000000000000000000000000000000000000000000000000000000002faf080000000000000000000000000000000000000000000000000000000000'
+                ),
             callGasLimit: 0,
             verificationGasLimit: 300000,
             preVerificationGas: 300000,
