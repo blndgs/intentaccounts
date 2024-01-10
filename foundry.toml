@@ -1,3 +1,6 @@
+[rpc_endpoints]
+mumbai = "${MUMBAI_RPC_URL}"
+
 [profile.default]
 solc = "0.8.23"
 src = "src"
