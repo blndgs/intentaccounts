@@ -4,11 +4,11 @@ pragma solidity ^0.8.23;
 import "forge-std/Test.sol";
 import "../src/SimpleAccount.sol";
 import "../src/IEntryPoint.sol";
-import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "../src/EntryPoint.sol";
 import "../src/SimpleAccountFactory.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
-import "lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
 using Strings for bytes32;
 using UserOperationLib for UserOperation;
@@ -45,13 +45,14 @@ contract SimpleAccountTest is Test {
 
         // Deploy the EntryPoint contract or use an existing one
         entryPoint = EntryPoint(payable(ENTRYPOINT_V06));
-        console.log("EntryPoint deployed at:", address(entryPoint));
+        console2.log("EntryPoint deployed at:", address(entryPoint));
 
         // Deploy the SimpleAccountFactory with the entry point
         factory = new SimpleAccountFactory(entryPoint);
 
         // Create an account using the factory
         simpleAccount = factory.createAccount(ownerAddress, salt);
+        console2.log("SimpleAccount deployed at:", address(simpleAccount));
     }
 
     // Signature Steps:
@@ -494,6 +495,34 @@ contract SimpleAccountTest is Test {
         bytes32 expectedHash = getOrigUserOpHash(userOp, block.chainid);
 
         assertEq(newUserOpHash, expectedHash, "Hash values should match for conventional userOps");
+    }
+
+    function testFindIntentEndIndexWithToken127BytesMockPrefix() public {
+        bytes memory mockPayload = new bytes(127); // Create a mock payload of 127 bytes
+        bytes memory data = abi.encodePacked(mockPayload, hex"7B696E74656E74206A736F6E7D3C696E74656E742D656E643E3078"); // "{intent json}<intent-end>0x"
+        int256 index = simpleAccount.findIntentEndIndex(data);
+        assertEq(index, int256(127 + 13), "Incorrect index for <intent-end> with 127-byte mock prefix");
+    }
+
+    function testFindIntentEndIndexWithTokenMoreThan128BytesMockPrefix() public {
+        bytes memory mockPayload = new bytes(129); // Create a mock payload of 129 bytes
+        bytes memory data = abi.encodePacked(mockPayload, hex"7B696E74656E74206A736F6E7D3C696E74656E742D656E643E3078"); // "{intent json}<intent-end>0x"
+        int256 index = simpleAccount.findIntentEndIndex(data);
+        assertEq(index, int256(129 + 13), "Incorrect index for <intent-end> with more than 128-byte mock prefix");
+    }
+
+    function testFindIntentEndIndexWithoutToken127BytesMockPrefix() public {
+        bytes memory mockPayload = new bytes(127); // Create a mock payload of 127 bytes
+        bytes memory data = abi.encodePacked(mockPayload, "No token here");
+        int256 index = simpleAccount.findIntentEndIndex(data);
+        assertEq(index, -1, "Index should be -1 when token is absent with 127-byte mock prefix");
+    }
+
+    function testFindIntentEndIndexWithoutTokenMoreThan128BytesMockPrefix() public {
+        bytes memory mockPayload = new bytes(129); // Create a mock payload of 129 bytes
+        bytes memory data = abi.encodePacked(mockPayload, "No token here");
+        int256 index = simpleAccount.findIntentEndIndex(data);
+        assertEq(index, -1, "Index should be -1 when token is absent with more than 128-byte mock prefix");
     }
 
     function testFindIntentEndIndexWithToken() public {

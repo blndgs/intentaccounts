@@ -22,7 +22,7 @@ import "./TokenCallbackHandler.sol";
 contract SimpleAccount is BaseAccount, TokenCallbackHandler, UUPSUpgradeable, Initializable {
     using UserOperationLib for UserOperation;
 
-    bytes private constant INTENT_END = "<intent-end>";
+    bytes private constant INTENT_END = hex"3c696e74656e742d656e643e"; // "<intent-end>"
 
     // Custom errors
     error EndLessThanStart();
@@ -126,16 +126,24 @@ contract SimpleAccount is BaseAccount, TokenCallbackHandler, UUPSUpgradeable, In
         return _findIntentEndIndex(data);
     }
 
-    // Helper function to find the index of <intent-end> token in the calldata
+    uint256 private constant SKIP_BYTES = 128;
+
+    // Helper function to find the index of <intent-end> token in hex in the calldata
+    // after skipping the first 128 bytes of the calldata which is the wrapper Entrypoint
+    // calldata which is the abi-encoded execute() function call and arguments.
+    // At position 128, the calldata contains the abi-encoded UserOperation calldata.
     // Search logic to return the index of <intent-end> or -1 if not found
     function _findIntentEndIndex(bytes memory data) internal pure returns (int256) {
-        uint256 tokenLength = INTENT_END.length;
+        // Skip the first SKIP_BYTES bytes if the data length allows it
+        uint256 adjustedStartIndex = data.length > SKIP_BYTES ? SKIP_BYTES : 0;
 
-        if (data.length < tokenLength) {
+        uint256 tokenLength = INTENT_END.length;
+        if (data.length < adjustedStartIndex + tokenLength) {
             return -1;
         }
 
-        for (uint256 i = 0; i <= data.length - tokenLength; i++) {
+        // Start the search loop from the adjusted index
+        for (uint256 i = adjustedStartIndex; i <= data.length - tokenLength; i++) {
             bool matchToken = true;
             for (uint256 j = 0; j < tokenLength; j++) {
                 if (data[i + j] != INTENT_END[j]) {
