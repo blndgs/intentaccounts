@@ -558,6 +558,15 @@ contract SimpleAccountTest is Test {
         }
     }
 
+    function testSliceStartOutOfBounds() public {
+        bytes memory data = bytes("Intents Are Nice.");
+        try simpleAccount.slice(data, 50, 60) {
+            fail("slice should have thrown for start out of bounds");
+        } catch (bytes memory) {
+            // expected
+        }
+    }
+
     function testSliceEndLessThanStart() public {
         bytes memory data = bytes("Intents Are In!");
         try simpleAccount.slice(data, 5, 2) {
