@@ -589,19 +589,6 @@ contract SimpleAccountTest is Test {
         assertEq(address(simpleAccountSalted), expectedAddress, "Account address does not match expected address");
     }
 
-    function hexStringToBytes32(string memory hexString) public pure returns (bytes32 result) {
-        bytes memory source = bytes(hexString);
-
-        // Ensure the input string is the correct length for a bytes32 type
-        require(source.length == 66, "Hex string must be 66 characters long including '0x'.");
-
-        result = 0x0;
-        assembly {
-            result := mload(add(hexString, 32))
-        }
-        return result;
-    }
-
     function logBytes32Value(string memory prompt, bytes32 value) public pure {
         // Convert bytes32 to string
         string memory valueAsString = toHexString(abi.encodePacked(value));
