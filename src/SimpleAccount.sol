@@ -23,7 +23,7 @@ contract SimpleAccount is BaseAccount, TokenCallbackHandler, UUPSUpgradeable, In
     using UserOperationLib for UserOperation;
 
     bytes private constant INTENT_END = hex"3c696e74656e742d656e643e"; // "<intent-end>"
-    bytes private constant INTENT_END_LEN = 12; // "<intent-end>"
+    uint256 private constant INTENT_END_LEN = 12; // "<intent-end>"
 
     // Custom errors
     error EndLessThanStart();
