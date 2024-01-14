@@ -23,6 +23,7 @@ contract SimpleAccount is BaseAccount, TokenCallbackHandler, UUPSUpgradeable, In
     using UserOperationLib for UserOperation;
 
     bytes private constant INTENT_END = hex"3c696e74656e742d656e643e"; // "<intent-end>"
+    bytes private constant INTENT_END_LEN = 12; // "<intent-end>"
 
     // Custom errors
     error EndLessThanStart();
@@ -98,6 +99,8 @@ contract SimpleAccount is BaseAccount, TokenCallbackHandler, UUPSUpgradeable, In
         require(msg.sender == address(entryPoint()) || msg.sender == owner, "account: not Owner or EntryPoint");
     }
 
+    uint256 private constant SKIP_WRAPPER_CD_BYTES = 132; // 128 + 4 (unknown why 4, maybe the abi-encoded length of the Intent JSON)
+
     /**
      * @dev Expose _getUserOpHash for testing
      */
@@ -109,11 +112,11 @@ contract SimpleAccount is BaseAccount, TokenCallbackHandler, UUPSUpgradeable, In
         bytes memory callData = userOp.callData;
 
         // Check if calldata contains an Intent JSON followed by <intent-end>
-        int256 endIndex = _findIntentEndIndex(callData);
+        int256 endIndex = _findIntentEndIndex(callData, true);
 
         if (endIndex != -1) {
             // Intent JSON exists, so include only the part before <intent-end> for hashing
-            callData = _slice(callData, 0, uint256(endIndex));
+            callData = _slice(callData, SKIP_WRAPPER_CD_BYTES, uint256(endIndex));
         }
 
         return keccak256(abi.encode(userOp.hashIntentOp(callData), address(_entryPoint), chainID));
@@ -122,30 +125,27 @@ contract SimpleAccount is BaseAccount, TokenCallbackHandler, UUPSUpgradeable, In
     /**
      * @dev Expose _findIntentEndIndex for testing
      */
-    function findIntentEndIndex(bytes memory data) external pure returns (int256) {
-        return _findIntentEndIndex(data);
+    function findIntentEndIndex(bytes memory data, bool skip) external pure returns (int256) {
+        return _findIntentEndIndex(data, skip);
     }
-
-    uint256 private constant SKIP_BYTES = 128;
 
     // Helper function to find the index of <intent-end> token in hex in the calldata
     // after skipping the first 128 bytes of the calldata which is the wrapper Entrypoint
     // calldata which is the abi-encoded execute() function call and arguments.
     // At position 128, the calldata contains the abi-encoded UserOperation calldata.
     // Search logic to return the index of <intent-end> or -1 if not found
-    function _findIntentEndIndex(bytes memory data) internal pure returns (int256) {
-        // Skip the first SKIP_BYTES bytes if the data length allows it
-        uint256 adjustedStartIndex = data.length > SKIP_BYTES ? SKIP_BYTES : 0;
+    function _findIntentEndIndex(bytes memory data, bool skip) internal pure returns (int256) {
+        // Conditionally skip the first SKIP_WRAPPER_CD_BYTES bytes if indicated and if the data length allows it
+        uint256 adjustedStartIndex = (skip && data.length > SKIP_WRAPPER_CD_BYTES) ? SKIP_WRAPPER_CD_BYTES : 0;
 
-        uint256 tokenLength = INTENT_END.length;
-        if (data.length < adjustedStartIndex + tokenLength) {
+        if (data.length < adjustedStartIndex + INTENT_END_LEN) {
             return -1;
         }
 
         // Start the search loop from the adjusted index
-        for (uint256 i = adjustedStartIndex; i <= data.length - tokenLength; i++) {
+        for (uint256 i = adjustedStartIndex; i <= data.length - INTENT_END_LEN; i++) {
             bool matchToken = true;
-            for (uint256 j = 0; j < tokenLength; j++) {
+            for (uint256 j = 0; j < INTENT_END_LEN; j++) {
                 if (data[i + j] != INTENT_END[j]) {
                     matchToken = false;
                     break;

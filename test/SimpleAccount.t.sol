@@ -442,11 +442,42 @@ contract SimpleAccountTest is Test {
         userOps[0] = userOp;
         bytes32 userOpHash = getOrigUserOpHash(userOp, block.chainid);
         vm.expectEmit(true, true, true, true);
-        
+
         // successful request with ** reverted sender transaction **
         emit IEntryPoint.UserOperationEvent(
             userOpHash, userOp.sender, address(0), uint256(0), false, uint256(0), uint256(476954)
         );
+        entryPoint.handleOps(userOps, payable(ownerAddress));
+    }
+
+    function testValidateExecuteMumbai_SolvedOpNewCallData() public {
+        console2.log("sender:", address(simpleAccount));
+        // Prepare the UserOperation object to sign
+        UserOperation memory userOp = UserOperation({
+            sender: address(simpleAccount),
+            nonce: 0,
+            initCode: bytes(hex""),
+            callData: bytes(
+                hex"b61d27f60000000000000000000000009d34f236bddf1b9de014312599d9c9ec8af1bc480000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000006000000000000000000000000000000000000000000000000000000000000001447b22636861696e4964223a38303030312c202273656e646572223a22307830413731393961393666646630323532453039463736353435633165463262653336393246343662222c226b696e64223a2273776170222c2268617368223a22222c2273656c6c546f6b656e223a22546f6b656e41222c22627579546f6b656e223a22546f6b656e42222c2273656c6c416d6f756e74223a31302c22627579416d6f756e74223a352c227061727469616c6c7946696c6c61626c65223a66616c73652c22737461747573223a225265636569766564222c22637265617465644174223a302c2265787069726174696f6e4174223a307d3c696e74656e742d656e643e095ea7b3000000000000000000000000d7b21a844f3a41c91a73d3f87b83fa93bb6cb518000000000000000000000000000000000000000000000000000000000000037800000000000000000000000000000000000000000000000000000000"
+                ),
+            callGasLimit: 300000,
+            verificationGasLimit: 300000,
+            preVerificationGas: 300000,
+            maxFeePerGas: 0,
+            maxPriorityFeePerGas: 0,
+            paymasterAndData: bytes(hex""),
+            signature: bytes(hex"")
+        });
+
+        // Generate the signature
+        userOp.signature = generateSignature(userOp, block.chainid);
+
+        vm.stopPrank();
+        vm.prank(ENTRYPOINT_V06);
+        simpleAccount.validateUserOp(userOp, bytes32(0), 0);
+        vm.startPrank(ownerAddress);
+        UserOperation[] memory userOps = new UserOperation[](1);
+        userOps[0] = userOp;
         entryPoint.handleOps(userOps, payable(ownerAddress));
     }
 
@@ -497,49 +528,87 @@ contract SimpleAccountTest is Test {
         assertEq(newUserOpHash, expectedHash, "Hash values should match for conventional userOps");
     }
 
-    function testFindIntentEndIndexWithToken127BytesMockPrefix() public {
+    function testFindIntentEndIndexWithToken127BytesMockPrefixNoSkip() public {
         bytes memory mockPayload = new bytes(127); // Create a mock payload of 127 bytes
         bytes memory data = abi.encodePacked(mockPayload, hex"7B696E74656E74206A736F6E7D3C696E74656E742D656E643E3078"); // "{intent json}<intent-end>0x"
-        int256 index = simpleAccount.findIntentEndIndex(data);
-        assertEq(index, int256(127 + 13), "Incorrect index for <intent-end> with 127-byte mock prefix");
+        int256 index = simpleAccount.findIntentEndIndex(data, false);
+        assertEq(index, int256(127 + 13), "Incorrect index for <intent-end> with 127-byte mock prefix and no skip");
     }
 
-    function testFindIntentEndIndexWithTokenMoreThan128BytesMockPrefix() public {
+    function testFindIntentEndIndexWithTokenMoreThan128BytesMockPrefixNoSkip() public {
         bytes memory mockPayload = new bytes(129); // Create a mock payload of 129 bytes
         bytes memory data = abi.encodePacked(mockPayload, hex"7B696E74656E74206A736F6E7D3C696E74656E742D656E643E3078"); // "{intent json}<intent-end>0x"
-        int256 index = simpleAccount.findIntentEndIndex(data);
-        assertEq(index, int256(129 + 13), "Incorrect index for <intent-end> with more than 128-byte mock prefix");
+        int256 index = simpleAccount.findIntentEndIndex(data, false);
+        assertEq(
+            index, int256(129 + 13), "Incorrect index for <intent-end> with more than 128-byte mock prefix and no skip"
+        );
+    }
+
+    function testFindIntentEndIndexWithTokenSkip() public {
+        bytes memory data = bytes(hex"7B696E74656E74206A736F6E7D3C696E74656E742D656E643E3078"); // "{intent json}<intent-end>0x"
+        int256 index = simpleAccount.findIntentEndIndex(data, true);
+        assertEq(index, int256(13), "Incorrect index for <intent-end> with skip");
+    }
+
+    function testFindIntentEndIndexWithTokenNoSkip() public {
+        bytes memory data = bytes(hex"7B696E74656E74206A736F6E7D3C696E74656E742D656E643E3078"); // "{intent json}<intent-end>0x"
+        int256 index = simpleAccount.findIntentEndIndex(data, false);
+        assertEq(index, int256(13), "Incorrect index for <intent-end> with no skip");
+    }
+
+    function testFindIntentEndIndexWithoutTokenSkip() public {
+        bytes memory data = bytes("No token here");
+        int256 index = simpleAccount.findIntentEndIndex(data, true);
+        assertEq(index, -1, "Index should be -1 when token is absent with skip");
+    }
+
+    function testFindIntentEndIndexWithoutTokenNoSkip() public {
+        bytes memory data = bytes("No token here");
+        int256 index = simpleAccount.findIntentEndIndex(data, false);
+        assertEq(index, -1, "Index should be -1 when token is absent with no skip");
+    }
+
+    function testFindIntentEndIndexEmptyDataSkip() public {
+        bytes memory data = "";
+        int256 index = simpleAccount.findIntentEndIndex(data, true);
+        assertEq(index, -1, "Index should be -1 for empty data with skip");
+    }
+
+    function testFindIntentEndIndexEmptyDataNoSkip() public {
+        bytes memory data = "";
+        int256 index = simpleAccount.findIntentEndIndex(data, false);
+        assertEq(index, -1, "Index should be -1 for empty data with no skip");
     }
 
     function testFindIntentEndIndexWithoutToken127BytesMockPrefix() public {
         bytes memory mockPayload = new bytes(127); // Create a mock payload of 127 bytes
         bytes memory data = abi.encodePacked(mockPayload, "No token here");
-        int256 index = simpleAccount.findIntentEndIndex(data);
+        int256 index = simpleAccount.findIntentEndIndex(data, false);
         assertEq(index, -1, "Index should be -1 when token is absent with 127-byte mock prefix");
     }
 
     function testFindIntentEndIndexWithoutTokenMoreThan128BytesMockPrefix() public {
         bytes memory mockPayload = new bytes(129); // Create a mock payload of 129 bytes
         bytes memory data = abi.encodePacked(mockPayload, "No token here");
-        int256 index = simpleAccount.findIntentEndIndex(data);
+        int256 index = simpleAccount.findIntentEndIndex(data, false);
         assertEq(index, -1, "Index should be -1 when token is absent with more than 128-byte mock prefix");
     }
 
     function testFindIntentEndIndexWithToken() public {
         bytes memory data = bytes("{intent json}<intent-end>0x");
-        int256 index = simpleAccount.findIntentEndIndex(data);
+        int256 index = simpleAccount.findIntentEndIndex(data, false);
         assertEq(index, int256(13), "Incorrect index for <intent-end>");
     }
 
     function testFindIntentEndIndexWithoutToken() public {
         bytes memory data = bytes("No token here");
-        int256 index = simpleAccount.findIntentEndIndex(data);
+        int256 index = simpleAccount.findIntentEndIndex(data, false);
         assertEq(index, -1, "Index should be -1 when token is absent");
     }
 
     function testFindIntentEndIndexEmptyData() public {
         bytes memory data = "";
-        int256 index = simpleAccount.findIntentEndIndex(data);
+        int256 index = simpleAccount.findIntentEndIndex(data, false);
         assertEq(index, -1, "Index should be -1 for empty data");
     }
 
