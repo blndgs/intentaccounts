@@ -66,7 +66,18 @@ contract SimpleAccount is BaseAccount, TokenCallbackHandler, UUPSUpgradeable, In
      */
     function execute(address dest, uint256 value, bytes calldata func) external {
         _requireFromEntryPointOrOwner();
-        _call(dest, value, func);
+        // Check if calldata contains an Intent JSON followed by <intent-end>
+        int256 endIntentIdx = _findIntentEndIndex(func, false);
+        console2.log("endIntentIdx", endIntentIdx);
+        if (endIntentIdx == -1) {
+            // No Intent JSON found, so execute the function call directly
+            _call(dest, value, func);
+            return;
+        }
+        uint256 startIdx = uint256(endIntentIdx) + INTENT_END_LEN; // Exclude the <intent-end> token in the slice
+        bytes memory callData = _slice(func, startIdx, func.length-startIdx);
+        console2.log("callData", toHexString(callData));
+        _call(dest, value, callData);
     }
 
     /**
