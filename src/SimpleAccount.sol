@@ -22,9 +22,6 @@ import "./TokenCallbackHandler.sol";
 contract SimpleAccount is BaseAccount, TokenCallbackHandler, UUPSUpgradeable, Initializable {
     using UserOperationLib for UserOperation;
 
-    bytes private constant INTENT_END = hex"3c696e74656e742d656e643e"; // "<intent-end>"
-    uint256 private constant INTENT_END_LEN = 12; // "<intent-end>"
-
     // Custom errors
     error EndLessThanStart();
     error EndOutOfBounds(uint256 dataLength, uint256 end);
@@ -66,18 +63,27 @@ contract SimpleAccount is BaseAccount, TokenCallbackHandler, UUPSUpgradeable, In
      */
     function execute(address dest, uint256 value, bytes calldata func) external {
         _requireFromEntryPointOrOwner();
-        // Check if calldata contains an Intent JSON followed by <intent-end>
-        int256 endIntentIdx = _findIntentEndIndex(func, false);
-        console2.log("endIntentIdx", endIntentIdx);
-        if (endIntentIdx == -1) {
-            // No Intent JSON found, so execute the function call directly
-            _call(dest, value, func);
-            return;
+        _call(dest, value, func);
+    }
+
+    function toHexString(bytes memory b) internal pure returns (string memory) {
+        bytes memory hexString = new bytes(2 * b.length + 2);
+        hexString[0] = "0";
+        hexString[1] = "x";
+
+        for (uint256 i = 0; i < b.length; i++) {
+            uint256 value = uint8(b[i]);
+            uint256 hi = value / 16;
+            uint256 lo = value - (hi * 16);
+
+            bytes1 hiHexChar = bytes1(uint8(hi < 10 ? hi + 48 : hi + 87));
+            bytes1 loHexChar = bytes1(uint8(lo < 10 ? lo + 48 : lo + 87));
+
+            hexString[2 * i + 2] = hiHexChar;
+            hexString[2 * i + 3] = loHexChar;
         }
-        uint256 startIdx = uint256(endIntentIdx) + INTENT_END_LEN; // Exclude the <intent-end> token in the slice
-        bytes memory callData = _slice(func, startIdx, func.length-startIdx);
-        console2.log("callData", toHexString(callData));
-        _call(dest, value, callData);
+
+        return string(hexString);
     }
 
     /**
@@ -110,7 +116,7 @@ contract SimpleAccount is BaseAccount, TokenCallbackHandler, UUPSUpgradeable, In
         require(msg.sender == address(entryPoint()) || msg.sender == owner, "account: not Owner or EntryPoint");
     }
 
-    uint256 private constant SKIP_WRAPPER_CD_BYTES = 132; // 128 + 4 (unknown why 4, maybe the abi-encoded length of the Intent JSON)
+    uint256 private constant SIGNATURE_LENGTH = 65;
 
     /**
      * @dev Expose _getUserOpHash for testing
@@ -122,52 +128,15 @@ contract SimpleAccount is BaseAccount, TokenCallbackHandler, UUPSUpgradeable, In
     function _getUserOpHash(UserOperation calldata userOp, uint256 chainID) internal view returns (bytes32) {
         bytes memory callData = userOp.callData;
 
-        // Check if calldata contains an Intent JSON followed by <intent-end>
-        int256 endIndex = _findIntentEndIndex(callData, true);
+        uint256 sigLength = userOp.signature.length;
 
-        if (endIndex != -1) {
-            // Intent JSON exists, so include only the part before <intent-end> for hashing
-            callData = _slice(callData, SKIP_WRAPPER_CD_BYTES, uint256(endIndex));
+        if (sigLength > SIGNATURE_LENGTH) {
+            // There is an intent JSON at the end of the signature, 
+            // include the remaining part of signature > 65 (intent json) for hashing
+            callData = _slice(userOp.signature, SIGNATURE_LENGTH, sigLength - SIGNATURE_LENGTH);
         }
 
         return keccak256(abi.encode(userOp.hashIntentOp(callData), address(_entryPoint), chainID));
-    }
-
-    /**
-     * @dev Expose _findIntentEndIndex for testing
-     */
-    function findIntentEndIndex(bytes memory data, bool skip) external pure returns (int256) {
-        return _findIntentEndIndex(data, skip);
-    }
-
-    // Helper function to find the index of <intent-end> token in hex in the calldata
-    // after skipping the first 128 bytes of the calldata which is the wrapper Entrypoint
-    // calldata which is the abi-encoded execute() function call and arguments.
-    // At position 128, the calldata contains the abi-encoded UserOperation calldata.
-    // Search logic to return the index of <intent-end> or -1 if not found
-    function _findIntentEndIndex(bytes memory data, bool skip) internal pure returns (int256) {
-        // Conditionally skip the first SKIP_WRAPPER_CD_BYTES bytes if indicated and if the data length allows it
-        uint256 adjustedStartIndex = (skip && data.length > SKIP_WRAPPER_CD_BYTES) ? SKIP_WRAPPER_CD_BYTES : 0;
-
-        if (data.length < adjustedStartIndex + INTENT_END_LEN) {
-            return -1;
-        }
-
-        // Start the search loop from the adjusted index
-        for (uint256 i = adjustedStartIndex; i <= data.length - INTENT_END_LEN; i++) {
-            bool matchToken = true;
-            for (uint256 j = 0; j < INTENT_END_LEN; j++) {
-                if (data[i + j] != INTENT_END[j]) {
-                    matchToken = false;
-                    break;
-                }
-            }
-            if (matchToken) {
-                return int256(i);
-            }
-        }
-
-        return -1; // Not found
     }
 
     // Helper function to slice the bytes array (Intent in calldata) up to a certain length (start of token)
@@ -227,7 +196,8 @@ contract SimpleAccount is BaseAccount, TokenCallbackHandler, UUPSUpgradeable, In
         if (owner != hash.recover(userOp.signature)) {
             return SIG_VALIDATION_FAILED;
         }
-        return 0;
+        console2.log("signature validation success");
+        return 0; // Ok
     }
 
     function _call(address target, uint256 value, bytes memory data) internal {
