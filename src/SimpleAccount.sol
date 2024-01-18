@@ -131,16 +131,23 @@ contract SimpleAccount is BaseAccount, TokenCallbackHandler, UUPSUpgradeable, In
         uint256 sigLength = userOp.signature.length;
 
         if (sigLength > SIGNATURE_LENGTH) {
-            // There is an intent JSON at the end of the signature, 
+            // There is an intent JSON at the end of the signature,
             // include the remaining part of signature > 65 (intent json) for hashing
-            callData = _slice(userOp.signature, SIGNATURE_LENGTH, sigLength - SIGNATURE_LENGTH);
+            callData = _slice(userOp.signature, SIGNATURE_LENGTH, sigLength);
         }
 
         return keccak256(abi.encode(userOp.hashIntentOp(callData), address(_entryPoint), chainID));
     }
 
-    // Helper function to slice the bytes array (Intent in calldata) up to a certain length (start of token)
-    // Slicing logic in Solidity to return the part of the data from start to end
+    /**
+     * @dev Slices a bytes array to return a portion specified by the start and end indices.
+     * @param data The bytes array to be sliced.
+     * @param start The index in the bytes array where the slice begins.
+     * @param end The index in the bytes array where the slice ends (exclusive).
+     * @return result The sliced portion of the bytes array.
+     * Note: The function reverts if the start index is not less than the end index,
+     *       if start or end is out of the bounds of the data array.
+     */
     function _sliceSol(bytes memory data, uint256 start, uint256 end) internal pure returns (bytes memory) {
         if (end <= start) revert EndLessThanStart();
         if (end > data.length) revert EndOutOfBounds(data.length, end);
@@ -160,8 +167,15 @@ contract SimpleAccount is BaseAccount, TokenCallbackHandler, UUPSUpgradeable, In
         return _slice(data, start, end);
     }
 
-    // Helper function to slice the bytes array (Intent in calldata) up to a certain length (start of token)
-    // Slicing logic in Yul to return the part of the data from start to end
+    /**
+     * @dev Slices a bytes array to return a portion specified by the start and end indices.
+     * @param data The bytes array to be sliced.
+     * @param start The index in the bytes array where the slice begins.
+     * @param end The index in the bytes array where the slice ends (exclusive).
+     * @return result The sliced portion of the bytes array.
+     * Note: The function reverts if the start index is not less than the end index,
+     *       if start or end is out of the bounds of the data array.
+     */
     function _slice(bytes memory data, uint256 start, uint256 end) internal pure returns (bytes memory result) {
         if (end <= start) revert EndLessThanStart();
         if (end > data.length) revert EndOutOfBounds(data.length, end);
@@ -193,7 +207,7 @@ contract SimpleAccount is BaseAccount, TokenCallbackHandler, UUPSUpgradeable, In
     {
         bytes32 userOpHash = _getUserOpHash(userOp, block.chainid);
         bytes32 hash = userOpHash.toEthSignedMessageHash();
-        if (owner != hash.recover(userOp.signature)) {
+        if (owner != hash.recover(_slice(userOp.signature, 0, SIGNATURE_LENGTH))) {
             return SIG_VALIDATION_FAILED;
         }
         console2.log("signature validation success");

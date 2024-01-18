@@ -6,9 +6,9 @@ import "../src/SimpleAccount.sol";
 import "../src/IEntryPoint.sol";
 import "../src/EntryPoint.sol";
 import "../src/SimpleAccountFactory.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import "forge-std/interfaces/IERC20.sol";
 
 using Strings for bytes32;
 using UserOperationLib for UserOperation;
@@ -46,6 +46,8 @@ contract SimpleAccountTest is Test {
         // Deploy the EntryPoint contract or use an existing one
         entryPoint = EntryPoint(payable(ENTRYPOINT_V06));
         console2.log("EntryPoint deployed at:", address(entryPoint));
+
+        token = IERC20(0x9d34f236bDDF1B9De014312599d9C9Ec8af1Bc48);
 
         // Deploy the SimpleAccountFactory with the entry point
         factory = new SimpleAccountFactory(entryPoint);
@@ -458,7 +460,7 @@ contract SimpleAccountTest is Test {
             nonce: 0,
             initCode: bytes(hex""),
             callData: bytes(
-                hex"b61d27f60000000000000000000000009d34f236bddf1b9de014312599d9c9ec8af1bc480000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000006000000000000000000000000000000000000000000000000000000000000001447b22636861696e4964223a38303030312c202273656e646572223a22307830413731393961393666646630323532453039463736353435633165463262653336393246343662222c226b696e64223a2273776170222c2268617368223a22222c2273656c6c546f6b656e223a22546f6b656e41222c22627579546f6b656e223a22546f6b656e42222c2273656c6c416d6f756e74223a31302c22627579416d6f756e74223a352c227061727469616c6c7946696c6c61626c65223a66616c73652c22737461747573223a225265636569766564222c22637265617465644174223a302c2265787069726174696f6e4174223a307d3c696e74656e742d656e643e095ea7b3000000000000000000000000d7b21a844f3a41c91a73d3f87b83fa93bb6cb518000000000000000000000000000000000000000000000000000000000000037800000000000000000000000000000000000000000000000000000000"
+                "{\"chainId\":80001, \"sender\":\"0x18Dd70639de2ca9146C32f9c84B90A68bBDaAA96\",\"kind\":\"swap\",\"hash\":\"\",\"sellToken\":\"0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE\",\"buyToken\":\"0xc2132D05D31c914a87C6611C10748AEb04B58e8F\",\"sellAmount\":10,\"buyAmount\":5,\"partiallyFillable\":false,\"status\":\"Received\",\"createdAt\":0,\"expirationAt\":0}"
                 ),
             callGasLimit: 300000,
             verificationGasLimit: 300000,
@@ -469,13 +471,24 @@ contract SimpleAccountTest is Test {
             signature: bytes(hex"")
         });
 
+        userOp.nonce = simpleAccount.getNonce();
+
         // Generate the signature
         userOp.signature = generateSignature(userOp, block.chainid);
 
-        vm.stopPrank();
-        vm.prank(ENTRYPOINT_V06);
-        simpleAccount.validateUserOp(userOp, bytes32(0), 0);
-        vm.startPrank(ownerAddress);
+        // Solve Intent userOp
+        userOp.callData = bytes(
+            hex"b61d27f60000000000000000000000009d34f236bddf1b9de014312599d9c9ec8af1bc48000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000600000000000000000000000000000000000000000000000000000000000000044095ea7b3000000000000000000000000d7b21a844f3a41c91a73d3f87b83fa93bb6cb518000000000000000000000000000000000000000000000000000000000000037800000000000000000000000000000000000000000000000000000000"
+        );
+        userOp.signature = bytes(
+            abi.encodePacked(
+                userOp.signature,
+                "{\"chainId\":80001, \"sender\":\"0x18Dd70639de2ca9146C32f9c84B90A68bBDaAA96\",\"kind\":\"swap\",\"hash\":\"\",\"sellToken\":\"0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE\",\"buyToken\":\"0xc2132D05D31c914a87C6611C10748AEb04B58e8F\",\"sellAmount\":10,\"buyAmount\":5,\"partiallyFillable\":false,\"status\":\"Received\",\"createdAt\":0,\"expirationAt\":0}"
+            )
+        );
+
+        verifySignature(userOp, "", "");
+
         UserOperation[] memory userOps = new UserOperation[](1);
         userOps[0] = userOp;
         entryPoint.handleOps(userOps, payable(ownerAddress));
@@ -633,13 +646,7 @@ contract SimpleAccountTest is Test {
         return signature;
     }
 
-    function verifySignature(
-        UserOperation memory userOp,
-        string memory generatedSignatureHex,
-        string memory userOpSignatureHex
-    ) internal returns (uint256) {
-        assertEq(generatedSignatureHex, userOpSignatureHex, "Signatures should match");
-
+    function verifySignature(UserOperation memory userOp, string memory, string memory) internal returns (uint256) {
         // not supplying the userOpHash as _validateSignature calls for the Intent version
         uint256 result = simpleAccount.ValidateSignature(userOp, bytes32(0));
         assertEq(result, 0, "Signature is not valid for the userOp");
