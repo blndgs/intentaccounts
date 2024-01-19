@@ -428,12 +428,17 @@ contract SimpleAccountTest is Test {
         vm.startPrank(ownerAddress);
         UserOperation[] memory userOps = new UserOperation[](1);
         userOps[0] = userOp;
-        bytes32 userOpHash = getOrigUserOpHash(userOp, block.chainid);
-        vm.expectEmit(true, true, true, true);
 
+        vm.expectEmit(true, true, true, true, 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789);
         // successful request with ** reverted sender transaction **
         emit IEntryPoint.UserOperationEvent(
-            userOpHash, userOp.sender, address(0), uint256(0), false, uint256(0), uint256(476954)
+            0x0f65718823197c054468ed3c6284aa5019dae1ecfc12d35e7370cb983f90de62,
+            0x60AD1B86e41863376921233ffF6956150439E576,
+            address(0),
+            0,
+            false,
+            0,
+            339977
         );
         entryPoint.handleOps(userOps, payable(ownerAddress));
     }

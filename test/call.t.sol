@@ -21,9 +21,6 @@ contract Smt is ERC20 {
         mint(0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789, 10 ** 27);
         // dynamic entrypoint
         mint(0xbc1CBee1dD2c8a235DC75D9dE77EB049aa930cAB, 10 ** 27);
-        console2.log("Supply:", totalSupply());
-        console2.log("SMT owner:", msg.sender);
-        console2.log("balance of owner:", balanceOf(msg.sender));
     }
 
     function mint(address to, uint256 amount) public virtual {
@@ -36,16 +33,18 @@ contract Smt is ERC20 {
 }
 
 contract ContractB {
+    using Strings for address;
+
     mapping(address => uint256) public balances;
     string valueRet = "myValue";
 
-    function foo() external {
-        console2.log("foo() msg.sender:", msg.sender);
-        console2.log("msg.sender balance:", address(msg.sender).balance);
+    function foo(address target) external {
         _call(
-            0xA48aa11C63Fb430b8a321aE5a7e13A9F4Ae99024,
+            target,
             0,
-            bytes(hex"095ea7b3000000000000000000000000d7b21a844f3a41c91a73d3f87b83fa93bb6cb5180000000000000000000000000000000000000000000000000000000000000378")
+            bytes(
+                hex"095ea7b3000000000000000000000000d7b21a844f3a41c91a73d3f87b83fa93bb6cb5180000000000000000000000000000000000000000000000000000000000000378"
+            )
         );
     }
 
@@ -53,10 +52,6 @@ contract ContractB {
      * execute a transaction (called directly from owner, or by entryPoint)
      */
     function execute(address dest, uint256 value, bytes calldata func) external {
-        console2.log("entered execute()", dest);
-        console2.log("msg.sender", msg.sender);
-        console2.log("value", value);
-        console2.log("func", string(func));
         _call(dest, value, func);
     }
 
@@ -64,7 +59,6 @@ contract ContractB {
      * execute a sequence of transactions
      */
     function executeBatch(address[] calldata dest, bytes[] calldata func) external {
-        console2.log("entered executeBatch()");
         require(dest.length == func.length, "wrong array lengths");
         for (uint256 i = 0; i < dest.length; i++) {
             _call(dest[i], 0, func[i]);
@@ -72,13 +66,7 @@ contract ContractB {
     }
 
     function _call(address target, uint256 value, bytes memory data) internal {
-        console2.log("entered _call");
-        console2.log("target", target);
-        console2.log("value", value);
-        console2.logBytes(data);
         (bool success, bytes memory result) = target.call{value: value}(data);
-        console2.log("success", success);
-        console2.log("result", string(result));
         if (!success) {
             assembly {
                 revert(add(result, 32), mload(result))
@@ -117,12 +105,10 @@ contract aTest is Test {
         // Deploy ContractB
         b = new ContractB();
 
-        entryPoint = new EntryPoint();
-        ENTRYPOINT_V06 = address(entryPoint);
-
         // Deploy the EntryPoint contract or use an existing one
         // entryPoint = EntryPoint(payable(ENTRYPOINT_V06));
-        console2.log("EntryPoint deployed at:", address(entryPoint));
+        entryPoint = new EntryPoint();
+        ENTRYPOINT_V06 = address(entryPoint);
 
         // Deploy the SimpleAccountFactory with the entry point
         factory = new SimpleAccountFactory(entryPoint);
@@ -133,30 +119,23 @@ contract aTest is Test {
 
         // Create an SMT token
         smt = new Smt();
-        console2.log("SMT deployed at:", address(smt));
 
-        uint256 amount = 100 ether; // Amount of Ether you want to allocate
-
-        // Check the new balance (optional, for verification)
-        uint256 origBalance = address(ownerAddress).balance;
-        console.log("Original Ether balance of ownerAddress:", origBalance);
+        uint256 amount = 100 ether;
 
         // Fund the ownerAddress with the specified amount of Ether
         vm.deal(ownerAddress, amount);
         vm.deal(0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789, amount);
-
-        // Check the new balance (optional, for verification)
-        uint256 newBalance = address(ownerAddress).balance;
-        console.log("New Ether balance of ownerAddress:", newBalance);
     }
 
-    // Function to call 'foo' in ContractB
+    // Contract calls illustrasted in multiple ways
     function testCallDo() external payable {
         // Use the address of the deployed ContractB instance
         address target = address(b);
 
+        address erc20token = address(smt);
+
         // Prepare call data for 'foo()' function
-        bytes memory callData = abi.encodeWithSignature("foo()");
+        bytes memory callData = abi.encodeWithSignature("foo(address)", erc20token);
 
         // Call 'foo()' function in ContractB using a low-level call
         // Custom call to 'foo()' function in ContractB
@@ -165,25 +144,33 @@ contract aTest is Test {
         // Check if the call was successful
         require(success, "Call to ContractB failed");
 
-        // b.execute(
-        //     0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789,
-        //     35000,
-        //     bytes(
-        //         hex"b760faf9000000000000000000000000a4bfe126d3ad137f972695dddb1780a29065e556"
-        //     )
-        // );
-        // simpleAccount.execute(target, 0, bytes(hex""));
-        // simpleAccount.execute(target, 0, bytes(hex'095ea7b3000000000000000000000000d7b21a844f3a41c91a73d3f87b83fa93bb6cb5180000000000000000000000000000000000000000000000000000000000000378'));
+        // Call execute() function in ContractB using a Yul call
+        // through indirection via execute(), which calls _call()
         address to = address(smt);
-        bytes memory data = bytes(hex"095ea7b3000000000000000000000000d7b21a844f3a41c91a73d3f87b83fa93bb6cb5180000000000000000000000000000000000000000000000000000000000000378");
-        uint256 value = 35000;
-        (success, ) = to.call{value: value}(data);
-        console2.log("success2", success);
+        b.execute(
+            to,
+            0,
+            bytes(
+                hex"095ea7b3000000000000000000000000d7b21a844f3a41c91a73d3f87b83fa93bb6cb5180000000000000000000000000000000000000000000000000000000000000378"
+            )
+        );
 
-        // Send Ether using low-level call
+        bytes memory data = bytes(
+            hex"095ea7b3000000000000000000000000d7b21a844f3a41c91a73d3f87b83fa93bb6cb5180000000000000000000000000000000000000000000000000000000000000378"
+        );
+        (success,) = to.call(data);
+        require(success, "Call to ContractB failed");
+
+        // Yul call() example
+        uint256 value = 0;
+
         assembly {
-            success := call(300000, to, value, data, mload(data), 0, 0)
+            let dataLength := mload(data) // Load the length of data from the first 32 bytes
+
+            // add(data, 32) adjusts the pointer to skip the length prefix of the
+            // dynamic array, and dataLength is the actual length of the data.
+            success := call(300000, to, value, add(data, 32), dataLength, 0, 0)
         }
-        console2.log("success3", success);
+        require(success, "Yul call failed");
     }
 }
