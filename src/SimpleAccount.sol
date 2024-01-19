@@ -5,10 +5,10 @@ pragma solidity ^0.8.12;
 /* solhint-disable no-inline-assembly */
 /* solhint-disable reason-string */
 
-import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import "./ECDSA.sol";
 
 import "./BaseAccount.sol";
 import "./TokenCallbackHandler.sol";
@@ -207,7 +207,7 @@ contract SimpleAccount is BaseAccount, TokenCallbackHandler, UUPSUpgradeable, In
     {
         bytes32 userOpHash = _getUserOpHash(userOp, block.chainid);
         bytes32 hash = userOpHash.toEthSignedMessageHash();
-        if (owner != hash.recover(_slice(userOp.signature, 0, SIGNATURE_LENGTH))) {
+        if (owner != hash.recover(userOp.signature)) {
             return SIG_VALIDATION_FAILED;
         }
         console2.log("signature validation success");
