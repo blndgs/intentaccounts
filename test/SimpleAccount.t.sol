@@ -152,14 +152,12 @@ contract SimpleAccountTest is Test {
                 )
         });
 
-        // Generate the signature
-        string memory generatedSignatureHex = toHexString(generateSignature(userOp, block.chainid));
+        userOp.nonce = simpleAccount.getNonce();
 
-        verifySignature(
-            userOp,
-            generatedSignatureHex,
-            "0x92f25342760a82b7e5649ed7c6d2d7cb93c0093f66c916d7e57de4af0ae00e2b0524bf364778c6b30c491354be332a1ce521e8a57c5e26f94f8069a404520e931b"
-        );
+        // Generate the signature
+        userOp.signature = generateSignature(userOp, block.chainid);
+
+        verifySignature(userOp);
     }
 
     function testValidateMumbaiLongCallData() public {
@@ -184,14 +182,12 @@ contract SimpleAccountTest is Test {
                 )
         });
 
-        // Generate the signature
-        string memory generatedSignatureHex = toHexString(generateSignature(userOp, block.chainid));
+        userOp.nonce = simpleAccount.getNonce();
 
-        verifySignature(
-            userOp,
-            generatedSignatureHex,
-            "0x74199499de42614e0172afc5781179682f311ed1ec8b369d5a4d8bae4e68f3387e9cab11473b4fb65932e4a8812793f6b7e80a9700855fde454109ceeac02e911b"
-        );
+        // Generate the signature
+        userOp.signature = generateSignature(userOp, block.chainid);
+
+        verifySignature(userOp);
     }
 
     function testValidateMumbai_UnsolvedIntentOp() public {
@@ -216,14 +212,12 @@ contract SimpleAccountTest is Test {
                 )
         });
 
-        // Generate the signature
-        string memory generatedSignatureHex = toHexString(generateSignature(userOp, block.chainid));
+        userOp.nonce = simpleAccount.getNonce();
 
-        verifySignature(
-            userOp,
-            generatedSignatureHex,
-            "0x8a2e15b3a0b4964c99e8929d26b081c94b0b284f9a67052019450911a9ee1dd964c862655d9ffc0b97350f5987a6793085adc8cc2297dc97e4b21666539148171b"
-        );
+        // Generate the signature
+        userOp.signature = generateSignature(userOp, block.chainid);
+
+        verifySignature(userOp);
     }
 
     function testValidateMumbai_UnsolvedIntent0GasOp() public {
@@ -248,14 +242,12 @@ contract SimpleAccountTest is Test {
                 )
         });
 
-        // Generate the signature
-        string memory generatedSignatureHex = toHexString(generateSignature(userOp, block.chainid));
+        userOp.nonce = simpleAccount.getNonce();
 
-        verifySignature(
-            userOp,
-            generatedSignatureHex,
-            "0x1b2c01e59028d70e881fc913570014ca4d693e29725dbbb5cd56cdc8b8f5007e6188fd6afd3482d65703c3a884195712c901aebf3a0964de04367e8c827340db1b"
-        );
+        // Generate the signature
+        userOp.signature = generateSignature(userOp, block.chainid);
+
+        verifySignature(userOp);
     }
 
     function testValidateMumbai_SolvedNilIntentOp() public {
@@ -278,14 +270,12 @@ contract SimpleAccountTest is Test {
                 )
         });
 
-        // Generate the signature
-        string memory generatedSignatureHex = toHexString(generateSignature(userOp, block.chainid));
+        userOp.nonce = simpleAccount.getNonce();
 
-        verifySignature(
-            userOp,
-            generatedSignatureHex,
-            "0x1b81c8280ec9fbf3009c650a67eadac8ab53ab645f55bdb927a870b40649904f7d1a5e9bd75b7e362625f05874f53d9e071cdc27baa43fc5a89b1338f24a9c7b1b"
-        );
+        // Generate the signature
+        userOp.signature = generateSignature(userOp, block.chainid);
+
+        verifySignature(userOp);
     }
 
     function testValidateMumbai_SolvedIntentOpNilSolution() public {
@@ -310,14 +300,12 @@ contract SimpleAccountTest is Test {
                 )
         });
 
-        // Generate the signature
-        string memory generatedSignatureHex = toHexString(generateSignature(userOp, block.chainid));
+        userOp.nonce = simpleAccount.getNonce();
 
-        verifySignature(
-            userOp,
-            generatedSignatureHex,
-            "0xe14ea21c8d6478388bfc9e5f1bf9a0d45fe1359fbfeac193e8b504be2db9fc317f6c6b06bff42328af64f6be85a31e729d2cab6c6b83ebf3ef12bc4cc344e9c31c"
-        );
+        // Generate the signature
+        userOp.signature = generateSignature(userOp, block.chainid);
+
+        verifySignature(userOp);
     }
 
     function testValidateMumbai_SolvedIntentOp() public {
@@ -342,14 +330,12 @@ contract SimpleAccountTest is Test {
                 )
         });
 
-        // Generate the signature
-        string memory generatedSignatureHex = toHexString(generateSignature(userOp, block.chainid));
+        userOp.nonce = simpleAccount.getNonce();
 
-        verifySignature(
-            userOp,
-            generatedSignatureHex,
-            "0x1b2c01e59028d70e881fc913570014ca4d693e29725dbbb5cd56cdc8b8f5007e6188fd6afd3482d65703c3a884195712c901aebf3a0964de04367e8c827340db1b"
-        );
+        // Generate the signature
+        userOp.signature = generateSignature(userOp, block.chainid);
+
+        verifySignature(userOp);
     }
 
     function testExecuteMumbai_EmptyOp() public {
@@ -487,7 +473,7 @@ contract SimpleAccountTest is Test {
             )
         );
 
-        verifySignature(userOp, "", "");
+        verifySignature(userOp);
 
         UserOperation[] memory userOps = new UserOperation[](1);
         userOps[0] = userOp;
@@ -646,7 +632,7 @@ contract SimpleAccountTest is Test {
         return signature;
     }
 
-    function verifySignature(UserOperation memory userOp, string memory, string memory) internal returns (uint256) {
+    function verifySignature(UserOperation memory userOp) internal returns (uint256) {
         // not supplying the userOpHash as _validateSignature calls for the Intent version
         uint256 result = simpleAccount.ValidateSignature(userOp, bytes32(0));
         assertEq(result, 0, "Signature is not valid for the userOp");
