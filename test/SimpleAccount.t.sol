@@ -7,8 +7,8 @@ import "../src/IEntryPoint.sol";
 import "../src/EntryPoint.sol";
 import "../src/SimpleAccountFactory.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
-import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "forge-std/interfaces/IERC20.sol";
+import "../src/ECDSA.sol";
 
 using Strings for bytes32;
 using UserOperationLib for UserOperation;
