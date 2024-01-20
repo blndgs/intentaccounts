@@ -210,7 +210,6 @@ contract SimpleAccount is BaseAccount, TokenCallbackHandler, UUPSUpgradeable, In
         if (owner != hash.recover(userOp.signature)) {
             return SIG_VALIDATION_FAILED;
         }
-        console2.log("signature validation success");
         return 0; // Ok
     }
 
