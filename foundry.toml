@@ -1,6 +1,9 @@
 [rpc_endpoints]
 mumbai = "${MUMBAI_RPC_URL}"
 
+[etherscan]
+mumbai = { key = "${POLYGONSCAN_API_KEY}" }
+
 [profile.default]
 solc = "0.8.23"
 src = "src"
