@@ -49,11 +49,11 @@ contract SimpleAccountTest is Test {
 
         token = IERC20(0x9d34f236bDDF1B9De014312599d9C9Ec8af1Bc48);
 
-        // Deploy the SimpleAccountFactory with the entry point
-        factory = new SimpleAccountFactory(entryPoint);
+        // Sync the factory with the deployed contract at Mumbai
+        factory = SimpleAccountFactory(0xA48aa11C63Fb430b8a321aE5a7e13A9F4Ae99024);
 
-        // Create an account using the factory
-        simpleAccount = factory.createAccount(ownerAddress, salt);
+        // Sync with the deployed contract at Mumbai
+        simpleAccount = SimpleAccount(payable(0x60AD1B86e41863376921233ffF6956150439E576));
         console2.log("SimpleAccount deployed at:", address(simpleAccount));
     }
 
@@ -101,11 +101,13 @@ contract SimpleAccountTest is Test {
     // 5. Sign the Eth Signed text with the owner's private key
     // vm.sign(ownerPrivateKey, ethSigned)
 
-    function testValidateSignature() public {
+    function testSimpleAccountAddress() public {
         // Validate the account address
-        address expectedAddress = factory.getAddress(ownerAddress, salt);
-        assertEq(address(simpleAccount), expectedAddress, "Account address does not match expected address");
+        address generatedAddress = factory.getAddress(ownerAddress, salt);
+        assertEq(address(simpleAccount), generatedAddress, "Account address does not match expected address");
+    }
 
+    function testValidateSignature() public {
         // Prepare the UserOperation object to sign
         UserOperation memory userOp = UserOperation({
             sender: ownerAddress,
@@ -428,6 +430,7 @@ contract SimpleAccountTest is Test {
         vm.startPrank(ownerAddress);
         UserOperation[] memory userOps = new UserOperation[](1);
         userOps[0] = userOp;
+
         vm.expectEmit(true, true, true, false, 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789);
         // successful request with ** reverted sender transaction **
         emit IEntryPoint.UserOperationEvent(
