@@ -12,3 +12,14 @@ docs/
 
 # Dotenv file
 .env
+
+.idea/
+
+node_modules
+.vscode/
+
+# linter
+.solhint.json
+
+# deployments
+broadcast

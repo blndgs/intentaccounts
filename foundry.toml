@@ -1,6 +1,15 @@
+[rpc_endpoints]
+mumbai = "${MUMBAI_RPC_URL}"
+
+[etherscan]
+mumbai = { key = "${POLYGONSCAN_API_KEY}" }
+
 [profile.default]
+solc = "0.8.23"
 src = "src"
 out = "out"
 libs = ["lib"]
+evmVersion = "shanghai"
+
 
 # See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options
