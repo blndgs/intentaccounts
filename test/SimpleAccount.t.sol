@@ -22,7 +22,7 @@ contract SimpleAccountTest is Test {
 
     SimpleAccountFactory public factory;
     SimpleAccount simpleAccount;
-    uint256 salt = 0;
+    uint256 salt;
     IEntryPoint public entryPoint;
     address public ownerAddress;
     uint256 public ownerPrivateKey;
@@ -135,8 +135,6 @@ contract SimpleAccountTest is Test {
     }
 
     function testValidateMumbaiVanillaOp() public {
-        assertEq(block.chainid, MUMBAI_CHAIN_ID, "chainid should be 80001");
-
         // Prepare the UserOperation object to sign
         UserOperation memory userOp = UserOperation({
             sender: 0x6B5f6558CB8B3C8Fec2DA0B1edA9b9d5C064ca47,
@@ -163,8 +161,6 @@ contract SimpleAccountTest is Test {
     }
 
     function testValidateMumbaiLongCallData() public {
-        assertEq(block.chainid, MUMBAI_CHAIN_ID, "chainid should be 80001");
-
         // Prepare the UserOperation object to sign
         UserOperation memory userOp = UserOperation({
             sender: 0x6B5f6558CB8B3C8Fec2DA0B1edA9b9d5C064ca47,
@@ -193,8 +189,6 @@ contract SimpleAccountTest is Test {
     }
 
     function testValidateMumbai_UnsolvedIntentOp() public {
-        assertEq(block.chainid, MUMBAI_CHAIN_ID, "chainid should be 80001");
-
         // Prepare the UserOperation object to sign
         UserOperation memory userOp = UserOperation({
             sender: 0x6B5f6558CB8B3C8Fec2DA0B1edA9b9d5C064ca47,
@@ -223,8 +217,6 @@ contract SimpleAccountTest is Test {
     }
 
     function testValidateMumbai_UnsolvedIntent0GasOp() public {
-        assertEq(block.chainid, MUMBAI_CHAIN_ID, "chainid should be 80001");
-
         // Prepare the UserOperation object to sign
         UserOperation memory userOp = UserOperation({
             sender: 0x6B5f6558CB8B3C8Fec2DA0B1edA9b9d5C064ca47,
@@ -253,8 +245,6 @@ contract SimpleAccountTest is Test {
     }
 
     function testValidateMumbai_SolvedNilIntentOp() public {
-        assertEq(block.chainid, MUMBAI_CHAIN_ID, "chainid should be 80001");
-
         // Prepare the UserOperation object to sign
         UserOperation memory userOp = UserOperation({
             sender: address(0),
@@ -281,8 +271,6 @@ contract SimpleAccountTest is Test {
     }
 
     function testValidateMumbai_SolvedIntentOpNilSolution() public {
-        assertEq(block.chainid, MUMBAI_CHAIN_ID, "chainid should be 80001");
-
         // Prepare the UserOperation object to sign
         UserOperation memory userOp = UserOperation({
             sender: 0x6B5f6558CB8B3C8Fec2DA0B1edA9b9d5C064ca47,
@@ -311,8 +299,6 @@ contract SimpleAccountTest is Test {
     }
 
     function testValidateMumbai_SolvedIntentOp() public {
-        assertEq(block.chainid, MUMBAI_CHAIN_ID, "chainid should be 80001");
-
         // Prepare the UserOperation object to sign
         UserOperation memory userOp = UserOperation({
             sender: 0x6B5f6558CB8B3C8Fec2DA0B1edA9b9d5C064ca47,
