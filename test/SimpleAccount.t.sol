@@ -55,8 +55,8 @@ contract SimpleAccountTest is Test {
 
         token = IERC20(0x9d34f236bDDF1B9De014312599d9C9Ec8af1Bc48);
 
-        // Sync the factory with the deployed contract at Mumbai
-        factory = SimpleAccountFactory(0xA48aa11C63Fb430b8a321aE5a7e13A9F4Ae99024);
+        // Create a unique salt for the account creation
+        string memory saltEnv = string(abi.encodePacked(network, "_SALT"));
 
         uint256 startGas = gasleft();
 
@@ -348,6 +348,8 @@ contract SimpleAccountTest is Test {
             signature: bytes(hex"")
         });
 
+        userOp.nonce = simpleAccount.getNonce();
+
         // Generate the signature
         userOp.signature = generateSignature(userOp, block.chainid);
 
@@ -384,6 +386,8 @@ contract SimpleAccountTest is Test {
             signature: bytes(hex"")
         });
 
+        userOp.nonce = simpleAccount.getNonce();
+
         // Generate the signature
         userOp.signature = generateSignature(userOp, block.chainid);
 
@@ -412,6 +416,8 @@ contract SimpleAccountTest is Test {
             paymasterAndData: bytes(hex""),
             signature: bytes(hex"")
         });
+
+        userOp.nonce = simpleAccount.getNonce();
 
         // Generate the signature
         userOp.signature = generateSignature(userOp, block.chainid);
