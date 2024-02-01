@@ -16,6 +16,7 @@ using UserOperationLib for UserOperation;
 contract SimpleAccountTest is Test {
     address public constant ENTRYPOINT_V06 = 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789;
     uint256 public constant MUMBAI_CHAIN_ID = 80001;
+    uint256 public constant POLYGON_CHAIN_ID = 137;
     uint256 mumbaiFork;
 
     using ECDSA for bytes32;
@@ -28,18 +29,23 @@ contract SimpleAccountTest is Test {
     uint256 public ownerPrivateKey;
     IERC20 public token;
 
+    string network;
+
     function setUp() public {
+        network = vm.envString("NETWORK");
+
         // Retrieve the MUMBAI_PRIVATE_KEY from the .env file
-        string memory mumbaiPrivateKeyString = vm.envString("MUMBAI_PRIVATE_KEY");
+        string memory privateKeyEnv = string(abi.encodePacked(network, "_PRIVATE_KEY"));
 
         // Derive the Ethereum address from the private key
-        ownerPrivateKey = vm.parseUint(mumbaiPrivateKeyString);
+        ownerPrivateKey = vm.parseUint(privateKeyString);
         ownerAddress = vm.addr(ownerPrivateKey);
         assertEq(ownerAddress, 0xa4BFe126D3aD137F972695dDdb1780a29065e556, "Owner address should match");
 
         // Create a VM instance for the MUMBAI fork
-        mumbaiFork = vm.createSelectFork(vm.envString("MUMBAI_RPC_URL"));
-        assertEq(MUMBAI_CHAIN_ID, block.chainid, "chainid should be 80001");
+        string memory urlEnv = string(abi.encodePacked(network, "_RPC_URL"));
+        mumbaiFork = vm.createSelectFork(vm.envString(urlEnv));
+        assert(MUMBAI_CHAIN_ID == block.chainid || POLYGON_CHAIN_ID == block.chainid);
 
         vm.startPrank(ownerAddress);
 
@@ -52,9 +58,9 @@ contract SimpleAccountTest is Test {
         // Sync the factory with the deployed contract at Mumbai
         factory = SimpleAccountFactory(0xA48aa11C63Fb430b8a321aE5a7e13A9F4Ae99024);
 
-        // Sync with the deployed contract at Mumbai
-        simpleAccount = SimpleAccount(payable(0x60AD1B86e41863376921233ffF6956150439E576));
-        console2.log("SimpleAccount deployed at:", address(simpleAccount));
+        uint256 startGas = gasleft();
+
+        // Sync the factory with the deployed contract at Mannet
     }
 
     // Signature Steps:
@@ -417,17 +423,9 @@ contract SimpleAccountTest is Test {
         UserOperation[] memory userOps = new UserOperation[](1);
         userOps[0] = userOp;
 
-        vm.expectEmit(true, true, true, false, 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789);
+        vm.expectEmit(false, true, true, false, 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789);
         // successful request with ** reverted sender transaction **
-        emit IEntryPoint.UserOperationEvent(
-            0x0f65718823197c054468ed3c6284aa5019dae1ecfc12d35e7370cb983f90de62,
-            0x60AD1B86e41863376921233ffF6956150439E576,
-            address(0),
-            0,
-            false,
-            0,
-            0
-        );
+        emit IEntryPoint.UserOperationEvent(0, address(simpleAccount), address(0), 0, false, 0, 0);
         entryPoint.handleOps(userOps, payable(ownerAddress));
     }
 
