@@ -13,7 +13,7 @@ import "../src/ECDSA.sol";
 using Strings for bytes32;
 using UserOperationLib for UserOperation;
 
-contract SimpleAccountTest is Test {
+contract SimpleAccountMainnetTest is Test {
     address public constant ENTRYPOINT_V06 = 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789;
     uint256 public constant MUMBAI_CHAIN_ID = 80001;
     uint256 public constant POLYGON_CHAIN_ID = 137;
@@ -36,11 +36,12 @@ contract SimpleAccountTest is Test {
 
         // Retrieve the MUMBAI_PRIVATE_KEY from the .env file
         string memory privateKeyEnv = string(abi.encodePacked(network, "_PRIVATE_KEY"));
+        string memory privateKeyString = vm.envString(privateKeyEnv);
 
         // Derive the Ethereum address from the private key
         ownerPrivateKey = vm.parseUint(privateKeyString);
         ownerAddress = vm.addr(ownerPrivateKey);
-        assertEq(ownerAddress, 0xa4BFe126D3aD137F972695dDdb1780a29065e556, "Owner address should match");
+        assertEq(ownerAddress, 0xc9164f44661d83d01CbB69C0b0E471280f446099, "Owner address should match");
 
         // Create a VM instance for the MUMBAI fork
         string memory urlEnv = string(abi.encodePacked(network, "_RPC_URL"));
@@ -57,10 +58,28 @@ contract SimpleAccountTest is Test {
 
         // Create a unique salt for the account creation
         string memory saltEnv = string(abi.encodePacked(network, "_SALT"));
+        salt = vm.envUint(saltEnv);
+        console2.log("Salt:", salt);
 
         uint256 startGas = gasleft();
 
         // Sync the factory with the deployed contract at Mannet
+        factory = SimpleAccountFactory(0x42E60c23aCe33c23e0945a07f6e2c1E53843a1d5);
+        console2.log("SimpleAccountFactory synced at:", address(factory));
+        uint256 endGas = gasleft();
+        console2.log("Gas used for Factory sync: ", startGas - endGas);
+        startGas = endGas;
+
+        // Use the factory to create a new SimpleAccount instance
+        simpleAccount = SimpleAccount(payable (0x89D05CEc8CDdc6801feD02DDB54F0dA31953a1fC));
+        console2.log("SimpleAccount wallet created at:", address(simpleAccount));
+        console2.log("Gas used for wallet creation: ", startGas - endGas);
+        startGas = endGas;
+
+        // verify the created account's address matches the expected counterfactual address
+        address expectedAddress = factory.getAddress(ownerAddress, salt);
+        assert(address(simpleAccount) == expectedAddress);
+        console2.log("New simpleAccount address:", expectedAddress);
     }
 
     // Signature Steps:
