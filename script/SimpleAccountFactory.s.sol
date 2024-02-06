@@ -5,25 +5,20 @@ import "forge-std/Script.sol";
 import "../src/SimpleAccountFactory.sol";
 
 contract deploySimpleAccountFactory is Script {
-    bool dryRun;
+    string network;
 
-    function setUp() public {}
+    function setUp() public {
+        network = vm.envString("NETWORK");
+    }
 
     function run() public {
         uint256 startGas = gasleft();
 
-        dryRun = vm.envBool("DRY_RUN");
-        console2.log("Dry run:", dryRun);
-        if (dryRun) {
-            uint256 fork = vm.createFork(vm.envString("MUMBAI_RPC_URL")); // Fork the Mumbai network
-            vm.selectFork(fork);
-        }
-
         // Setup signer
-        string memory mumbaiPrivateKeyString = vm.envString("MUMBAI_PRIVATE_KEY");
+        string memory privateKeyEnv = string(abi.encodePacked(network, "_PRIVATE_KEY"));
+        string memory mumbaiPrivateKeyString = vm.envString(privateKeyEnv);
         uint256 signerPrivateKey = vm.parseUint(mumbaiPrivateKeyString);
         address signer = vm.addr(signerPrivateKey);
-        assert(signer == 0xa4BFe126D3aD137F972695dDdb1780a29065e556);
 
         // Start impersonating the deployer account
         console2.log("Network ID:", block.chainid);
@@ -32,22 +27,21 @@ contract deploySimpleAccountFactory is Script {
 
         console2.log("Owner of SimpleAccount", signer);
 
-        if (!dryRun) {
-            vm.startBroadcast(signerPrivateKey);
-        }
+        vm.startBroadcast(signerPrivateKey);
 
         // Define entry point address and owner address
         address entryPointAddress = 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789;
 
         // Deploy the SimpleAccountFactory with the EntryPoint
-        try new SimpleAccountFactory(IEntryPoint(entryPointAddress)) returns (SimpleAccountFactory factory) {
+        SimpleAccountFactory factory = SimpleAccountFactory(0x42E60c23aCe33c23e0945a07f6e2c1E53843a1d5);
             console2.log("SimpleAccountFactory deployed at:", address(factory));
             uint256 endGas = gasleft();
             console2.log("Gas used for Factory deployment: ", startGas - endGas);
             startGas = endGas;
 
             // Create a unique salt for the account creation
-            uint256 salt = vm.envUint("MUMBAI_SALT");
+            string memory saltEnv = string(abi.encodePacked(network, "_SALT"));
+            uint256 salt = vm.envUint(saltEnv);
             console2.log("Salt:", salt);
 
             // Use the factory to create a new SimpleAccount instance
@@ -61,6 +55,9 @@ contract deploySimpleAccountFactory is Script {
                 address expectedAddress = factory.getAddress(signer, salt);
                 assert(address(account) == expectedAddress);
                 console2.log("New simpleAccount address:", expectedAddress);
+                uint nonce = account.getNonce();
+                console2.log("Account nonce", nonce);
+
             } catch Error(string memory reason) {
                 console2.log("An error occurred when created a wallet:", reason);
             } catch Panic(uint256 errorCode) {
@@ -68,17 +65,15 @@ contract deploySimpleAccountFactory is Script {
             } catch {
                 console2.log("An unexpected error occurred when created a wallet");
             }
-        } catch Error(string memory reason) {
-            console2.log("An error occurred when deployed the wallet factory:", reason);
-        } catch Panic(uint256 errorCode) {
-            console2.log("A panic occurred when deployed the wallet factory (code", errorCode, ")");
-        } catch {
-            console2.log("An unexpected error occurred when deployed the wallet factory");
-        }
+        // } catch Error(string memory reason) {
+        //     console2.log("An error occurred when deployed the wallet factory:", reason);
+        // } catch Panic(uint256 errorCode) {
+        //     console2.log("A panic occurred when deployed the wallet factory (code", errorCode, ")");
+        // } catch {
+        //     console2.log("An unexpected error occurred when deployed the wallet factory");
+        // }
 
-        if (!dryRun) {
-            vm.stopBroadcast(); // End the broadcast session
-        }
+        vm.stopBroadcast(); // End the broadcast session
 
         console2.log("Balance of signer in Gwei:", weiToGwei(signer.balance), "Gwei");
     }

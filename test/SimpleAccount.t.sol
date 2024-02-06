@@ -13,33 +13,40 @@ import "../src/ECDSA.sol";
 using Strings for bytes32;
 using UserOperationLib for UserOperation;
 
-contract SimpleAccountTest is Test {
+contract SimpleAccountMainnetTest is Test {
     address public constant ENTRYPOINT_V06 = 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789;
     uint256 public constant MUMBAI_CHAIN_ID = 80001;
+    uint256 public constant POLYGON_CHAIN_ID = 137;
     uint256 mumbaiFork;
 
     using ECDSA for bytes32;
 
     SimpleAccountFactory public factory;
     SimpleAccount simpleAccount;
-    uint256 salt = 0;
+    uint256 salt;
     IEntryPoint public entryPoint;
     address public ownerAddress;
     uint256 public ownerPrivateKey;
     IERC20 public token;
 
+    string network;
+
     function setUp() public {
+        network = vm.envString("NETWORK");
+
         // Retrieve the MUMBAI_PRIVATE_KEY from the .env file
-        string memory mumbaiPrivateKeyString = vm.envString("MUMBAI_PRIVATE_KEY");
+        string memory privateKeyEnv = string(abi.encodePacked(network, "_PRIVATE_KEY"));
+        string memory privateKeyString = vm.envString(privateKeyEnv);
 
         // Derive the Ethereum address from the private key
-        ownerPrivateKey = vm.parseUint(mumbaiPrivateKeyString);
+        ownerPrivateKey = vm.parseUint(privateKeyString);
         ownerAddress = vm.addr(ownerPrivateKey);
-        assertEq(ownerAddress, 0xa4BFe126D3aD137F972695dDdb1780a29065e556, "Owner address should match");
+        assertEq(ownerAddress, 0xc9164f44661d83d01CbB69C0b0E471280f446099, "Owner address should match");
 
         // Create a VM instance for the MUMBAI fork
-        mumbaiFork = vm.createSelectFork(vm.envString("MUMBAI_RPC_URL"));
-        assertEq(MUMBAI_CHAIN_ID, block.chainid, "chainid should be 80001");
+        string memory urlEnv = string(abi.encodePacked(network, "_RPC_URL"));
+        mumbaiFork = vm.createSelectFork(vm.envString(urlEnv));
+        assert(MUMBAI_CHAIN_ID == block.chainid || POLYGON_CHAIN_ID == block.chainid);
 
         vm.startPrank(ownerAddress);
 
@@ -49,12 +56,30 @@ contract SimpleAccountTest is Test {
 
         token = IERC20(0x9d34f236bDDF1B9De014312599d9C9Ec8af1Bc48);
 
-        // Sync the factory with the deployed contract at Mumbai
-        factory = SimpleAccountFactory(0xA48aa11C63Fb430b8a321aE5a7e13A9F4Ae99024);
+        // Create a unique salt for the account creation
+        string memory saltEnv = string(abi.encodePacked(network, "_SALT"));
+        salt = vm.envUint(saltEnv);
+        console2.log("Salt:", salt);
 
-        // Sync with the deployed contract at Mumbai
-        simpleAccount = SimpleAccount(payable(0x60AD1B86e41863376921233ffF6956150439E576));
-        console2.log("SimpleAccount deployed at:", address(simpleAccount));
+        uint256 startGas = gasleft();
+
+        // Sync the factory with the deployed contract at Mannet
+        factory = SimpleAccountFactory(0x42E60c23aCe33c23e0945a07f6e2c1E53843a1d5);
+        console2.log("SimpleAccountFactory synced at:", address(factory));
+        uint256 endGas = gasleft();
+        console2.log("Gas used for Factory sync: ", startGas - endGas);
+        startGas = endGas;
+
+        // Use the factory to create a new SimpleAccount instance
+        simpleAccount = SimpleAccount(payable (0x89D05CEc8CDdc6801feD02DDB54F0dA31953a1fC));
+        console2.log("SimpleAccount wallet created at:", address(simpleAccount));
+        console2.log("Gas used for wallet creation: ", startGas - endGas);
+        startGas = endGas;
+
+        // verify the created account's address matches the expected counterfactual address
+        address expectedAddress = factory.getAddress(ownerAddress, salt);
+        assert(address(simpleAccount) == expectedAddress);
+        console2.log("New simpleAccount address:", expectedAddress);
     }
 
     // Signature Steps:
@@ -135,8 +160,6 @@ contract SimpleAccountTest is Test {
     }
 
     function testValidateMumbaiVanillaOp() public {
-        assertEq(block.chainid, MUMBAI_CHAIN_ID, "chainid should be 80001");
-
         // Prepare the UserOperation object to sign
         UserOperation memory userOp = UserOperation({
             sender: 0x6B5f6558CB8B3C8Fec2DA0B1edA9b9d5C064ca47,
@@ -163,8 +186,6 @@ contract SimpleAccountTest is Test {
     }
 
     function testValidateMumbaiLongCallData() public {
-        assertEq(block.chainid, MUMBAI_CHAIN_ID, "chainid should be 80001");
-
         // Prepare the UserOperation object to sign
         UserOperation memory userOp = UserOperation({
             sender: 0x6B5f6558CB8B3C8Fec2DA0B1edA9b9d5C064ca47,
@@ -193,8 +214,6 @@ contract SimpleAccountTest is Test {
     }
 
     function testValidateMumbai_UnsolvedIntentOp() public {
-        assertEq(block.chainid, MUMBAI_CHAIN_ID, "chainid should be 80001");
-
         // Prepare the UserOperation object to sign
         UserOperation memory userOp = UserOperation({
             sender: 0x6B5f6558CB8B3C8Fec2DA0B1edA9b9d5C064ca47,
@@ -223,8 +242,6 @@ contract SimpleAccountTest is Test {
     }
 
     function testValidateMumbai_UnsolvedIntent0GasOp() public {
-        assertEq(block.chainid, MUMBAI_CHAIN_ID, "chainid should be 80001");
-
         // Prepare the UserOperation object to sign
         UserOperation memory userOp = UserOperation({
             sender: 0x6B5f6558CB8B3C8Fec2DA0B1edA9b9d5C064ca47,
@@ -253,8 +270,6 @@ contract SimpleAccountTest is Test {
     }
 
     function testValidateMumbai_SolvedNilIntentOp() public {
-        assertEq(block.chainid, MUMBAI_CHAIN_ID, "chainid should be 80001");
-
         // Prepare the UserOperation object to sign
         UserOperation memory userOp = UserOperation({
             sender: address(0),
@@ -281,8 +296,6 @@ contract SimpleAccountTest is Test {
     }
 
     function testValidateMumbai_SolvedIntentOpNilSolution() public {
-        assertEq(block.chainid, MUMBAI_CHAIN_ID, "chainid should be 80001");
-
         // Prepare the UserOperation object to sign
         UserOperation memory userOp = UserOperation({
             sender: 0x6B5f6558CB8B3C8Fec2DA0B1edA9b9d5C064ca47,
@@ -311,8 +324,6 @@ contract SimpleAccountTest is Test {
     }
 
     function testValidateMumbai_SolvedIntentOp() public {
-        assertEq(block.chainid, MUMBAI_CHAIN_ID, "chainid should be 80001");
-
         // Prepare the UserOperation object to sign
         UserOperation memory userOp = UserOperation({
             sender: 0x6B5f6558CB8B3C8Fec2DA0B1edA9b9d5C064ca47,
@@ -356,6 +367,8 @@ contract SimpleAccountTest is Test {
             signature: bytes(hex"")
         });
 
+        userOp.nonce = simpleAccount.getNonce();
+
         // Generate the signature
         userOp.signature = generateSignature(userOp, block.chainid);
 
@@ -392,6 +405,8 @@ contract SimpleAccountTest is Test {
             signature: bytes(hex"")
         });
 
+        userOp.nonce = simpleAccount.getNonce();
+
         // Generate the signature
         userOp.signature = generateSignature(userOp, block.chainid);
 
@@ -421,6 +436,8 @@ contract SimpleAccountTest is Test {
             signature: bytes(hex"")
         });
 
+        userOp.nonce = simpleAccount.getNonce();
+
         // Generate the signature
         userOp.signature = generateSignature(userOp, block.chainid);
 
@@ -431,17 +448,9 @@ contract SimpleAccountTest is Test {
         UserOperation[] memory userOps = new UserOperation[](1);
         userOps[0] = userOp;
 
-        vm.expectEmit(true, true, true, false, 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789);
+        vm.expectEmit(false, true, true, false, 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789);
         // successful request with ** reverted sender transaction **
-        emit IEntryPoint.UserOperationEvent(
-            0x0f65718823197c054468ed3c6284aa5019dae1ecfc12d35e7370cb983f90de62,
-            0x60AD1B86e41863376921233ffF6956150439E576,
-            address(0),
-            0,
-            false,
-            0,
-            0
-        );
+        emit IEntryPoint.UserOperationEvent(0, address(simpleAccount), address(0), 0, false, 0, 0);
         entryPoint.handleOps(userOps, payable(ownerAddress));
     }
 

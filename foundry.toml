@@ -1,11 +1,13 @@
 [rpc_endpoints]
 mumbai = "${MUMBAI_RPC_URL}"
+polygon = "${POLYGON_RPC_URL}"
 
 [etherscan]
-mumbai = { key = "${POLYGONSCAN_API_KEY}" }
+mumbai = { key = "${POLYGONSCAN_API_KEY}", chain = "80001" }
+polygon = { key = "${POLYGONSCAN_API_KEY}", chain = "137" }
 
 [profile.default]
-solc = "0.8.23"
+solc = "0.8.24"
 src = "src"
 out = "out"
 libs = ["lib"]
