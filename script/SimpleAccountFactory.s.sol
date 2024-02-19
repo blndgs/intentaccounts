@@ -4,26 +4,26 @@ pragma solidity ^0.8.24;
 import "forge-std/Script.sol";
 import "../src/SimpleAccountFactory.sol";
 
-contract deploySimpleAccountFactory is Script {
-    string network;
+contract DeploySimpleAccountFactory is Script {
+    string _network;
 
     function setUp() public {
-        network = vm.envString("NETWORK");
+        _network = vm.envString("NETWORK");
     }
 
     function run() public {
         uint256 startGas = gasleft();
 
         // Setup signer
-        string memory privateKeyEnv = string(abi.encodePacked(network, "_PRIVATE_KEY"));
+        string memory privateKeyEnv = string(abi.encodePacked(_network, "_PRIVATE_KEY"));
         string memory privateKeyString = vm.envString(privateKeyEnv);
         uint256 signerPrivateKey = vm.parseUint(privateKeyString);
         address signer = vm.addr(signerPrivateKey);
 
         // Start impersonating the deployer account
         console2.log("Network ID:", block.chainid);
-        console2.log("Balance of signer in Ether:", weiToEther(signer.balance), "ETH");
-        console2.log("Balance of signer in Gwei:", weiToGwei(signer.balance), "Gwei");
+        console2.log("Balance of signer in Ether:", _weiToEther(signer.balance), "ETH");
+        console2.log("Balance of signer in Gwei:", _weiToGwei(signer.balance), "Gwei");
 
         console2.log("Owner of SimpleAccount", signer);
 
@@ -40,7 +40,7 @@ contract deploySimpleAccountFactory is Script {
             startGas = endGas;
 
             // Create a unique salt for the account creation
-            string memory saltEnv = string(abi.encodePacked(network, "_SALT"));
+            string memory saltEnv = string(abi.encodePacked(_network, "_SALT"));
             uint256 salt = vm.envUint(saltEnv);
             console2.log("Salt:", salt);
 
@@ -75,14 +75,14 @@ contract deploySimpleAccountFactory is Script {
 
         vm.stopBroadcast(); // End the broadcast session
 
-        console2.log("Balance of signer in Gwei:", weiToGwei(signer.balance), "Gwei");
+        console2.log("Balance of signer in Gwei:", _weiToGwei(signer.balance), "Gwei");
     }
 
-    function weiToEther(uint256 weiAmount) private pure returns (uint256) {
+    function _weiToEther(uint256 weiAmount) private pure returns (uint256) {
         return weiAmount / 1 ether;
     }
 
-    function weiToGwei(uint256 weiAmount) private pure returns (uint256) {
+    function _weiToGwei(uint256 weiAmount) private pure returns (uint256) {
         return weiAmount / 1 gwei;
     }
 }
