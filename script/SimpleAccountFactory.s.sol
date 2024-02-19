@@ -16,8 +16,8 @@ contract deploySimpleAccountFactory is Script {
 
         // Setup signer
         string memory privateKeyEnv = string(abi.encodePacked(network, "_PRIVATE_KEY"));
-        string memory mumbaiPrivateKeyString = vm.envString(privateKeyEnv);
-        uint256 signerPrivateKey = vm.parseUint(mumbaiPrivateKeyString);
+        string memory privateKeyString = vm.envString(privateKeyEnv);
+        uint256 signerPrivateKey = vm.parseUint(privateKeyString);
         address signer = vm.addr(signerPrivateKey);
 
         // Start impersonating the deployer account
@@ -33,7 +33,7 @@ contract deploySimpleAccountFactory is Script {
         address entryPointAddress = 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789;
 
         // Deploy the SimpleAccountFactory with the EntryPoint
-        SimpleAccountFactory factory = SimpleAccountFactory(0x42E60c23aCe33c23e0945a07f6e2c1E53843a1d5);
+        try new SimpleAccountFactory(IEntryPoint(entryPointAddress)) returns (SimpleAccountFactory factory) {
             console2.log("SimpleAccountFactory deployed at:", address(factory));
             uint256 endGas = gasleft();
             console2.log("Gas used for Factory deployment: ", startGas - endGas);
@@ -65,13 +65,13 @@ contract deploySimpleAccountFactory is Script {
             } catch {
                 console2.log("An unexpected error occurred when created a wallet");
             }
-        // } catch Error(string memory reason) {
-        //     console2.log("An error occurred when deployed the wallet factory:", reason);
-        // } catch Panic(uint256 errorCode) {
-        //     console2.log("A panic occurred when deployed the wallet factory (code", errorCode, ")");
-        // } catch {
-        //     console2.log("An unexpected error occurred when deployed the wallet factory");
-        // }
+        } catch Error(string memory reason) {
+            console2.log("An error occurred when deployed the wallet factory:", reason);
+        } catch Panic(uint256 errorCode) {
+            console2.log("A panic occurred when deployed the wallet factory (code", errorCode, ")");
+        } catch {
+            console2.log("An unexpected error occurred when deployed the wallet factory");
+        }
 
         vm.stopBroadcast(); // End the broadcast session
 

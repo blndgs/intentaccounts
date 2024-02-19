@@ -1,0 +1,522 @@
+forge script script/SimpleAccountFactory.s.sol --broadcast --rpc-url https://virtual.mainnet.rpc.tenderly.co/5e30f66b-5868-4c5f-a2df-11375bd8f648 -vvvvv --chain-id 1 --verify --watch
+[⠒] Compiling...
+No files changed, compilation skipped
+Traces:
+  [25975] deploySimpleAccountFactory::setUp()
+    ├─ [0] VM::envString("NETWORK") [staticcall]
+    │   └─ ← <env var value>
+    └─ ← ()
+
+  [2276630] deploySimpleAccountFactory::run()
+    ├─ [0] VM::envString("ETHEREUM_PRIVATE_KEY") [staticcall]
+    │   └─ ← <env var value>
+    ├─ [0] VM::parseUint("0x031ce39458d86fe55c19828d9ac9212277e1ddc0a0e5b168e494f42a299d5849") [staticcall]
+    │   └─ ← 1407980959412940845388606624221050252368110124778447126787684940436995921993 [1.407e75]
+    ├─ [0] VM::addr(<pk>) [staticcall]
+    │   └─ ← 0xc9164f44661d83d01CbB69C0b0E471280f446099
+    ├─ [0] console::log("Network ID:", 1) [staticcall]
+    │   └─ ← ()
+    ├─ [0] console::log("Balance of signer in Ether:", 1000, "ETH") [staticcall]
+    │   └─ ← ()
+    ├─ [0] console::log("Balance of signer in Gwei:", 1000000000000 [1e12], "Gwei") [staticcall]
+    │   └─ ← ()
+    ├─ [0] console::log("Owner of SimpleAccount", 0xc9164f44661d83d01CbB69C0b0E471280f446099) [staticcall]
+    │   └─ ← ()
+    ├─ [0] VM::startBroadcast(1407980959412940845388606624221050252368110124778447126787684940436995921993 [1.407e75])
+    │   └─ ← ()
+    ├─ [2076880] → new SimpleAccountFactory@0x42E60c23aCe33c23e0945a07f6e2c1E53843a1d5
+    │   ├─ [1617568] → new SimpleAccount@0xa0f1f916B2CC55956781F0712eb2F6ed026ECAe6
+    │   │   ├─ emit Initialized(version: 255)
+    │   │   └─ ← 8432 bytes of code
+    │   └─ ← 10767 bytes of code
+    ├─ [0] console::log("SimpleAccountFactory deployed at:", SimpleAccountFactory: [0x42E60c23aCe33c23e0945a07f6e2c1E53843a1d5]) [staticcall]
+    │   └─ ← ()
+    ├─ [0] console::log("Gas used for Factory deployment: ", 2129732 [2.129e6]) [staticcall]
+    │   └─ ← ()
+    ├─ [0] VM::envUint("ETHEREUM_SALT") [staticcall]
+    │   └─ ← <env var value>
+    ├─ [0] console::log("Salt:", 0) [staticcall]
+    │   └─ ← ()
+    ├─ [126625] SimpleAccountFactory::createAccount(0xc9164f44661d83d01CbB69C0b0E471280f446099, 0)
+    │   ├─ [85476] → new ERC1967Proxy@0xc31bE7F83620D7cEF8EdEbEe0f5aF096A7C0b7F4
+    │   │   ├─ emit Upgraded(implementation: SimpleAccount: [0xa0f1f916B2CC55956781F0712eb2F6ed026ECAe6])
+    │   │   ├─ [26154] SimpleAccount::initialize(0xc9164f44661d83d01CbB69C0b0E471280f446099) [delegatecall]
+    │   │   │   ├─ emit SimpleAccountInitialized(entryPoint: 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789, owner: 0xc9164f44661d83d01CbB69C0b0E471280f446099)
+    │   │   │   ├─ emit Initialized(version: 1)
+    │   │   │   └─ ← ()
+    │   │   └─ ← 1380 bytes of code
+    │   └─ ← ERC1967Proxy: [0xc31bE7F83620D7cEF8EdEbEe0f5aF096A7C0b7F4]
+    ├─ [0] console::log("SimpleAccount wallet created at:", ERC1967Proxy: [0xc31bE7F83620D7cEF8EdEbEe0f5aF096A7C0b7F4]) [staticcall]
+    │   └─ ← ()
+    ├─ [0] console::log("Gas used for wallet creation: ", 130532 [1.305e5]) [staticcall]
+    │   └─ ← ()
+    ├─ [5229] SimpleAccountFactory::getAddress(0xc9164f44661d83d01CbB69C0b0E471280f446099, 0) [staticcall]
+    │   └─ ← ERC1967Proxy: [0xc31bE7F83620D7cEF8EdEbEe0f5aF096A7C0b7F4]
+    ├─ [0] console::log("New simpleAccount address:", ERC1967Proxy: [0xc31bE7F83620D7cEF8EdEbEe0f5aF096A7C0b7F4]) [staticcall]
+    │   └─ ← ()
+    ├─ [6249] ERC1967Proxy::getNonce() [staticcall]
+    │   ├─ [5860] SimpleAccount::getNonce() [delegatecall]
+    │   │   ├─ [2688] 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789::getNonce(ERC1967Proxy: [0xc31bE7F83620D7cEF8EdEbEe0f5aF096A7C0b7F4], 0) [staticcall]
+    │   │   │   └─ ← 0
+    │   │   └─ ← 0
+    │   └─ ← 0
+    ├─ [0] console::log("Account nonce", 0) [staticcall]
+    │   └─ ← ()
+    ├─ [0] VM::stopBroadcast()
+    │   └─ ← ()
+    ├─ [0] console::log("Balance of signer in Gwei:", 1000000000000 [1e12], "Gwei") [staticcall]
+    │   └─ ← ()
+    └─ ← ()
+
+
+Script ran successfully.
+
+== Logs ==
+  Network ID: 1
+  Balance of signer in Ether: 1000 ETH
+  Balance of signer in Gwei: 1000000000000 Gwei
+  Owner of SimpleAccount 0xc9164f44661d83d01CbB69C0b0E471280f446099
+  SimpleAccountFactory deployed at: 0x42E60c23aCe33c23e0945a07f6e2c1E53843a1d5
+  Gas used for Factory deployment:  2129732
+  Salt: 0
+  SimpleAccount wallet created at: 0xc31bE7F83620D7cEF8EdEbEe0f5aF096A7C0b7F4
+  Gas used for wallet creation:  130532
+  New simpleAccount address: 0xc31bE7F83620D7cEF8EdEbEe0f5aF096A7C0b7F4
+  Account nonce 0
+  Balance of signer in Gwei: 1000000000000 Gwei
+
+## Setting up 1 EVM.
+==========================
+Simulated On-chain Traces:
+
+  [2076880] → new SimpleAccountFactory@0x42E60c23aCe33c23e0945a07f6e2c1E53843a1d5
+    ├─ [1617568] → new SimpleAccount@0xa0f1f916B2CC55956781F0712eb2F6ed026ECAe6
+    │   ├─ emit Initialized(version: 255)
+    │   └─ ← 8432 bytes of code
+    └─ ← 10767 bytes of code
+
+  [129125] SimpleAccountFactory::createAccount(0xc9164f44661d83d01CbB69C0b0E471280f446099, 0)
+    ├─ [87976] → new ERC1967Proxy@0xc31bE7F83620D7cEF8EdEbEe0f5aF096A7C0b7F4
+    │   ├─ emit Upgraded(implementation: SimpleAccount: [0xa0f1f916B2CC55956781F0712eb2F6ed026ECAe6])
+    │   ├─ [26154] SimpleAccount::initialize(0xc9164f44661d83d01CbB69C0b0E471280f446099) [delegatecall]
+    │   │   ├─ emit SimpleAccountInitialized(entryPoint: 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789, owner: 0xc9164f44661d83d01CbB69C0b0E471280f446099)
+    │   │   ├─ emit Initialized(version: 1)
+    │   │   └─ ← ()
+    │   └─ ← 1380 bytes of code
+    └─ ← ERC1967Proxy: [0xc31bE7F83620D7cEF8EdEbEe0f5aF096A7C0b7F4]
+
+
+==========================
+
+Chain 1
+
+Estimated gas price: 3.000000002 gwei
+
+Estimated total gas used for script: 3191307
+
+Estimated amount required: 0.009573921006382614 ETH
+
+==========================
+
+###
+Finding wallets for all the necessary addresses...
+##
+Sending transactions [0 - 1].
+⠉ [00:00:00] [########################################################] 2/2 txes (0.0s)
+Transactions saved to: /Users/mar/go/src/github.com/blndgs/intentaccounts/broadcast/SimpleAccountFactory.s.sol/1/run-latest.json
+
+Sensitive values saved to: /Users/mar/go/src/github.com/blndgs/intentaccounts/cache/SimpleAccountFactory.s.sol/1/run-latest.json
+
+##
+Waiting for receipts.
+⠙ [00:00:00] [####################################################] 2/2 receipts (0.0s)
+##### mainnet
+✅  [Success]Hash: 0xc96f84c55459213d8aa3642511f9710176a6e2c25884f2426f894d62548aa097
+Block: 19220265
+Paid: 0.00006468000004312 ETH (21560 gas * 3.000000002 gwei)
+
+
+##### mainnet
+✅  [Success]Hash: 0x9e274f5909e7fcbaf3a80573e23b58a0cb48a4eef70a9dc431725fbf143c2ffc
+Contract Address: 0x7BC49E56b20BE6e872E5213e7B4AF5453C499425
+Block: 19220266
+Paid: 0.0068842500045895 ETH (2294750 gas * 3.000000002 gwei)
+
+
+Transactions saved to: /Users/mar/go/src/github.com/blndgs/intentaccounts/broadcast/SimpleAccountFactory.s.sol/1/run-latest.json
+
+Sensitive values saved to: /Users/mar/go/src/github.com/blndgs/intentaccounts/cache/SimpleAccountFactory.s.sol/1/run-latest.json
+
+
+
+==========================
+
+ONCHAIN EXECUTION COMPLETE & SUCCESSFUL.
+Total Paid: 0.00694893000463262 ETH (2316310 gas * avg 3.000000002 gwei)
+
+We haven't found any matching bytecode for the following contracts: [0x7bc49e56b20be6e872e5213e7b4af5453c499425].
+
+This may occur when resuming a verification, but the underlying source code or compiler version has changed.
+##
+Start verification for (2) contracts
+Start verifying contract `0xa0f1f916B2CC55956781F0712eb2F6ed026ECAe6` deployed on mainnet
+
+Submitting verification for [src/SimpleAccount.sol:SimpleAccount] 0xa0f1f916B2CC55956781F0712eb2F6ed026ECAe6.
+
+Submitting verification for [src/SimpleAccount.sol:SimpleAccount] 0xa0f1f916B2CC55956781F0712eb2F6ed026ECAe6.
+
+Submitting verification for [src/SimpleAccount.sol:SimpleAccount] 0xa0f1f916B2CC55956781F0712eb2F6ed026ECAe6.
+
+Submitting verification for [src/SimpleAccount.sol:SimpleAccount] 0xa0f1f916B2CC55956781F0712eb2F6ed026ECAe6.
+
+Submitting verification for [src/SimpleAccount.sol:SimpleAccount] 0xa0f1f916B2CC55956781F0712eb2F6ed026ECAe6.
+
+Submitting verification for [src/SimpleAccount.sol:SimpleAccount] 0xa0f1f916B2CC55956781F0712eb2F6ed026ECAe6.
+
+Transactions saved to: /Users/mar/go/src/github.com/blndgs/intentaccounts/broadcast/SimpleAccountFactory.s.sol/1/run-latest.json
+
+Sensitive values saved to: /Users/mar/go/src/github.com/blndgs/intentaccounts/cache/SimpleAccountFactory.s.sol/1/run-latest.json
+
+
+󰀵 …/intentaccounts   eth_deploy $!   Sol v0.8.24  v18.17.1 19GiB/32GiB on ☁️   (us-west-2) took 42s🕙 15:34:19 
+✗ forge script script/SimpleAccountFactory.s.sol --broadcast --rpc-url https://mainnet.gateway.tenderly.co/30Ficv49C4MUExEKiJgC1z -vvvvv --chain-id 1 --verify --watch
+[⠒] Compiling...
+No files changed, compilation skipped
+Traces:
+  [25975] deploySimpleAccountFactory::setUp()
+    ├─ [0] VM::envString("NETWORK") [staticcall]
+    │   └─ ← <env var value>
+    └─ ← ()
+
+  [2276630] deploySimpleAccountFactory::run()
+    ├─ [0] VM::envString("ETHEREUM_PRIVATE_KEY") [staticcall]
+    │   └─ ← <env var value>
+    ├─ [0] VM::parseUint("0x031ce39458d86fe55c19828d9ac9212277e1ddc0a0e5b168e494f42a299d5849") [staticcall]
+    │   └─ ← 1407980959412940845388606624221050252368110124778447126787684940436995921993 [1.407e75]
+    ├─ [0] VM::addr(<pk>) [staticcall]
+    │   └─ ← 0xc9164f44661d83d01CbB69C0b0E471280f446099
+    ├─ [0] console::log("Network ID:", 1) [staticcall]
+    │   └─ ← ()
+    ├─ [0] console::log("Balance of signer in Ether:", 0, "ETH") [staticcall]
+    │   └─ ← ()
+    ├─ [0] console::log("Balance of signer in Gwei:", 14000000 [1.4e7], "Gwei") [staticcall]
+    │   └─ ← ()
+    ├─ [0] console::log("Owner of SimpleAccount", 0xc9164f44661d83d01CbB69C0b0E471280f446099) [staticcall]
+    │   └─ ← ()
+    ├─ [0] VM::startBroadcast(1407980959412940845388606624221050252368110124778447126787684940436995921993 [1.407e75])
+    │   └─ ← ()
+    ├─ [2076880] → new SimpleAccountFactory@0x42E60c23aCe33c23e0945a07f6e2c1E53843a1d5
+    │   ├─ [1617568] → new SimpleAccount@0xa0f1f916B2CC55956781F0712eb2F6ed026ECAe6
+    │   │   ├─ emit Initialized(version: 255)
+    │   │   └─ ← 8432 bytes of code
+    │   └─ ← 10767 bytes of code
+    ├─ [0] console::log("SimpleAccountFactory deployed at:", SimpleAccountFactory: [0x42E60c23aCe33c23e0945a07f6e2c1E53843a1d5]) [staticcall]
+    │   └─ ← ()
+    ├─ [0] console::log("Gas used for Factory deployment: ", 2129732 [2.129e6]) [staticcall]
+    │   └─ ← ()
+    ├─ [0] VM::envUint("ETHEREUM_SALT") [staticcall]
+    │   └─ ← <env var value>
+    ├─ [0] console::log("Salt:", 0) [staticcall]
+    │   └─ ← ()
+    ├─ [126625] SimpleAccountFactory::createAccount(0xc9164f44661d83d01CbB69C0b0E471280f446099, 0)
+    │   ├─ [85476] → new ERC1967Proxy@0xc31bE7F83620D7cEF8EdEbEe0f5aF096A7C0b7F4
+    │   │   ├─ emit Upgraded(implementation: SimpleAccount: [0xa0f1f916B2CC55956781F0712eb2F6ed026ECAe6])
+    │   │   ├─ [26154] SimpleAccount::initialize(0xc9164f44661d83d01CbB69C0b0E471280f446099) [delegatecall]
+    │   │   │   ├─ emit SimpleAccountInitialized(entryPoint: 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789, owner: 0xc9164f44661d83d01CbB69C0b0E471280f446099)
+    │   │   │   ├─ emit Initialized(version: 1)
+    │   │   │   └─ ← ()
+    │   │   └─ ← 1380 bytes of code
+    │   └─ ← ERC1967Proxy: [0xc31bE7F83620D7cEF8EdEbEe0f5aF096A7C0b7F4]
+    ├─ [0] console::log("SimpleAccount wallet created at:", ERC1967Proxy: [0xc31bE7F83620D7cEF8EdEbEe0f5aF096A7C0b7F4]) [staticcall]
+    │   └─ ← ()
+    ├─ [0] console::log("Gas used for wallet creation: ", 130532 [1.305e5]) [staticcall]
+    │   └─ ← ()
+    ├─ [5229] SimpleAccountFactory::getAddress(0xc9164f44661d83d01CbB69C0b0E471280f446099, 0) [staticcall]
+    │   └─ ← ERC1967Proxy: [0xc31bE7F83620D7cEF8EdEbEe0f5aF096A7C0b7F4]
+    ├─ [0] console::log("New simpleAccount address:", ERC1967Proxy: [0xc31bE7F83620D7cEF8EdEbEe0f5aF096A7C0b7F4]) [staticcall]
+    │   └─ ← ()
+    ├─ [6249] ERC1967Proxy::getNonce() [staticcall]
+    │   ├─ [5860] SimpleAccount::getNonce() [delegatecall]
+    │   │   ├─ [2688] 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789::getNonce(ERC1967Proxy: [0xc31bE7F83620D7cEF8EdEbEe0f5aF096A7C0b7F4], 0) [staticcall]
+    │   │   │   └─ ← 0
+    │   │   └─ ← 0
+    │   └─ ← 0
+    ├─ [0] console::log("Account nonce", 0) [staticcall]
+    │   └─ ← ()
+    ├─ [0] VM::stopBroadcast()
+    │   └─ ← ()
+    ├─ [0] console::log("Balance of signer in Gwei:", 14000000 [1.4e7], "Gwei") [staticcall]
+    │   └─ ← ()
+    └─ ← ()
+
+
+Script ran successfully.
+
+== Logs ==
+  Network ID: 1
+  Balance of signer in Ether: 0 ETH
+  Balance of signer in Gwei: 14000000 Gwei
+  Owner of SimpleAccount 0xc9164f44661d83d01CbB69C0b0E471280f446099
+  SimpleAccountFactory deployed at: 0x42E60c23aCe33c23e0945a07f6e2c1E53843a1d5
+  Gas used for Factory deployment:  2129732
+  Salt: 0
+  SimpleAccount wallet created at: 0xc31bE7F83620D7cEF8EdEbEe0f5aF096A7C0b7F4
+  Gas used for wallet creation:  130532
+  New simpleAccount address: 0xc31bE7F83620D7cEF8EdEbEe0f5aF096A7C0b7F4
+  Account nonce 0
+  Balance of signer in Gwei: 14000000 Gwei
+
+## Setting up 1 EVM.
+==========================
+Simulated On-chain Traces:
+
+  [2076880] → new SimpleAccountFactory@0x42E60c23aCe33c23e0945a07f6e2c1E53843a1d5
+    ├─ [1617568] → new SimpleAccount@0xa0f1f916B2CC55956781F0712eb2F6ed026ECAe6
+    │   ├─ emit Initialized(version: 255)
+    │   └─ ← 8432 bytes of code
+    └─ ← 10767 bytes of code
+
+  [129125] SimpleAccountFactory::createAccount(0xc9164f44661d83d01CbB69C0b0E471280f446099, 0)
+    ├─ [87976] → new ERC1967Proxy@0xc31bE7F83620D7cEF8EdEbEe0f5aF096A7C0b7F4
+    │   ├─ emit Upgraded(implementation: SimpleAccount: [0xa0f1f916B2CC55956781F0712eb2F6ed026ECAe6])
+    │   ├─ [26154] SimpleAccount::initialize(0xc9164f44661d83d01CbB69C0b0E471280f446099) [delegatecall]
+    │   │   ├─ emit SimpleAccountInitialized(entryPoint: 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789, owner: 0xc9164f44661d83d01CbB69C0b0E471280f446099)
+    │   │   ├─ emit Initialized(version: 1)
+    │   │   └─ ← ()
+    │   └─ ← 1380 bytes of code
+    └─ ← ERC1967Proxy: [0xc31bE7F83620D7cEF8EdEbEe0f5aF096A7C0b7F4]
+
+
+==========================
+
+Chain 1
+
+Estimated gas price: 73.526823284 gwei
+
+Estimated total gas used for script: 3191307
+
+Estimated amount required: 0.234646665833992188 ETH
+
+==========================
+
+###
+Finding wallets for all the necessary addresses...
+##
+Sending transactions [0 - 1].
+
+Transactions saved to: /Users/mar/go/src/github.com/blndgs/intentaccounts/broadcast/SimpleAccountFactory.s.sol/1/run-latest.json
+
+Sensitive values saved to: /Users/mar/go/src/github.com/blndgs/intentaccounts/cache/SimpleAccountFactory.s.sol/1/run-latest.json
+
+Error:
+(code: 3, message: insufficient funds for gas * price + value, data: None)
+
+󰀵 …/intentaccounts   eth_deploy $!   Sol v0.8.24  v18.17.1 20GiB/32GiB on ☁️   (us-west-2) took 8s🕙 15:42:06 
+✗ forge script script/SimpleAccountFactory.s.sol --broadcast --rpc-url https://mainnet.gateway.tenderly.co/30Ficv49C4MUExEKiJgC1z -vvvvv --chain-id 1 --verify --watch
+[⠒] Compiling...
+No files changed, compilation skipped
+Traces:
+  [25975] deploySimpleAccountFactory::setUp()
+    ├─ [0] VM::envString("NETWORK") [staticcall]
+    │   └─ ← <env var value>
+    └─ ← ()
+
+  [2276630] deploySimpleAccountFactory::run()
+    ├─ [0] VM::envString("ETHEREUM_PRIVATE_KEY") [staticcall]
+    │   └─ ← <env var value>
+    ├─ [0] VM::parseUint("0x031ce39458d86fe55c19828d9ac9212277e1ddc0a0e5b168e494f42a299d5849") [staticcall]
+    │   └─ ← 1407980959412940845388606624221050252368110124778447126787684940436995921993 [1.407e75]
+    ├─ [0] VM::addr(<pk>) [staticcall]
+    │   └─ ← 0xc9164f44661d83d01CbB69C0b0E471280f446099
+    ├─ [0] console::log("Network ID:", 1) [staticcall]
+    │   └─ ← ()
+    ├─ [0] console::log("Balance of signer in Ether:", 0, "ETH") [staticcall]
+    │   └─ ← ()
+    ├─ [0] console::log("Balance of signer in Gwei:", 244000000 [2.44e8], "Gwei") [staticcall]
+    │   └─ ← ()
+    ├─ [0] console::log("Owner of SimpleAccount", 0xc9164f44661d83d01CbB69C0b0E471280f446099) [staticcall]
+    │   └─ ← ()
+    ├─ [0] VM::startBroadcast(1407980959412940845388606624221050252368110124778447126787684940436995921993 [1.407e75])
+    │   └─ ← ()
+    ├─ [2076880] → new SimpleAccountFactory@0x42E60c23aCe33c23e0945a07f6e2c1E53843a1d5
+    │   ├─ [1617568] → new SimpleAccount@0xa0f1f916B2CC55956781F0712eb2F6ed026ECAe6
+    │   │   ├─ emit Initialized(version: 255)
+    │   │   └─ ← 8432 bytes of code
+    │   └─ ← 10767 bytes of code
+    ├─ [0] console::log("SimpleAccountFactory deployed at:", SimpleAccountFactory: [0x42E60c23aCe33c23e0945a07f6e2c1E53843a1d5]) [staticcall]
+    │   └─ ← ()
+    ├─ [0] console::log("Gas used for Factory deployment: ", 2129732 [2.129e6]) [staticcall]
+    │   └─ ← ()
+    ├─ [0] VM::envUint("ETHEREUM_SALT") [staticcall]
+    │   └─ ← <env var value>
+    ├─ [0] console::log("Salt:", 0) [staticcall]
+    │   └─ ← ()
+    ├─ [126625] SimpleAccountFactory::createAccount(0xc9164f44661d83d01CbB69C0b0E471280f446099, 0)
+    │   ├─ [85476] → new ERC1967Proxy@0xc31bE7F83620D7cEF8EdEbEe0f5aF096A7C0b7F4
+    │   │   ├─ emit Upgraded(implementation: SimpleAccount: [0xa0f1f916B2CC55956781F0712eb2F6ed026ECAe6])
+    │   │   ├─ [26154] SimpleAccount::initialize(0xc9164f44661d83d01CbB69C0b0E471280f446099) [delegatecall]
+    │   │   │   ├─ emit SimpleAccountInitialized(entryPoint: 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789, owner: 0xc9164f44661d83d01CbB69C0b0E471280f446099)
+    │   │   │   ├─ emit Initialized(version: 1)
+    │   │   │   └─ ← ()
+    │   │   └─ ← 1380 bytes of code
+    │   └─ ← ERC1967Proxy: [0xc31bE7F83620D7cEF8EdEbEe0f5aF096A7C0b7F4]
+    ├─ [0] console::log("SimpleAccount wallet created at:", ERC1967Proxy: [0xc31bE7F83620D7cEF8EdEbEe0f5aF096A7C0b7F4]) [staticcall]
+    │   └─ ← ()
+    ├─ [0] console::log("Gas used for wallet creation: ", 130532 [1.305e5]) [staticcall]
+    │   └─ ← ()
+    ├─ [5229] SimpleAccountFactory::getAddress(0xc9164f44661d83d01CbB69C0b0E471280f446099, 0) [staticcall]
+    │   └─ ← ERC1967Proxy: [0xc31bE7F83620D7cEF8EdEbEe0f5aF096A7C0b7F4]
+    ├─ [0] console::log("New simpleAccount address:", ERC1967Proxy: [0xc31bE7F83620D7cEF8EdEbEe0f5aF096A7C0b7F4]) [staticcall]
+    │   └─ ← ()
+    ├─ [6249] ERC1967Proxy::getNonce() [staticcall]
+    │   ├─ [5860] SimpleAccount::getNonce() [delegatecall]
+    │   │   ├─ [2688] 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789::getNonce(ERC1967Proxy: [0xc31bE7F83620D7cEF8EdEbEe0f5aF096A7C0b7F4], 0) [staticcall]
+    │   │   │   └─ ← 0
+    │   │   └─ ← 0
+    │   └─ ← 0
+    ├─ [0] console::log("Account nonce", 0) [staticcall]
+    │   └─ ← ()
+    ├─ [0] VM::stopBroadcast()
+    │   └─ ← ()
+    ├─ [0] console::log("Balance of signer in Gwei:", 244000000 [2.44e8], "Gwei") [staticcall]
+    │   └─ ← ()
+    └─ ← ()
+
+
+Script ran successfully.
+
+== Logs ==
+  Network ID: 1
+  Balance of signer in Ether: 0 ETH
+  Balance of signer in Gwei: 244000000 Gwei
+  Owner of SimpleAccount 0xc9164f44661d83d01CbB69C0b0E471280f446099
+  SimpleAccountFactory deployed at: 0x42E60c23aCe33c23e0945a07f6e2c1E53843a1d5
+  Gas used for Factory deployment:  2129732
+  Salt: 0
+  SimpleAccount wallet created at: 0xc31bE7F83620D7cEF8EdEbEe0f5aF096A7C0b7F4
+  Gas used for wallet creation:  130532
+  New simpleAccount address: 0xc31bE7F83620D7cEF8EdEbEe0f5aF096A7C0b7F4
+  Account nonce 0
+  Balance of signer in Gwei: 244000000 Gwei
+
+## Setting up 1 EVM.
+==========================
+Simulated On-chain Traces:
+
+  [2076880] → new SimpleAccountFactory@0x42E60c23aCe33c23e0945a07f6e2c1E53843a1d5
+    ├─ [1617568] → new SimpleAccount@0xa0f1f916B2CC55956781F0712eb2F6ed026ECAe6
+    │   ├─ emit Initialized(version: 255)
+    │   └─ ← 8432 bytes of code
+    └─ ← 10767 bytes of code
+
+  [129125] SimpleAccountFactory::createAccount(0xc9164f44661d83d01CbB69C0b0E471280f446099, 0)
+    ├─ [87976] → new ERC1967Proxy@0xc31bE7F83620D7cEF8EdEbEe0f5aF096A7C0b7F4
+    │   ├─ emit Upgraded(implementation: SimpleAccount: [0xa0f1f916B2CC55956781F0712eb2F6ed026ECAe6])
+    │   ├─ [26154] SimpleAccount::initialize(0xc9164f44661d83d01CbB69C0b0E471280f446099) [delegatecall]
+    │   │   ├─ emit SimpleAccountInitialized(entryPoint: 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789, owner: 0xc9164f44661d83d01CbB69C0b0E471280f446099)
+    │   │   ├─ emit Initialized(version: 1)
+    │   │   └─ ← ()
+    │   └─ ← 1380 bytes of code
+    └─ ← ERC1967Proxy: [0xc31bE7F83620D7cEF8EdEbEe0f5aF096A7C0b7F4]
+
+
+==========================
+
+Chain 1
+
+Estimated gas price: 74.653915246 gwei
+
+Estimated total gas used for script: 3191307
+
+Estimated amount required: 0.238243562301966522 ETH
+
+==========================
+
+###
+Finding wallets for all the necessary addresses...
+##
+Sending transactions [0 - 1].
+⠉ [00:00:00] [###########################################################################################################################################################################] 2/2 txes (0.0s)
+Transactions saved to: /Users/mar/go/src/github.com/blndgs/intentaccounts/broadcast/SimpleAccountFactory.s.sol/1/run-latest.json
+
+Sensitive values saved to: /Users/mar/go/src/github.com/blndgs/intentaccounts/cache/SimpleAccountFactory.s.sol/1/run-latest.json
+
+##
+Waiting for receipts.
+⠙ [00:00:06] [#######################################################################################################################################################################] 2/2 receipts (0.0s)
+##### mainnet
+✅  [Success]Hash: 0x9a7ef01d1d6c5c1a79363ae8898cc72c662b0716f6551dc0c1e0afc318c4deab
+Contract Address: 0x42E60c23aCe33c23e0945a07f6e2c1E53843a1d5
+Block: 19262144
+Paid: 0.11583405954427075 ETH (2294750 gas * 50.477855777 gwei)
+
+
+##### mainnet
+✅  [Success]Hash: 0xaafad7339d759bc4adcdc5684f7d4fd9513731ccd5b98613a3272d20091cacc0
+Block: 19262144
+Paid: 0.007606255697757245 ETH (150685 gas * 50.477855777 gwei)
+
+
+Transactions saved to: /Users/mar/go/src/github.com/blndgs/intentaccounts/broadcast/SimpleAccountFactory.s.sol/1/run-latest.json
+
+Sensitive values saved to: /Users/mar/go/src/github.com/blndgs/intentaccounts/cache/SimpleAccountFactory.s.sol/1/run-latest.json
+
+
+
+==========================
+
+ONCHAIN EXECUTION COMPLETE & SUCCESSFUL.
+Total Paid: 0.123440315242027995 ETH (2445435 gas * avg 50.477855777 gwei)
+##
+Start verification for (3) contracts
+Start verifying contract `0x42E60c23aCe33c23e0945a07f6e2c1E53843a1d5` deployed on mainnet
+
+Submitting verification for [src/SimpleAccountFactory.sol:SimpleAccountFactory] 0x42E60c23aCe33c23e0945a07f6e2c1E53843a1d5.
+
+Submitting verification for [src/SimpleAccountFactory.sol:SimpleAccountFactory] 0x42E60c23aCe33c23e0945a07f6e2c1E53843a1d5.
+
+Submitting verification for [src/SimpleAccountFactory.sol:SimpleAccountFactory] 0x42E60c23aCe33c23e0945a07f6e2c1E53843a1d5.
+Submitted contract for verification:
+        Response: `OK`
+        GUID: `kmngafnvzvfpjbtz5bjjmy5qnt6t8cxgfsbbu6r9lgyifdbalv`
+        URL: https://etherscan.io/address/0x42e60c23ace33c23e0945a07f6e2c1e53843a1d5
+Contract verification status:
+Response: `NOTOK`
+Details: `Pending in queue`
+Contract verification status:
+Response: `OK`
+Details: `Pass - Verified`
+Contract successfully verified
+Start verifying contract `0xa0f1f916B2CC55956781F0712eb2F6ed026ECAe6` deployed on mainnet
+
+Submitting verification for [src/SimpleAccount.sol:SimpleAccount] 0xa0f1f916B2CC55956781F0712eb2F6ed026ECAe6.
+Submitted contract for verification:
+        Response: `OK`
+        GUID: `zcvaix7kipkzzbrsagspyjupugyaghsv6kzyqdhday7zgpcryx`
+        URL: https://etherscan.io/address/0xa0f1f916b2cc55956781f0712eb2f6ed026ecae6
+Contract verification status:
+Response: `NOTOK`
+Details: `Pending in queue`
+Contract verification status:
+Response: `OK`
+Details: `Pass - Verified`
+Contract successfully verified
+Start verifying contract `0xc31bE7F83620D7cEF8EdEbEe0f5aF096A7C0b7F4` deployed on mainnet
+
+Submitting verification for [lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy] 0xc31bE7F83620D7cEF8EdEbEe0f5aF096A7C0b7F4.
+Submitted contract for verification:
+        Response: `OK`
+        GUID: `fzx8znhqih9unnxz9s1rfzjayfrmajhxhdxp98tpjwma1rjbkg`
+        URL: https://etherscan.io/address/0xc31be7f83620d7cef8edebee0f5af096a7c0b7f4
+Contract verification status:
+Response: `NOTOK`
+Details: `Pending in queue`
+Contract verification status:
+Response: `OK`
+Details: `Pass - Verified`
+Contract successfully verified
+All (3) contracts were verified!
+
+Transactions saved to: /Users/mar/go/src/github.com/blndgs/intentaccounts/broadcast/SimpleAccountFactory.s.sol/1/run-latest.json
+
+Sensitive values saved to: /Users/mar/go/src/github.com/blndgs/intentaccounts/cache/SimpleAccountFactory.s.sol/1/run-latest.json
