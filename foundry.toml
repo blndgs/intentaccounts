@@ -1,10 +1,12 @@
 [rpc_endpoints]
 mumbai = "${MUMBAI_RPC_URL}"
 polygon = "${POLYGON_RPC_URL}"
+ethereum = "${ETHEREUM_RPC_URL}"
 
 [etherscan]
 mumbai = { key = "${POLYGONSCAN_API_KEY}", chain = "80001" }
 polygon = { key = "${POLYGONSCAN_API_KEY}", chain = "137" }
+etherscan = { key = "${ETHEREUMSCAN_API_KEY}", chain = "1" }
 
 [profile.default]
 solc = "0.8.24"
