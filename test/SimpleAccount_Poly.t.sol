@@ -13,8 +13,8 @@ import "../src/ECDSA.sol";
 using Strings for bytes32;
 using UserOperationLib for UserOperation;
 
-contract SimpleAccountMainnetTest is Test {
-    address public constant ENTRYPOINT_V06 = 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789;
+contract SimpleAccounPolygonTest is Test {
+    address constant ENTRYPOINT_V06 = 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789;
     uint256 public constant MUMBAI_CHAIN_ID = 80001;
     uint256 public constant POLYGON_CHAIN_ID = 137;
     uint256 mumbaiFork;
@@ -32,10 +32,7 @@ contract SimpleAccountMainnetTest is Test {
     string network;
 
     function setUp() public {
-        network = vm.envString("NETWORK");
-
-        // Retrieve the MUMBAI_PRIVATE_KEY from the .env file
-        string memory privateKeyEnv = string(abi.encodePacked(network, "_PRIVATE_KEY"));
+        string memory privateKeyEnv = string(abi.encodePacked(network, "POLYGON_PRIVATE_KEY"));
         string memory privateKeyString = vm.envString(privateKeyEnv);
 
         // Derive the Ethereum address from the private key
@@ -44,7 +41,7 @@ contract SimpleAccountMainnetTest is Test {
         assertEq(ownerAddress, 0xc9164f44661d83d01CbB69C0b0E471280f446099, "Owner address should match");
 
         // Create a VM instance for the MUMBAI fork
-        string memory urlEnv = string(abi.encodePacked(network, "_RPC_URL"));
+        string memory urlEnv = string(abi.encodePacked(network, "POLYGON_RPC_URL"));
         mumbaiFork = vm.createSelectFork(vm.envString(urlEnv));
         assert(MUMBAI_CHAIN_ID == block.chainid || POLYGON_CHAIN_ID == block.chainid);
 
@@ -57,7 +54,7 @@ contract SimpleAccountMainnetTest is Test {
         token = IERC20(0x9d34f236bDDF1B9De014312599d9C9Ec8af1Bc48);
 
         // Create a unique salt for the account creation
-        string memory saltEnv = string(abi.encodePacked(network, "_SALT"));
+        string memory saltEnv = string(abi.encodePacked(network, "POLYGON_SALT"));
         salt = vm.envUint(saltEnv);
         console2.log("Salt:", salt);
 
