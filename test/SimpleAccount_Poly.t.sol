@@ -6,7 +6,6 @@ import "../src/SimpleAccount.sol";
 import "../src/IEntryPoint.sol";
 import "../src/EntryPoint.sol";
 import "../src/SimpleAccountFactory.sol";
-import "@openzeppelin/contracts/utils/Strings.sol";
 import "forge-std/interfaces/IERC20.sol";
 import "../src/ECDSA.sol";
 
@@ -21,7 +20,7 @@ contract SimpleAccounPolygonTest is Test {
 
     using ECDSA for bytes32;
 
-    SimpleAccountFactory public factory;
+    SimpleAccountFactory factory;
     SimpleAccount simpleAccount;
     uint256 salt;
     IEntryPoint public entryPoint;
@@ -72,11 +71,6 @@ contract SimpleAccounPolygonTest is Test {
         console2.log("SimpleAccount wallet created at:", address(simpleAccount));
         console2.log("Gas used for wallet creation: ", startGas - endGas);
         startGas = endGas;
-
-        // verify the created account's address matches the expected counterfactual address
-        address expectedAddress = factory.getAddress(ownerAddress, salt);
-        assert(address(simpleAccount) == expectedAddress);
-        console2.log("New simpleAccount address:", expectedAddress);
     }
 
     // Signature Steps:
@@ -124,7 +118,7 @@ contract SimpleAccounPolygonTest is Test {
     // vm.sign(ownerPrivateKey, ethSigned)
 
     function testSimpleAccountAddress() public {
-        // Validate the account address
+        // verify the created account's address matches the expected counterfactual address
         address generatedAddress = factory.getAddress(ownerAddress, salt);
         assertEq(address(simpleAccount), generatedAddress, "Account address does not match expected address");
     }
