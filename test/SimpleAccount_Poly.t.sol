@@ -204,7 +204,7 @@ contract SimpleAccounPolygonTest is Test {
         verifySignature(userOp);
     }
 
-    function testValidateMumbai_UnsolvedIntentOp() public {
+    function testValidate_UnsolvedIntentOp() public {
         // Prepare the UserOperation object to sign
         UserOperation memory userOp = UserOperation({
             sender: 0x6B5f6558CB8B3C8Fec2DA0B1edA9b9d5C064ca47,
@@ -232,7 +232,7 @@ contract SimpleAccounPolygonTest is Test {
         verifySignature(userOp);
     }
 
-    function testValidateMumbai_UnsolvedIntent0GasOp() public {
+    function testValidate_UnsolvedIntent0GasOp() public {
         // Prepare the UserOperation object to sign
         UserOperation memory userOp = UserOperation({
             sender: 0x6B5f6558CB8B3C8Fec2DA0B1edA9b9d5C064ca47,
@@ -260,7 +260,7 @@ contract SimpleAccounPolygonTest is Test {
         verifySignature(userOp);
     }
 
-    function testValidateMumbai_SolvedNilIntentOp() public {
+    function testValidate_SolvedNilIntentOp() public {
         // Prepare the UserOperation object to sign
         UserOperation memory userOp = UserOperation({
             sender: address(0),
@@ -286,7 +286,7 @@ contract SimpleAccounPolygonTest is Test {
         verifySignature(userOp);
     }
 
-    function testValidateMumbai_SolvedIntentOpNilSolution() public {
+    function testValidate_SolvedIntentOpNilSolution() public {
         // Prepare the UserOperation object to sign
         UserOperation memory userOp = UserOperation({
             sender: 0x6B5f6558CB8B3C8Fec2DA0B1edA9b9d5C064ca47,
@@ -314,7 +314,7 @@ contract SimpleAccounPolygonTest is Test {
         verifySignature(userOp);
     }
 
-    function testValidateMumbai_SolvedIntentOp() public {
+    function testValidate_SolvedIntentOp() public {
         // Prepare the UserOperation object to sign
         UserOperation memory userOp = UserOperation({
             sender: 0x6B5f6558CB8B3C8Fec2DA0B1edA9b9d5C064ca47,
@@ -342,7 +342,7 @@ contract SimpleAccounPolygonTest is Test {
         verifySignature(userOp);
     }
 
-    function testExecuteMumbai_EmptyOp() public {
+    function testExecute_EmptyOp() public {
         // Prepare the UserOperation object to sign
         UserOperation memory userOp = UserOperation({
             sender: address(simpleAccount),
@@ -375,7 +375,7 @@ contract SimpleAccounPolygonTest is Test {
         console2.log("Entrypoint balance:", entryPoint.balanceOf(anAddress));
     }
 
-    function testExecuteMumbai_vanillaUserOp() public {
+    function testExecute_vanillaUserOp() public {
         showBalances(ownerAddress, "Before userOp execution");
         showBalances(address(simpleAccount), "Before userOp execution");
 
@@ -409,7 +409,7 @@ contract SimpleAccounPolygonTest is Test {
         showBalances(address(simpleAccount), "After userOp execution");
     }
 
-    function testValidateExecuteMumbai_SolvedOpReverted() public {
+    function testValidateExecute_SolvedOpReverted() public {
         // Prepare the UserOperation object to sign
         UserOperation memory userOp = UserOperation({
             sender: address(simpleAccount),
@@ -445,7 +445,7 @@ contract SimpleAccounPolygonTest is Test {
         entryPoint.handleOps(userOps, payable(ownerAddress));
     }
 
-    function testValidateExecuteMumbai_SolvedOpNewCallData() public {
+    function testValidateExecute_SolvedOpNewCallData() public {
         console2.log("sender:", address(simpleAccount));
         // Prepare the UserOperation object to sign
         UserOperation memory userOp = UserOperation({
@@ -487,7 +487,7 @@ contract SimpleAccounPolygonTest is Test {
         entryPoint.handleOps(userOps, payable(ownerAddress));
     }
 
-    function testValidateExecuteMumbai_SolverIntentOp() public {
+    function testValidateExecute_SolverIntentOp() public {
         console2.log("sender:", address(simpleAccount));
 
         // 1. SDK setups the unsigned Intent UserOp
@@ -542,7 +542,7 @@ contract SimpleAccounPolygonTest is Test {
         entryPoint.handleOps(userOps, payable(ownerAddress));
     }
 
-    function testValidateExecuteMumbai_SolverIntentOpNewModel() public {
+    function testValidateExecute_SolverIntentOpNewModel() public {
         console2.log("sender:", address(simpleAccount));
 
         // 1. SDK setups the unsigned Intent UserOp
@@ -597,11 +597,11 @@ contract SimpleAccounPolygonTest is Test {
         entryPoint.handleOps(userOps, payable(ownerAddress));
     }
 
-    function testValidateExecuteMumbai_SolverNative() public {
+    function testValidateExecute_SolverNative() public {
         console2.log("sender:", address(simpleAccount));
 
         uint256 balanceBef = address(simpleAccount).balance;
-        console2.log("Balance of SimpleAccount after execution in Ether:", _weiToEther(balanceBef), "Matic");
+        console2.log("Balance of SimpleAccount before execution in Ether:", _weiToEther(balanceBef), "Matic");
 
         // 1. SDK setups the unsigned Intent UserOp
         UserOperation memory userOp = UserOperation({
@@ -659,7 +659,7 @@ contract SimpleAccounPolygonTest is Test {
      
         uint256 balanceAfter = address(simpleAccount).balance;
         // print the balance of the contract
-        console2.log("Balance of SimpleAccount after execution in Ether:", _weiToEther(balanceAfter), "ETH");
+        console2.log("Balance of SimpleAccount after execution in Matic:", _weiToEther(balanceAfter), "ETH");
         // assert balanceAfter < balanceBef
         assertGt(balanceBef, balanceAfter, "Balance of SimpleAccount should have decreased after execution");
     }
