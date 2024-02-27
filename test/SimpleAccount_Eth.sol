@@ -173,6 +173,168 @@ contract SimpleAccounEthereumTest is Test {
         // assertGt(balanceBef, balanceAfter, "Balance of SimpleAccount should have decreased after execution");
     }
 
+     /**
+      * Tests wallet creation with user (counterfactual account's address) 
+      * Ether funding.
+      */
+    function testCreateNewWalletUserEtherFunding() public {
+        // New owner without a smart account wallet
+        address walletOwner = 0x278caac08B594f8559699F39b9460430739B9802;
+
+        console2.log("walletOwner:", walletOwner);
+        address account = _factory.getAddress(walletOwner, 0);
+        console2.log("counterfactual address for new wallet:", account);
+
+        uint codeSize = account.code.length;
+        assertEq(codeSize, 0, "Account should not be deployed yet");
+
+        // **************************************************************
+        // Non-zero gas userOp, user funds it.
+        // In this case the account has deposited in the EntryPoint
+        // **************************************************************
+        vm.deal(account, 10 ether);
+        uint256 balanceBef = account.balance;
+        assertEq(balanceBef, 10 ether);
+
+        uint256 depositBef = _entryPoint.balanceOf(account);
+        assertEq(depositBef, 0, "Entrypoint account deposits is 0 before execution");
+
+        // 1. SDK setups the unsigned Intent UserOp
+        UserOperation memory userOp = UserOperation({
+            sender: account,
+            nonce: 0,
+            initCode: bytes(hex"42E60c23aCe33c23e0945a07f6e2c1E53843a1d55fbfb9cf000000000000000000000000278caac08B594f8559699F39b9460430739B98020000000000000000000000000000000000000000000000000000000000000000"),
+            callData: bytes(hex""),
+            callGasLimit: 800000,
+            verificationGasLimit: 628384,
+            preVerificationGas: 626688,
+            maxFeePerGas: 65536, // Non zero value requires ETH balance in account
+            maxPriorityFeePerGas: 73728,
+            paymasterAndData: bytes(hex""),
+            signature: bytes(hex"915bfc4f231f35dbfb3a8d145b5d987d2582a8858c80e820d3f96909618b2e1f2bd29293263cbfa7ba66ffe4f5d142b0141d56e85ddfb7e4859e12fdfe9b225d1c")
+        });
+
+        UserOperation[] memory userOps = new UserOperation[](1);
+        userOps[0] = userOp;
+
+        // entryPoint emits successful userOp execution events
+        vm.expectEmit(false, true, true, false, 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789);
+        emit IEntryPoint.UserOperationEvent(0/* ignore userOp hash */, account, address(0) /* paymaster */, userOp.nonce, true, 0, 0);
+        _entryPoint.handleOps(userOps, payable(_ownerAddress));
+     
+        uint256 balanceAfter = account.balance;
+        uint256 depositAfter = _entryPoint.balanceOf(account);
+
+        assertLt(balanceAfter, balanceBef, "Balance of SimpleAccount should have decreased after execution");
+        assertGt(depositAfter, depositBef, "Entrypoint account deposits should have increased after execution");
+    }
+
+     /**
+      * Tests wallet creation with user (counterfactual account's address) 
+      * Ether funding.
+      */
+    function testCreateNewWalletUserEtherDeposit() public {
+        // New owner without a smart account wallet
+        address walletOwner = 0x278caac08B594f8559699F39b9460430739B9802;
+
+        console2.log("walletOwner:", walletOwner);
+        address account = _factory.getAddress(walletOwner, 0);
+        console2.log("counterfactual address for new wallet:", account);
+
+        uint codeSize = account.code.length;
+        assertEq(codeSize, 0, "Account should not be deployed yet");
+
+        // **************************************************************
+        // Non-zero gas userOp, user funds it.
+        // Necessary to fund the account to pay for the account creation
+        // **************************************************************
+        // vm.deal(walletOwner, 10 ether);
+        // assertEq(walletOwner.balance, 10 ether);
+
+        _entryPoint.depositTo{value: 10 ether}(account);
+        uint256 depositBef = _entryPoint.balanceOf(account);
+        assertGt(depositBef, 9 ether, "deposit should be near 10 ether");
+
+        // 1. SDK setups the unsigned Intent UserOp
+        UserOperation memory userOp = UserOperation({
+            sender: account,
+            nonce: 0,
+            initCode: bytes(hex"42E60c23aCe33c23e0945a07f6e2c1E53843a1d55fbfb9cf000000000000000000000000278caac08B594f8559699F39b9460430739B98020000000000000000000000000000000000000000000000000000000000000000"),
+            callData: bytes(hex""),
+            callGasLimit: 800000,
+            verificationGasLimit: 628384,
+            preVerificationGas: 626688,
+            maxFeePerGas: 65536, // Non zero value requires ETH balance in account
+            maxPriorityFeePerGas: 73728,
+            paymasterAndData: bytes(hex""),
+            signature: bytes(hex"915bfc4f231f35dbfb3a8d145b5d987d2582a8858c80e820d3f96909618b2e1f2bd29293263cbfa7ba66ffe4f5d142b0141d56e85ddfb7e4859e12fdfe9b225d1c")
+        });
+
+        UserOperation[] memory userOps = new UserOperation[](1);
+        userOps[0] = userOp;
+
+        // entryPoint emits successful userOp execution events
+        vm.expectEmit(false, true, true, false, 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789);
+        emit IEntryPoint.UserOperationEvent(0/* ignore userOp hash */, account, address(0) /* paymaster */, userOp.nonce, true, 0, 0);
+        _entryPoint.handleOps(userOps, payable(_ownerAddress));
+     
+        uint256 depositAfter = _entryPoint.balanceOf(account);
+
+        assertEq(account.balance, 0, "Balance of SimpleAccount should have been affected after execution");
+        assertLt(depositAfter, depositBef, "Entrypoint account deposits should have decreased after execution");
+    }
+
+     /**
+      * Tests sponsored wallet creation.
+      */
+    function testCreateNewWalletFundingByBundler() public {
+        // New owner without a smart account wallet
+        address walletOwner = 0x278caac08B594f8559699F39b9460430739B9802;
+        assertEq(walletOwner.balance, 0, "EoA owner should have not Eth balance");
+
+        console2.log("walletOwner:", walletOwner);
+        address account = _factory.getAddress(walletOwner, 0);
+        console2.log("counterfactual address for new wallet:", account);
+
+        uint codeSize = account.code.length;
+        assertEq(codeSize, 0, "Account should not be deployed yet");
+
+        uint256 balanceBef = account.balance;
+        assertEq(balanceBef, 0, "Account Balance should not have been funded");
+
+        uint256 depositBef = _entryPoint.balanceOf(account);
+        assertEq(depositBef, 0, "Entrypoint account deposits is 0 before execution");
+
+        // 1. SDK setups the unsigned Intent UserOp
+        UserOperation memory userOp = UserOperation({
+            sender: account,
+            nonce: 0,
+            initCode: bytes(hex"42E60c23aCe33c23e0945a07f6e2c1E53843a1d55fbfb9cf000000000000000000000000278caac08B594f8559699F39b9460430739B98020000000000000000000000000000000000000000000000000000000000000000"),
+            callData: bytes(hex""),
+            callGasLimit: 800000,
+            verificationGasLimit: 628384,
+            preVerificationGas: 626688,
+            maxFeePerGas: 0,
+            maxPriorityFeePerGas: 0,
+            paymasterAndData: bytes(hex""),
+            signature: bytes(hex"06577b58c31d7c58c69b0c281c5c7353573eb1e930e7560bdcc61517885ab9d738b6668ace150b7724c0ee247d64c5e5dfc09e09a845687c38a2607d10dd7d111c")
+        });
+
+        UserOperation[] memory userOps = new UserOperation[](1);
+        userOps[0] = userOp;
+
+        // entryPoint emits successful userOp execution events
+        vm.expectEmit(false, true, true, false, 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789);
+        emit IEntryPoint.UserOperationEvent(0/* ignore userOp hash */, account, address(0) /* paymaster */, userOp.nonce, true, 0, 0);
+        _entryPoint.handleOps(userOps, payable(_ownerAddress));
+     
+        uint256 balanceAfter = account.balance;
+        uint256 depositAfter = _entryPoint.balanceOf(account);
+
+        assertEq(balanceAfter, 0, "Account Balance should have remained at 0 after execution");
+        assertEq(depositAfter, 0, "Entrypoint account deposits should be zero");
+    }
+
     function _weiToEther(uint256 weiAmount) private pure returns (uint256) {
         return weiAmount / 1 ether;
     }
