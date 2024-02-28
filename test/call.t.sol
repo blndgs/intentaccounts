@@ -1,4 +1,4 @@
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.24;
 
 import "forge-std/Test.sol";
 import "../src/Exec.sol";
@@ -56,6 +56,42 @@ contract ContractB {
     }
 
     /**
+     * @dev Executes a delegate call in the caller's function storage context.
+     * @param to The address of the contract to delegate call to.
+     * @param data The calldata to send with the delegate call.
+     * @param txGas The amount of gas to allocate for the delegate call.
+     * @return success A boolean indicating whether the call was successful.
+     * Delegate calls execute the code of the target address in the context of the calling contract.
+     */
+    function delegateCall(address to, bytes memory data, uint256 txGas) external returns (bool success) {
+        return Exec.delegateCall(to, data, txGas);
+    }
+
+    /**
+     * @dev Performs a call and reverts the transaction if the call is unsuccessful.
+     * @param to The address to call.
+     * @param data The calldata to send.
+     * @param maxLen The maximum length of the revert data to handle.
+     * This function is a convenience method that combines a call and conditional revert.
+     */
+    function callAndRevert(address to, bytes memory data, uint256 maxLen) external {
+        return Exec.callAndRevert(to, data, maxLen);
+    }
+
+    /**
+     * @dev Executes a regular contract call in the called's function storage context.
+     * @param to The address of the contract to call.
+     * @param value The amount of Ether to send with the call.
+     * @param data The calldata to send with the call.
+     * @param txGas The amount of gas to allocate for the call.
+     * @return success A boolean indicating whether the call was successful.
+     * Inline assembly is used to optimize gas consumption and direct control over the EVM.
+     */
+    function call(address to, uint256 value, bytes memory data, uint256 txGas) external returns (bool success) {
+        return Exec.call(to, value, data, txGas);
+    }
+
+    /**
      * execute a sequence of transactions
      */
     function executeBatch(address[] calldata dest, bytes[] calldata func) external {
@@ -65,7 +101,7 @@ contract ContractB {
         }
     }
 
-    function _call(address target, uint256 value, bytes memory data) internal {
+    function _call(address target, uint256 value, bytes memory data) public {
         (bool success, bytes memory result) = target.call{value: value}(data);
         if (!success) {
             assembly {
