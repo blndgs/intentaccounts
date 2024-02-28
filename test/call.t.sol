@@ -111,7 +111,7 @@ contract ContractB {
     }
 }
 
-contract aTest is Test {
+contract callsTest is Test {
     address ENTRYPOINT_V06;
     // address constant ENTRYPOINT_V06 = 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789;
     uint256 mumbaiFork;
@@ -126,17 +126,19 @@ contract aTest is Test {
     uint256 salt = 0;
     IEntryPoint public entryPoint;
     Smt smt;
+    string _network;
 
     function setUp() public {
-        string memory mumbaiPrivateKeyString = vm.envString("MUMBAI_PRIVATE_KEY");
+        string memory privateKeyEnv = string(abi.encodePacked(_network, "ETHEREUM_PRIVATE_KEY"));
+        string memory privateKeyString = vm.envString(privateKeyEnv);
 
         // Derive the Ethereum address from the private key
-        ownerPrivateKey = vm.parseUint(mumbaiPrivateKeyString);
+        ownerPrivateKey = vm.parseUint(privateKeyString);
         ownerAddress = vm.addr(ownerPrivateKey);
-        assertEq(ownerAddress, 0xa4BFe126D3aD137F972695dDdb1780a29065e556, "Owner address should match");
+        assertEq(ownerAddress, 0xc9164f44661d83d01CbB69C0b0E471280f446099, "Owner address should match");
 
-        mumbaiFork = vm.createSelectFork(vm.envString("MUMBAI_RPC_URL"));
-        vm.startPrank(ownerAddress);
+        mumbaiFork = vm.createSelectFork(vm.envString("ETHEREUM_RPC_URL"));
+        // vm.startPrank(ownerAddress);
 
         // Deploy ContractB
         b = new ContractB();
@@ -155,6 +157,7 @@ contract aTest is Test {
 
         // Create an SMT token
         smt = new Smt();
+        console2.log("SMT deployed at:", address(smt));
 
         uint256 amount = 100 ether;
 
