@@ -212,4 +212,69 @@ contract callsTest is Test {
         }
         require(success, "Yul call failed");
     }
+
+    function testApprove() external payable {
+        address spender = 0xEAd050515E10fDB3540ccD6f8236C46790508A76;
+        uint256 amount = 8000; // equivalent to 0.008 * 10 ** 6 in USDC decimals
+
+        console2.log("msg.sender: ", msg.sender);
+        console2.log("address(this): ", address(this));
+        console2.log("address(b)", address(b));
+
+        // 1st call
+        console.log("smt.approve(spender, amount)");
+        smt.approve(spender, amount);
+
+        address erc20token = address(smt);
+        bytes memory data = abi.encodeWithSelector(IERC20.approve.selector, spender, amount);
+
+        // 2nd call
+        console2.log("Exec.delegateCall(erc20token, data, gasleft())");
+        bool success = Exec.delegateCall(erc20token, data, gasleft());
+        require(success, "Delegate call failed");
+
+        // 3rd call
+        console2.log("Exec.callAndRevert(erc20token, data, 512)");
+        Exec.callAndRevert(erc20token, data, 512);
+        require(success, "Call and revert failed");
+
+        // Use the address of the deployed ContractB instance
+        address btarget = address(b);
+        bytes memory dataB = bytes(
+            hex"369e7c410000000000000000000000005991a2df15a8f6a256d3ec51e99254cd3fb576a9000000000000000000000000000000000000000000000000000000000000006000000000000000000000000000000000000000000000000000000000000493e00000000000000000000000000000000000000000000000000000000000000044095ea7b3000000000000000000000000ead050515e10fdb3540ccd6f8236c46790508a76000000000000000000000000000000000000000000000000000000000000037800000000000000000000000000000000000000000000000000000000"
+        );
+        console2.log("Exec.Call->b.delegateCall->erc20token.approve(spender, amount)");
+        success = Exec.call(btarget, 0, dataB, gasleft());
+
+        dataB = bytes(
+            hex"f2addfd70000000000000000000000005991a2df15a8f6a256d3ec51e99254cd3fb576a9000000000000000000000000000000000000000000000000000000000000006000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000044095ea7b3000000000000000000000000ead050515e10fdb3540ccd6f8236c46790508a76000000000000000000000000000000000000000000000000000000000000037800000000000000000000000000000000000000000000000000000000"
+        );
+        console2.log("Exec.call->b.callAndRevert->erc20token.approve(spender, amount)");
+        success = Exec.call(btarget, 0, dataB, gasleft());
+
+        // Check if the call was successful
+        require(success, "Call using Exec.call failed");
+
+        // Call execute() function in ContractB using a Yul call
+        // through indirection via execute(), which calls _call()
+        console2.log("b.execute(erc20token, 0, data)");
+        b.execute(erc20token, 0, data);
+
+        console2.log("erc20Token.call(data)");
+        (success,) = erc20token.call(data);
+        require(success, "Call to ContractB failed");
+
+        // Yul call() example
+        uint256 value = 0;
+
+        console2.log("Yul call(300000, erc20token, value, add(data, 32), dataLength, 0, 0)");
+        assembly {
+            let dataLength := mload(data) // Load the length of data from the first 32 bytes
+
+            // add(data, 32) adjusts the pointer to skip the length prefix of the
+            // dynamic array, and dataLength is the actual length of the data.
+            success := call(300000, erc20token, value, add(data, 32), dataLength, 0, 0)
+        }
+        require(success, "Yul call failed");
+    }
 }
