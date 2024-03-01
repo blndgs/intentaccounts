@@ -28,7 +28,6 @@ contract SimpleAccounEthereumTest is Test {
     string _network;
 
     function setUp() public {
-        console2.log("Setup");
         string memory privateKeyEnv = string(abi.encodePacked(_network, "ETHEREUM_PRIVATE_KEY"));
         string memory privateKeyString = vm.envString(privateKeyEnv);
 
@@ -47,7 +46,7 @@ contract SimpleAccounEthereumTest is Test {
 
         // Deploy the EntryPoint contract or use an existing one
         _entryPoint = EntryPoint(payable(ENTRYPOINT_V06));
-    console2.log("EntryPoint deployed at:", address(_entryPoint));
+        console2.log("EntryPoint deployed at:", address(_entryPoint));
 
         // Create a unique _salt for the account creation
         string memory _saltEnv = string(abi.encodePacked(_network, "ETHEREUM_SALT"));

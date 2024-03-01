@@ -98,6 +98,21 @@ contract SimpleAccount is BaseAccount, TokenCallbackHandler, UUPSUpgradeable, In
     }
 
     /**
+     * execute a sequence of transactions with Ether transfer at the last calldata execution.
+     */
+    function execValueBatch(uint256 value, address[] calldata dest, bytes[] calldata func) external {
+        _requireFromEntryPointOrOwner();
+        require(dest.length == func.length, "wrong array lengths");
+        for (uint256 i = 0; i < dest.length; i++) {
+            if (value != 0 && i == dest.length - 1) {
+                _call(dest[i], value, func[i]);
+            } else {
+                _call(dest[i], 0, func[i]);
+            }
+        }
+    }
+
+    /**
      * @dev The _entryPoint member is immutable, to reduce gas consumption.  To upgrade EntryPoint,
      * a new implementation of SimpleAccount must be deployed with the new EntryPoint address, then upgrading
      * the implementation by calling `upgradeTo()`
