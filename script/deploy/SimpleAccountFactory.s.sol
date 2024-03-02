@@ -2,7 +2,7 @@
 pragma solidity ^0.8.24;
 
 import "forge-std/Script.sol";
-import "../src/SimpleAccountFactory.sol";
+import "../../src/SimpleAccountFactory.sol";
 
 contract DeploySimpleAccountFactory is Script {
     string _network;
