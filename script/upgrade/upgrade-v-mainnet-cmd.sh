@@ -1,0 +1,1 @@
+forge script script/upgrade/SimpleAccountFactory.s.sol --broadcast --rpc-url https://virtual.mainnet.rpc.tenderly.co/220b5b66-ee44-4940-9637-b4d0706317ce -vvvvv --chain-id 1 --verify --watch
