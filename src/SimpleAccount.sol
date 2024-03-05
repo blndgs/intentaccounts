@@ -7,7 +7,7 @@ pragma solidity ^0.8.12;
 
 import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
-import "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import "@openzeppelin/legacy/contracts/utils/math/SafeMath.sol";
 import "./ECDSA.sol";
 
 import "./BaseAccount.sol";
@@ -31,6 +31,7 @@ contract SimpleAccount is BaseAccount, TokenCallbackHandler, UUPSUpgradeable, In
 
     address public owner;
 
+    /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
     IEntryPoint private immutable _entryPoint;
 
     event SimpleAccountInitialized(IEntryPoint indexed entryPoint, address indexed owner);
@@ -48,6 +49,7 @@ contract SimpleAccount is BaseAccount, TokenCallbackHandler, UUPSUpgradeable, In
     // solhint-disable-next-line no-empty-blocks
     receive() external payable {}
 
+    /// @custom:oz-upgrades-unsafe-allow constructor
     constructor(IEntryPoint anEntryPoint) {
         _entryPoint = anEntryPoint;
         _disableInitializers();
