@@ -13,13 +13,8 @@ import "./ECDSA.sol";
 import "./BaseAccount.sol";
 import "./TokenCallbackHandler.sol";
 
-/**
- * minimal account.
- *  this is sample minimal account.
- *  has execute, eth handling methods
- *  has a single signer that can send requests through the entryPoint.
- */
-contract SimpleAccount is BaseAccount, TokenCallbackHandler, UUPSUpgradeable, Initializable {
+/// @custom:oz-upgrades-from SimpleAccount
+contract SimpleAccountV2 is BaseAccount, TokenCallbackHandler, UUPSUpgradeable, Initializable {
     using UserOperationLib for UserOperation;
 
     // Custom errors
@@ -96,6 +91,17 @@ contract SimpleAccount is BaseAccount, TokenCallbackHandler, UUPSUpgradeable, In
         require(dest.length == func.length, "wrong array lengths");
         for (uint256 i = 0; i < dest.length; i++) {
             _call(dest[i], 0, func[i]);
+        }
+    }
+
+    /**
+     * execute a sequence of EVM calldata with Ether transfers.
+     */
+    function execValueBatch(uint256[] calldata values, address[] calldata dest, bytes[] calldata func) external {
+        _requireFromEntryPointOrOwner();
+        require(dest.length == func.length, "wrong array lengths");
+        for (uint256 i = 0; i < dest.length; i++) {
+            _call(dest[i], values[i], func[i]);
         }
     }
 
