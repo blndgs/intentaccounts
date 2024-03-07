@@ -6,7 +6,7 @@ import "../../src/SimpleAccount.sol";
 import "../../src/SimpleAccountV2.sol";
 
 contract UpgradeSimpleAccount is Script {
-    address private immutable ENTRYPOINT_ADDRESS;
+    address private ENTRYPOINT_ADDRESS;
 
     string _network;
 
@@ -25,11 +25,11 @@ contract UpgradeSimpleAccount is Script {
         console2.log("Signer address:", signer);
 
         // read the enntrypoint address from the environment
-        ENTRYPOINT_ADDRESS = vm.addr(vm.envString("ENTRYPOINT_ADDRESS"));
+        ENTRYPOINT_ADDRESS = vm.envAddress("ENTRYPOINT_ADDRESS");
         console2.log("Entry point address:", ENTRYPOINT_ADDRESS);
 
         string memory proxyAddressEnv = string(abi.encodePacked(_network, "_PROXY_ADDRESS"));
-        address proxyAddress = vm.addr(vm.envString(proxyAddressEnv));
+        address payable proxyAddress = payable(vm.envAddress(proxyAddressEnv));
         console2.log("Proxy address:", proxyAddress);
 
         string memory networkSaltEnv = string(abi.encodePacked(_network, "_SALT"));
