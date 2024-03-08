@@ -1,1 +1,1 @@
-forge script DeploySimpleAccountFactory --broadcast --rpc-url https://mainnet.gateway.tenderly.co/30Ficv49C4MUExEKiJgC1z -vvvvv --chain-id 1 --watch
+forge script DeploySimpleAccountFactory --broadcast --rpc-url https://virtual.mainnet.rpc.tenderly.co/c4100609-e3ff-441b-a803-5a4e95de809f -vvvvv --chain-id 1
