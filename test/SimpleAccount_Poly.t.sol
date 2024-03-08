@@ -9,10 +9,10 @@ import "../src/SimpleAccountFactory.sol";
 import "forge-std/interfaces/IERC20.sol";
 import "../src/ECDSA.sol";
 
-using Strings for bytes32;
-using UserOperationLib for UserOperation;
-
 contract SimpleAccounPolygonTest is Test {
+    using Strings for bytes32;
+    using UserOperationLib for UserOperation;
+
     address constant ENTRYPOINT_V06 = 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789;
     uint256 public constant MUMBAI_CHAIN_ID = 80001;
     uint256 public constant POLYGON_CHAIN_ID = 137;

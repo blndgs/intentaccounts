@@ -7,11 +7,12 @@ import "../src/IEntryPoint.sol";
 import "../src/EntryPoint.sol";
 import "../src/SimpleAccountFactory.sol";
 import "../src/ECDSA.sol";
-
-using Strings for bytes32;
-using UserOperationLib for UserOperation;
+import "../src/UserOperation.sol";
 
 contract SimpleAccounEthereumTest is Test {
+    using Strings for bytes32;
+    using UserOperationLib for UserOperation;
+
     address public constant ENTRYPOINT_V06 = 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789;
     uint256 public constant ETHEREUM_CHAIN_ID = 1;
     uint256 _ethereumFork;
