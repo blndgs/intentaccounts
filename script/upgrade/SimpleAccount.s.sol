@@ -15,8 +15,6 @@ contract UpgradeSimpleAccount is Script {
     }
 
     function run() public {
-        uint256 startGas = gasleft();
-
         // Setup signer
         string memory privateKeyEnv = string(abi.encodePacked(_network, "_PRIVATE_KEY"));
         string memory privateKeyString = vm.envString(privateKeyEnv);
@@ -42,36 +40,30 @@ contract UpgradeSimpleAccount is Script {
         console2.log("Balance of signer in Gwei:", _weiToGwei(signer.balance), "Gwei");
 
         console2.log("Owner of SimpleAccount", signer);
+        console2.log("msg.sender", msg.sender);
+        console2.log("tx.origin", tx.origin);
+        address accountOwner = SimpleAccountV2(proxyAddress).owner();
+        console2.log("Account owner:", accountOwner);
+        assert(accountOwner == signer);
 
         vm.startBroadcast(signerPrivateKey);
 
-        try new SimpleAccountV2(IEntryPoint(ENTRYPOINT_ADDRESS)) returns (SimpleAccountV2 newImplementation) {
-            console2.log("Deployed SimpleAccountV2 implementation at:", address(newImplementation));
+        SimpleAccountV2 newImplementation = SimpleAccountV2(payable(0x16c83BBacc3Ec35fD3484F153C965e2978f371f4));
+        console2.log("Deployed SimpleAccountV2 implementation at:", address(newImplementation));
 
-            bytes memory data = abi.encodeWithSelector(SimpleAccountV2.initialize.selector, signer);
-            SimpleAccountV2(proxyAddress).upgradeToAndCall(address(newImplementation), data);
-            console2.log("Upgraded SimpleAccount proxy at", proxyAddress, "to new implementation:", address(newImplementation));
+        bytes memory data = abi.encodeWithSelector(SimpleAccountV2.initialize.selector, signer);
+        SimpleAccountV2(proxyAddress).upgradeToAndCall(address(newImplementation), data);
+        console2.log(
+            "Upgraded SimpleAccount proxy at", proxyAddress, "to new implementation:", address(newImplementation)
+        );
 
-            // verify proxy implementation has been upgraded
-            SimpleAccountV2 upgradedAccount = SimpleAccountV2(proxyAddress);
+        // verify proxy implementation has been upgraded
+        SimpleAccountV2 upgradedAccount = SimpleAccountV2(proxyAddress);
 
-            // calling a function in the new implementation with empty data should have no effect
-            upgradedAccount.execValueBatch(new uint256[](0), new address[](0), new bytes[](0));
-        } catch Error(string memory reason) {
-            console2.log("An error occurred when deployed the wallet factory:", reason);
-            revert(reason);
-        } catch Panic(uint256 errorCode) {
-            console2.log("A panic occurred when deployed the wallet factory (code", errorCode, ")");
-            revert("Panic occurred");
-        } catch {
-            console2.log("An unexpected error occurred when deployed the wallet factory");
-            revert("Unexpected error");
-        }
+        // calling a function in the new implementation with empty data should have no effect
+        upgradedAccount.execValueBatch(new uint256[](0), new address[](0), new bytes[](0));
 
         vm.stopBroadcast();
-
-        uint256 endGas = gasleft();
-        console2.log("Gas used for upgrade: ", startGas - endGas);
 
         console2.log("Balance of signer in Ether:", _weiToEther(signer.balance), "ETH");
         console2.log("Balance of signer in Gwei:", _weiToGwei(signer.balance), "Gwei");
