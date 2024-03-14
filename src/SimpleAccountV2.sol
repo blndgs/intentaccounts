@@ -13,13 +13,8 @@ import "./ECDSA.sol";
 import "./BaseAccount.sol";
 import "./TokenCallbackHandler.sol";
 
-/**
- * minimal account.
- *  this is sample minimal account.
- *  has execute, eth handling methods
- *  has a single signer that can send requests through the entryPoint.
- */
-contract SimpleAccount is BaseAccount, TokenCallbackHandler, UUPSUpgradeable, Initializable {
+/// @custom:oz-upgrades-from SimpleAccount
+contract SimpleAccountV2 is BaseAccount, TokenCallbackHandler, UUPSUpgradeable, Initializable {
     using UserOperationLib for UserOperation;
 
     // Custom errors

@@ -1,0 +1,2 @@
+forge clean && forge build
+forge script UpgradeSimpleAccount --broadcast --rpc-url https://virtual.mainnet.rpc.tenderly.co/220b5b66-ee44-4940-9637-b4d0706317ce  --verifier-url https://virtual.mainnet.rpc.tenderly.co/c4100609-e3ff-441b-a803-5a4e95de809f -vvvvv --chain-id 1 --ffi

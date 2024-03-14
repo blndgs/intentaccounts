@@ -2,7 +2,7 @@
 pragma solidity ^0.8.24;
 
 import "forge-std/Script.sol";
-import "../src/SimpleAccountFactory.sol";
+import "../../src/SimpleAccountFactory.sol";
 
 contract DeploySimpleAccountFactory is Script {
     string _network;
@@ -26,8 +26,10 @@ contract DeploySimpleAccountFactory is Script {
         console2.log("Balance of signer in Gwei:", _weiToGwei(signer.balance), "Gwei");
 
         console2.log("Owner of SimpleAccount", signer);
+        console2.log("msg.sender", msg.sender);
+        console2.log("tx.origin", tx.origin);
 
-        vm.startBroadcast(signerPrivateKey);
+        vm.startBroadcast(signer);
 
         // Define entry point address and owner address
         address entryPointAddress = 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789;
