@@ -9,6 +9,8 @@ ifneq (,$(wildcard ./.env))
 endif
 
 # Commands
+fmt:
+	forge fmt
 
 # Build the project using Forge
 build:
