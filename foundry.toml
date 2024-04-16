@@ -7,6 +7,7 @@ ethereum = "${ETHEREUM_RPC_URL}"
 mumbai = { key = "${POLYGONSCAN_API_KEY}", chain = "80001" }
 polygon = { key = "${POLYGONSCAN_API_KEY}", chain = "137" }
 etherscan = { key = "${ETHEREUMSCAN_API_KEY}", chain = "1" }
+v-mainnet888scan = { key = "ow43E49ce6DQR--95rzFX3K7esqyoati", chain = "888", url = "https://virtual.mainnet.rpc.tenderly.co/c5ed9a3b-7ad5-4d6a-8e4b-76a4b00ba6ea/verify/etherscan" }
 
 [profile.default]
 solc = "0.8.25"
