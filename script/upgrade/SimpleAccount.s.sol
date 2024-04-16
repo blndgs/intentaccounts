@@ -3,7 +3,6 @@ pragma solidity ^0.8.24;
 
 import "forge-std/Script.sol";
 import "../../src/SimpleAccount.sol";
-import "../../src/SimpleAccountV2.sol";
 
 contract UpgradeSimpleAccount is Script {
     address private ENTRYPOINT_ADDRESS;
@@ -42,23 +41,23 @@ contract UpgradeSimpleAccount is Script {
         console2.log("Owner of SimpleAccount", signer);
         console2.log("msg.sender", msg.sender);
         console2.log("tx.origin", tx.origin);
-        address accountOwner = SimpleAccountV2(proxyAddress).owner();
+        address accountOwner = SimpleAccount(proxyAddress).owner();
         console2.log("Account owner:", accountOwner);
         assert(accountOwner == signer);
 
         vm.startBroadcast(signerPrivateKey);
 
-        SimpleAccountV2 newImplementation = SimpleAccountV2(payable(0x16c83BBacc3Ec35fD3484F153C965e2978f371f4));
-        console2.log("Deployed SimpleAccountV2 implementation at:", address(newImplementation));
+        SimpleAccount newImplementation = SimpleAccount(payable(0x16c83BBacc3Ec35fD3484F153C965e2978f371f4));
+        console2.log("Deployed SimpleAccount implementation at:", address(newImplementation));
 
-        bytes memory data = abi.encodeWithSelector(SimpleAccountV2.initialize.selector, signer);
-        SimpleAccountV2(proxyAddress).upgradeToAndCall(address(newImplementation), data);
+        bytes memory data = abi.encodeWithSelector(SimpleAccount.initialize.selector, signer);
+        SimpleAccount(proxyAddress).upgradeToAndCall(address(newImplementation), data);
         console2.log(
             "Upgraded SimpleAccount proxy at", proxyAddress, "to new implementation:", address(newImplementation)
         );
 
         // verify proxy implementation has been upgraded
-        SimpleAccountV2 upgradedAccount = SimpleAccountV2(proxyAddress);
+        SimpleAccount upgradedAccount = SimpleAccount(proxyAddress);
 
         // calling a function in the new implementation with empty data should have no effect
         upgradedAccount.execValueBatch(new uint256[](0), new address[](0), new bytes[](0));
