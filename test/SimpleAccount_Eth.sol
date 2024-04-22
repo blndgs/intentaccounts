@@ -106,6 +106,38 @@ contract SimpleAccounEthereumTest is Test {
         return result;
     }
 
+    // Test userOp validation for a vanilla Ethereum operation
+    // userOp has no initCode, callData, or paymaster
+    // _simpleAccount is already deployed
+    function testValidateEtherVanillaOp() public {
+        // Prepare the UserOperation object to sign
+        UserOperation memory userOp = UserOperation({
+            sender: address(_simpleAccount),
+            nonce: 0x0,
+            initCode: bytes(hex""),
+            callData: bytes(hex""),
+            callGasLimit: 500000,
+            verificationGasLimit: 65536,
+            preVerificationGas: 65536,
+            maxFeePerGas: 0,
+            maxPriorityFeePerGas: 0,
+            paymasterAndData: bytes(hex""),
+            signature: bytes(
+                hex""
+                )
+        });
+
+        userOp.nonce = _simpleAccount.getNonce();
+        console2.log("nonce:", userOp.nonce);
+
+        // Generate the signature
+        userOp.signature = generateSignature(userOp, block.chainid);
+        console2.log("signature:"); // 65 bytes or 130 hex characters. ECDSA signature
+        console2.logBytes(userOp.signature);
+
+        verifySignature(userOp);
+    }
+
     function testValidateExecute_SolverNative() public {
         console2.log("sender:", address(_simpleAccount));
 
