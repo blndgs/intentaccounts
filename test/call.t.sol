@@ -111,7 +111,6 @@ contract ContractB {
 
 contract callsTest is Test {
     address constant ENTRYPOINT_V06 = 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789;
-    uint256 mumbaiFork;
     ContractB b;
     address public _ownerAddress;
     uint256 public _ownerPrivateKey;
@@ -134,10 +133,9 @@ contract callsTest is Test {
         // Derive the Ethereum address from the private key
         _ownerPrivateKey = vm.parseUint(privateKeyString);
         _ownerAddress = vm.addr(_ownerPrivateKey);
-        assertEq(_ownerAddress, 0xc9164f44661d83d01CbB69C0b0E471280f446099, "Owner address should match");
+        console2.log("Owner address:", _ownerAddress);
 
-        mumbaiFork = vm.createSelectFork(vm.envString("ETHEREUM_RPC_URL"));
-        // vm.startPrank(_ownerAddress);
+        vm.createSelectFork(vm.envString("ETHEREUM_RPC_URL"));
 
         // Deploy the EntryPoint contract or use an existing one
         _entryPoint = EntryPoint(payable(ENTRYPOINT_V06));
@@ -146,8 +144,10 @@ contract callsTest is Test {
         // Deploy ContractB
         b = new ContractB();
 
+        address account = vm.envAddress("ETH_4337_ACCOUNT");
+
         // Sync with deployed Eth mainnet 4337 wallet
-        _simpleAccount = SimpleAccount(payable(0xc31bE7F83620D7cEF8EdEbEe0f5aF096A7C0b7F4));
+        _simpleAccount = SimpleAccount(payable(account));
         console2.log("_SimpleAccount deployed at:", address(_simpleAccount));
 
         // Create an SMT token
@@ -278,11 +278,11 @@ contract callsTest is Test {
             nonce: 0,
             initCode: bytes(hex""),
             callData: bytes(
-                "{\"sender\":\"0xc31bE7F83620D7cEF8EdEbEe0f5aF096A7C0b7F4\",\"from\":{\"type\":\"TOKEN\",\"address\":\"0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE\",\"amount\":\"0.8\",\"chainId\":\"1\"},\"to\":{\"type\":\"TOKEN\",\"address\":\"0xdac17f958d2ee523a2206206994597c13d831ec7\",\"chainId\":\"1\"}}"
+                "{\"sender\":\"0xff6F893437e88040ffb70Ce6Aeff4CcbF8dc19A4\",\"from\":{\"type\":\"TOKEN\",\"address\":\"0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE\",\"amount\":\"0.8\",\"chainId\":\"1\"},\"to\":{\"type\":\"TOKEN\",\"address\":\"0xdac17f958d2ee523a2206206994597c13d831ec7\",\"chainId\":\"1\"}}"
                 ),
             callGasLimit: 800000,
             verificationGasLimit: 100000,
-            preVerificationGas: 0,
+            preVerificationGas: 10000,
             maxFeePerGas: 0,
             maxPriorityFeePerGas: 0,
             paymasterAndData: bytes(hex""),
@@ -293,6 +293,7 @@ contract callsTest is Test {
         console2.log("nonce:", userOp.nonce);
 
         // 2. SDK signs the intent userOp
+        console2.log("chain ID:", block.chainid);
         userOp.signature = generateSignature(userOp, block.chainid);
         console2.log("signature:");
         console2.logBytes(userOp.signature);
@@ -316,6 +317,7 @@ contract callsTest is Test {
         // 6. Bundler submits solved userOp on-chain 
 
         verifySignature(userOp);
+        console2.log("userOp signature verified");
 
         UserOperation[] memory userOps = new UserOperation[](1);
         userOps[0] = userOp;
