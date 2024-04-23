@@ -87,10 +87,14 @@ contract SimpleAccounEthereumTest is Test {
     }
 
     function generateSignature(UserOperation memory userOp, uint256 chainID) internal view returns (bytes memory) {
+        return generateSignature(userOp, chainID, _ownerPrivateKey);
+    }
+
+    function generateSignature(UserOperation memory userOp, uint256 chainID, uint256 signerPrvKey) internal view returns (bytes memory) {
         bytes32 userOpHash = _simpleAccount.getUserOpHash(userOp, chainID);
 
         // Sign the hash with the owner's private key
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(_ownerPrivateKey, userOpHash.toEthSignedMessageHash());
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(signerPrvKey, userOpHash.toEthSignedMessageHash());
 
         // Combine (v, r, s) into a signature
         bytes memory signature = abi.encodePacked(r, s, v);
