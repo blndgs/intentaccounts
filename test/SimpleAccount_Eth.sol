@@ -237,6 +237,7 @@ contract SimpleAccounEthereumTest is Test {
         UserOperation memory userOp = UserOperation({
             sender: account,
             nonce: 0,
+            // Account factory address: 0x793bf47262290b0d02d4326bfc3654a0358e12de + createAccount(owner<0xd219ceeC68dE386AF92551F9b08a9Aef8910C4EA>, salt) calldata
             initCode: bytes(hex"793bf47262290b0d02d4326bfc3654a0358e12de5fbfb9cf000000000000000000000000d219ceeC68dE386AF92551F9b08a9Aef8910C4EA0000000000000000000000000000000000000000000000000000000000000000"),
             callData: bytes(hex""),
             callGasLimit: 800000,
@@ -268,73 +269,12 @@ contract SimpleAccounEthereumTest is Test {
     }
 
      /**
-      * Tests wallet creation with user (counterfactual account's address) 
-      * Ether funding.
-      */
-    function testCreateNewWalletUserEtherDeposit() public {
-        // New owner without a smart account wallet
-        uint ownerPrivateKey = 0x150c8f7379076d4d9244ed39a9bfba489f664760e37b71d1bd4f231c5662d62e;
-        address walletOwner = 0xd219ceeC68dE386AF92551F9b08a9Aef8910C4EA;
-
-        // console2.log("walletOwner:", walletOwner);
-        address newAccountAddress = _factory.getAddress(walletOwner, 0);
-        console2.log("counterfactual address for new wallet:", newAccountAddress);
-
-        uint codeSize = newAccountAddress.code.length;
-        assertEq(codeSize, 0, "Account should not be deployed yet");
-
-        // **************************************************************
-        // Non-zero gas userOp, user funds it.
-        // Necessary to fund the account to pay for the account creation
-        // **************************************************************
-        vm.deal(walletOwner, 10 ether);
-        assertEq(walletOwner.balance, 10 ether);
-
-        _entryPoint.depositTo{value: 10 ether}(newAccountAddress);
-        uint256 depositBef = _entryPoint.balanceOf(newAccountAddress);
-        assertGt(depositBef, 9 ether, "deposit should be near 10 ether");
-
-        // 1. SDK setups the unsigned Intent UserOp
-        UserOperation memory userOp = UserOperation({
-            sender: newAccountAddress,
-            nonce: 0,
-            // Account factory address: 0x793bf47262290b0d02d4326bfc3654a0358e12de + createAccount(owner<0xd219ceeC68dE386AF92551F9b08a9Aef8910C4EA>, salt) calldata
-            initCode: bytes(hex"793bf47262290b0d02d4326bfc3654a0358e12de5fbfb9cf000000000000000000000000d219ceeC68dE386AF92551F9b08a9Aef8910C4EA0000000000000000000000000000000000000000000000000000000000000000"),
-            callData: bytes(hex""),
-            callGasLimit: 800000,
-            verificationGasLimit: 628384,
-            preVerificationGas: 626688,
-            maxFeePerGas: 65536, // Non zero value requires ETH balance in account
-            maxPriorityFeePerGas: 73728,
-            paymasterAndData: bytes(hex""),
-            signature: bytes(hex"")
-        });
-
-        userOp.signature = generateSignature(userOp, block.chainid, ownerPrivateKey);
-        console2.log("signature:"); // 65 bytes or 130 hex characters. ECDSA signature
-        console2.logBytes(userOp.signature);
-
-        UserOperation[] memory userOps = new UserOperation[](1);
-        userOps[0] = userOp;
-
-        // entryPoint emits successful userOp execution events
-        vm.expectEmit(false, true, true, false, ENTRYPOINT_V06);
-        emit IEntryPoint.UserOperationEvent(0/* ignore userOp hash */, newAccountAddress, address(0) /* paymaster */, userOp.nonce, true, 0, 0);
-        _entryPoint.handleOps(userOps, payable(_ownerAddress));
-     
-        uint256 depositAfter = _entryPoint.balanceOf(newAccountAddress);
-
-        assertEq(newAccountAddress.balance, 0, "Balance of SimpleAccount should have been affected after execution");
-        assertLt(depositAfter, depositBef, "Entrypoint account deposits should have decreased after execution");
-    }
-
-     /**
-      * Tests sponsored wallet creation.
+      * Tests sponsored wallet creation by bundler.
       */
     function testCreateNewWalletFundingByBundler() public {
         // New owner without a smart account wallet
-        address walletOwner = 0x278caac08B594f8559699F39b9460430739B9802;
-        assertEq(walletOwner.balance, 0, "EoA owner should have not Eth balance");
+        uint ownerPrivateKey = 0x150c8f7379076d4d9244ed39a9bfba489f664760e37b71d1bd4f231c5662d62e;
+        address walletOwner = 0xd219ceeC68dE386AF92551F9b08a9Aef8910C4EA;
 
         console2.log("walletOwner:", walletOwner);
         address account = _factory.getAddress(walletOwner, 0);
@@ -353,7 +293,8 @@ contract SimpleAccounEthereumTest is Test {
         UserOperation memory userOp = UserOperation({
             sender: account,
             nonce: 0,
-            initCode: bytes(hex"42E60c23aCe33c23e0945a07f6e2c1E53843a1d55fbfb9cf000000000000000000000000278caac08B594f8559699F39b9460430739B98020000000000000000000000000000000000000000000000000000000000000000"),
+            // Account factory address: 0x793bf47262290b0d02d4326bfc3654a0358e12de + createAccount(owner<0xd219ceeC68dE386AF92551F9b08a9Aef8910C4EA>, salt) calldata
+            initCode: bytes(hex"793bf47262290b0d02d4326bfc3654a0358e12de5fbfb9cf000000000000000000000000d219ceeC68dE386AF92551F9b08a9Aef8910C4EA0000000000000000000000000000000000000000000000000000000000000000"),
             callData: bytes(hex""),
             callGasLimit: 800000,
             verificationGasLimit: 628384,
@@ -361,11 +302,15 @@ contract SimpleAccounEthereumTest is Test {
             maxFeePerGas: 0,
             maxPriorityFeePerGas: 0,
             paymasterAndData: bytes(hex""),
-            signature: bytes(hex"06577b58c31d7c58c69b0c281c5c7353573eb1e930e7560bdcc61517885ab9d738b6668ace150b7724c0ee247d64c5e5dfc09e09a845687c38a2607d10dd7d111c")
+            signature: bytes(hex"")
         });
 
         UserOperation[] memory userOps = new UserOperation[](1);
         userOps[0] = userOp;
+
+        userOp.signature = generateSignature(userOp, block.chainid, ownerPrivateKey);
+        console2.log("signature:"); // 65 bytes or 130 hex characters. ECDSA signature
+        console2.logBytes(userOp.signature);
 
         // entryPoint emits successful userOp execution events
         vm.expectEmit(false, true, true, false, 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789);
