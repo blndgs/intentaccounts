@@ -1,17 +1,21 @@
-name: test
+name: Solidity Tests
 
-on: workflow_dispatch
-
-env:
-  FOUNDRY_PROFILE: ci
+on:
+  pull_request:
+    branches:
+      - main
+      - test
+      - live
+  push:
+    branches:
+      - main
+      - test
+      - live
 
 jobs:
-  check:
-    strategy:
-      fail-fast: true
-
-    name: Foundry project
+  tests:
     runs-on: ubuntu-latest
+    
     steps:
       - uses: actions/checkout@v4
         with:
@@ -22,13 +26,29 @@ jobs:
         with:
           version: nightly
 
+      - name: Set environment variables
+        run: |
+          echo "ETHEREUM_RPC_URL=${{ secrets['${{ github.ref_name }}_ETHEREUM_RPC_URL'] }}" >> $GITHUB_ENV
+          echo "ETHEREUM_SALT=${{ secrets['${{ github.ref_name }}_ETHEREUM_SALT'] }}" >> $GITHUB_ENV
+          echo "ETH_4337_FACTORY=${{ secrets['${{ github.ref_name }}_ETH_4337_FACTORY'] }}" >> $GITHUB_ENV
+          echo "ETH_4337_ACCOUNT=${{ secrets['${{ github.ref_name }}_ETH_4337_ACCOUNT'] }}" >> $GITHUB_ENV
+
       - name: Run Forge build
         run: |
           forge --version
           forge build --sizes
-        id: build
-
+        
       - name: Run Forge tests
-        run: |
-          forge test -vvv
-        id: test
+        run: forge test -vvv
+        env:
+          ETHEREUM_PRIVATE_KEY: ${{ secrets[format('ETHEREUM_PRIVATE_KEY_{0}', github.ref_name)] }}
+
+      - name: Run coverage
+        run: forge coverage --report lcov
+        
+      - name: Upload coverage report 
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./lcov.info
+          fail_ci_if_error: true
+          flags: unittests
