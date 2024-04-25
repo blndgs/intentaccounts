@@ -40,7 +40,7 @@ jobs:
         id: env_prefix
         run: |
           BRANCH=${{ github.base_ref }}  # This is set for pull requests
-          [ -z "$BRANCH" ] && BRANCH=${GITHUB_REF#refs/heads/}  # Fallback to current branch if not a pull request
+          [ -z "$BRANCH" ] && BRANCH=main  # Fallback to main branch if not a pull request
           PREFIX=$(echo $BRANCH | awk -F'-' '{print toupper($1)}')  # Extract prefix and convert to upper case
           echo "PREFIX=$PREFIX" >> $GITHUB_ENV
           echo "PREFIX=$PREFIX"
