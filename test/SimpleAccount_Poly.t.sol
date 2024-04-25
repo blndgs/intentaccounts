@@ -601,7 +601,7 @@ contract SimpleAccounPolygonTest is Test {
         console2.log("sender:", address(simpleAccount));
 
         uint256 balanceBef = address(simpleAccount).balance;
-        console2.log("Balance of SimpleAccount before execution in Ether:", _weiToEther(balanceBef), "Matic");
+        console2.log("Balance of SimpleAccount before execution in ", _weiToEther(balanceBef), "Matic");
 
         // 1. SDK setups the unsigned Intent UserOp
         UserOperation memory userOp = UserOperation({
@@ -611,9 +611,9 @@ contract SimpleAccounPolygonTest is Test {
             callData: bytes(
                 "{\"chainId\":80001, \"sender\":\"0x18Dd70639de2ca9146C32f9c84B90A68bBDaAA96\",\"kind\":\"swap\",\"hash\":\"\",\"sellToken\":\"0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE\",\"buyToken\":\"0xc2132D05D31c914a87C6611C10748AEb04B58e8F\",\"sellAmount\":10,\"buyAmount\":5,\"partiallyFillable\":false,\"status\":\"Received\",\"createdAt\":0,\"expirationAt\":0}"
                 ),
-            callGasLimit: 785000,
-            verificationGasLimit: 25000,
-            preVerificationGas: 0,
+            callGasLimit: 1000000,
+            verificationGasLimit: 100000,
+            preVerificationGas: 100000,
             maxFeePerGas: 0,
             maxPriorityFeePerGas: 0,
             paymasterAndData: bytes(hex""),
@@ -659,7 +659,7 @@ contract SimpleAccounPolygonTest is Test {
      
         uint256 balanceAfter = address(simpleAccount).balance;
         // print the balance of the contract
-        console2.log("Balance of SimpleAccount after execution in Matic:", _weiToEther(balanceAfter), "ETH");
+        console2.log("Balance of SimpleAccount after execution in ", _weiToEther(balanceAfter), "Matic");
         // assert balanceAfter < balanceBef
         assertGt(balanceBef, balanceAfter, "Balance of SimpleAccount should have decreased after execution");
     }
