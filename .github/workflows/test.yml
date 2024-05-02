@@ -62,16 +62,8 @@ jobs:
         
       - name: Run Forge tests
         run: forge test -vvv
-        # env:
-        #   ETHEREUM_PRIVATE_KEY: ${{ secrets[format('{0}_ETHEREUM_PRIVATE_KEY', env.PREFIX)] }}
-        #   POLYGON_PRIVATE_KEY: ${{ secrets[format('{0}_POLYGON_PRIVATE_KEY', env.PREFIX)] }}
 
       - name: Run coverage
-        run: forge coverage --report lcov
-        
-      - name: Upload coverage report 
-        uses: codecov/codecov-action@v3
-        with:
-          files: ./lcov.info
-          fail_ci_if_error: true
-          flags: unittests
+        run: |
+          forge coverage --report lcov
+          forge coverage --report summary
