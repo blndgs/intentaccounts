@@ -4,12 +4,12 @@ on:
   pull_request:
     branches:
       - main
-      - test
+      - testnet
       - live
   push:
     branches:
       - main
-      - test
+      - testnet
       - live
   workflow_dispatch:      
 
