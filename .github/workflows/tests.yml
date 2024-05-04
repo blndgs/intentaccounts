@@ -92,7 +92,9 @@ jobs:
             exit 0
           else
             echo "Tests failed"
-            gh pr comment "$PR_URL" --body "Tests failed. Please fix the issues before merging."
+            SOURCE_BRANCH="${{ github.event.pull_request.head.ref }}"
+            TARGET_BRANCH="${{ github.event.pull_request.base.ref }}"
+            gh pr comment "$PR_URL" --body "Tests failed on pull request from branch $SOURCE_BRANCH to $TARGET_BRANCH. Please fix the issues before merging."
             exit 1
           fi
         env:
