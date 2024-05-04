@@ -76,7 +76,7 @@ jobs:
             echo "Tests failed"
             exit 1
           fi
-          
+
       - name: Create GitHub App Token
         uses: actions/create-github-app-token@v1
         id: app-token
@@ -92,8 +92,7 @@ jobs:
             exit 0
           else
             echo "Tests failed"
-            gh pr comment "$PR_URL" --body "1: Tests failed. Please fix the issues before merging."
-            gh pr comment "${{ github.event.pull_request.number }}" --body "2: Tests failed. Please fix the issues before merging."
+            gh pr comment "$PR_URL" --body "Tests failed. Please fix the issues before merging."
             exit 1
           fi
         env:

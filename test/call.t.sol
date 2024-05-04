@@ -177,7 +177,7 @@ contract callsTest is Test {
         bool success = Exec.call(target, 0, callData, gasleft());
 
         // Check if the call was successful
-        require(!success, "Call to ContractB failed");
+        require(success, "Call to ContractB failed");
 
         // Call execute() function in ContractB using a Yul call
         // through indirection via execute(), which calls _call()
