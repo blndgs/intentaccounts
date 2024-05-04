@@ -1,4 +1,4 @@
-[![Solidity Tests](https://github.com/blndgs/intentaccounts/actions/workflows/test.yml/badge.svg)](https://github.com/blndgs/intentaccounts/actions/workflows/test.yml)
+[![Solidity Tests](https://github.com/blndgs/intentaccounts/actions/workflows/tests.yml/badge.svg)](https://github.com/blndgs/intentaccounts/actions/workflows/tests.yml)
 
 # Intents SimpleAccount ERC-4337 Wallet
 
