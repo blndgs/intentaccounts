@@ -73,6 +73,7 @@ jobs:
             forge coverage --report summary
           else
             echo "Tests failed"
+            exit 1
           fi
 
       - name: Check test results
