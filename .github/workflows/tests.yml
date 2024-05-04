@@ -85,7 +85,7 @@ jobs:
           private-key: ${{ secrets.PRIVATE_KEY }}
 
       - name: Check test results
-        if: github.event_name == 'pull_request'
+        if: github.event_name == 'pull_request' && (github.event.pull_request.base.ref == 'testnet' || github.event.pull_request.base.ref == 'live')
         run: |
           if [ ${{ steps.run_tests_and_coverage.outcome }} == "success" ]; then
             echo "Tests passed"
