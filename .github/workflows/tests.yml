@@ -62,6 +62,7 @@ jobs:
           forge build --sizes
 
       - name: Run tests and coverage
+        id: run_tests_and_coverage
         run: |
           TEST_RESULT=0
           forge test -vvv || TEST_RESULT=$?
