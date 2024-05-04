@@ -4,12 +4,12 @@ on:
   pull_request:
     branches:
       - main
-      - test
+      - testnet
       - live
   push:
     branches:
       - main
-      - test
+      - testnet
       - live
   workflow_dispatch:      
 
@@ -55,15 +55,48 @@ jobs:
           echo "ETH_4337_ACCOUNT=${{ vars[format('{0}_ETH_4337_ACCOUNT', env.PREFIX)] }}" >> $GITHUB_ENV
           echo "ETHEREUM_PRIVATE_KEY=${{ secrets[format('{0}_ETHEREUM_PRIVATE_KEY', env.PREFIX)] }}" >> $GITHUB_ENV
           echo "POLYGON_PRIVATE_KEY=${{ secrets[format('{0}_POLYGON_PRIVATE_KEY', env.PREFIX)] }}" >> $GITHUB_ENV
+
       - name: Run Forge build
         run: |
           forge --version
           forge build --sizes
-        
-      - name: Run Forge tests
-        run: forge test -vvv
 
-      - name: Run coverage
+      - name: Run tests and coverage
+        id: run_tests_and_coverage
+        continue-on-error: true
         run: |
-          forge coverage --report lcov
-          forge coverage --report summary
+          TEST_RESULT=0
+          forge test -vvv || TEST_RESULT=$?
+          
+          if [ $TEST_RESULT -eq 0 ]; then
+            echo "Tests passed"
+            forge coverage --report lcov
+            forge coverage --report summary
+          else
+            echo "Tests failed"
+            exit 1
+          fi
+
+      - name: Create GitHub App Token
+        uses: actions/create-github-app-token@v1
+        id: app-token
+        with:
+          app-id: ${{ vars.APP_ID }}
+          private-key: ${{ secrets.PRIVATE_KEY }}
+
+      - name: Check test results
+        if: github.event_name == 'pull_request'
+        run: |
+          if [ ${{ steps.run_tests_and_coverage.outcome }} == "success" ]; then
+            echo "Tests passed"
+            exit 0
+          else
+            echo "Tests failed"
+            SOURCE_BRANCH="${{ github.event.pull_request.head.ref }}"
+            TARGET_BRANCH="${{ github.event.pull_request.base.ref }}"
+            gh pr comment "$PR_URL" --body "Tests failed on pull request from branch $SOURCE_BRANCH to $TARGET_BRANCH. Please fix the issues before merging."
+            exit 1
+          fi
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          PR_URL: ${{ github.event.pull_request.number }}
