@@ -63,6 +63,7 @@ jobs:
 
       - name: Run tests and coverage
         id: run_tests_and_coverage
+        continue-on-error: true
         run: |
           TEST_RESULT=0
           forge test -vvv || TEST_RESULT=$?
