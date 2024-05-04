@@ -76,6 +76,13 @@ jobs:
             echo "Tests failed"
             exit 1
           fi
+          
+      - name: Create GitHub App Token
+        uses: actions/create-github-app-token@v1
+        id: app-token
+        with:
+          app-id: ${{ vars.APP_ID }}
+          private-key: ${{ secrets.PRIVATE_KEY }}
 
       - name: Check test results
         if: github.event_name == 'pull_request'
@@ -90,4 +97,5 @@ jobs:
             exit 1
           fi
         env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
           PR_URL: ${{ github.event.pull_request.number }}
