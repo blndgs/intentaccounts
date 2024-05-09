@@ -18,7 +18,7 @@ struct ECDSAValidatorStorage {
 // 1. default mode, use preset validator for the kernel
 // 2. enable mode, enable a new validator for given action and use it for current userOp
 // 3. sudo mode, use default plugin for current userOp
-contract ECDSAValidator is IKernelValidator {
+contract KernelIntentValidator is IKernelValidator {
     // Custom errors
     error EndLessThanStart();
     error EndOutOfBounds(uint256 dataLength, uint256 end);
@@ -77,7 +77,7 @@ contract ECDSAValidator is IKernelValidator {
         }
     }
 
-    uint256 private constant SIGNATURE_LENGTH = 69; // ECDSA 65 + 4 (kernel zero padding)
+    uint256 private constant SIGNATURE_LENGTH = 65;
 
     function _getUserOpHash(UserOperation calldata userOp, uint256 chainID) internal pure returns (bytes32) {
         bytes memory callData = userOp.callData;
@@ -103,21 +103,28 @@ contract ECDSAValidator is IKernelValidator {
 
         address owner = ecdsaValidatorStorage[_userOp.sender].owner;
         bytes32 hash = ECDSA.toEthSignedMessageHash(_userOpHash);
-        if (owner == ECDSA.recover(hash, _userOp.signature)) {
+
+        // Extract the first 65 bytes of the signature
+        bytes memory signature65 = _userOp.signature[:SIGNATURE_LENGTH];
+        
+        if (owner == ECDSA.recover(hash, signature65)) {
             return ValidationData.wrap(0);
         }
-        if (owner != ECDSA.recover(_userOpHash, _userOp.signature)) {
-            return SIG_VALIDATION_FAILED;
-        }
+
+        return SIG_VALIDATION_FAILED;
     }
 
     function validateSignature(bytes32 hash, bytes calldata signature) public view override returns (ValidationData) {
         address owner = ecdsaValidatorStorage[msg.sender].owner;
-        if (owner == ECDSA.recover(hash, signature)) {
+                
+        // Extract the first 65 bytes of the signature
+        bytes memory signature65 = signature[:SIGNATURE_LENGTH];
+
+        if (owner == ECDSA.recover(hash, signature65)) {
             return ValidationData.wrap(0);
         }
         bytes32 ethHash = ECDSA.toEthSignedMessageHash(hash);
-        address recovered = ECDSA.recover(ethHash, signature);
+        address recovered = ECDSA.recover(ethHash, signature65);
         if (owner != recovered) {
             return SIG_VALIDATION_FAILED;
         }
