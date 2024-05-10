@@ -55,6 +55,14 @@ jobs:
           echo "ETH_4337_ACCOUNT=${{ vars[format('{0}_ETH_4337_ACCOUNT', env.PREFIX)] }}" >> $GITHUB_ENV
           echo "ETHEREUM_PRIVATE_KEY=${{ secrets[format('{0}_ETHEREUM_PRIVATE_KEY', env.PREFIX)] }}" >> $GITHUB_ENV
           echo "POLYGON_PRIVATE_KEY=${{ secrets[format('{0}_POLYGON_PRIVATE_KEY', env.PREFIX)] }}" >> $GITHUB_ENV
+          echo "ETHEREUM_RPC_URL=${{ vars[format('{0}_ETHEREUM_RPC_URL', env.PREFIX)] }}"
+          echo "POLYGON_RPC_URL=${{ vars[format('{0}_POLYGON_RPC_URL', env.PREFIX)] }}"
+          echo "ETHEREUM_SALT=${{ vars[format('{0}_ETHEREUM_SALT', env.PREFIX)] }}"
+          echo "POLYGON_SALT=${{ vars[format('{0}_POLYGON_SALT', env.PREFIX)] }}"
+          echo "ETH_4337_FACTORY=${{ vars[format('{0}_ETH_4337_FACTORY', env.PREFIX)] }}"
+          echo "ETH_4337_ACCOUNT=${{ vars[format('{0}_ETH_4337_ACCOUNT', env.PREFIX)] }}"
+          echo "ETHEREUM_PRIVATE_KEY=${{ secrets[format('{0}_ETHEREUM_PRIVATE_KEY', env.PREFIX)] }}"
+          echo "POLYGON_PRIVATE_KEY=${{ secrets[format('{0}_POLYGON_PRIVATE_KEY', env.PREFIX)] }}"
 
       - name: Run Forge build
         run: |
