@@ -31,6 +31,15 @@ jobs:
             echo "Not running on a pull request"
           fi
 
+      - name: Determine Environment Prefix
+        id: env_prefix
+        run: |
+          BRANCH=${{ github.base_ref }}  # This is set for pull requests
+          [ -z "$BRANCH" ] && BRANCH=main  # Fallback to main branch if not a pull request
+          PREFIX=$(echo $BRANCH | awk -F'-' '{print toupper($1)}')  # Extract prefix and convert to upper case
+          echo "PREFIX=$PREFIX" >> $GITHUB_ENV
+          echo "PREFIX=$PREFIX"
+
       - name: Set environment variables
         run: |
           # echo env variables
@@ -42,7 +51,16 @@ jobs:
           echo "ETH_4337_ACCOUNT=${{ vars[format('{0}_ETH_4337_ACCOUNT', env.PREFIX)] }}"
           echo "ETHEREUM_PRIVATE_KEY=${{ secrets[format('{0}_ETHEREUM_PRIVATE_KEY', env.PREFIX)] }}"
           echo "POLYGON_PRIVATE_KEY=${{ secrets[format('{0}_POLYGON_PRIVATE_KEY', env.PREFIX)] }}"
-          
+
+          echo "ETHEREUM_RPC_URL=${{ vars.MAIN_ETHEREUM_RPC_URL }}" >> $GITHUB_ENV
+          echo "POLYGON_RPC_URL=${{ vars.MAIN_POLYGON_RPC_URL }}" >> $GITHUB_ENV
+          echo "ETHEREUM_SALT=${{ vars.MAIN_ETHEREUM_SALT }}" >> $GITHUB_ENV
+          echo "POLYGON_SALT=${{ vars.MAIN_POLYGON_SALT }}" >> $GITHUB_ENV
+          echo "ETH_4337_FACTORY=${{ vars.MAIN_ETH_4337_FACTORY }}" >> $GITHUB_ENV
+          echo "ETH_4337_ACCOUNT=${{ vars.MAIN_ETH_4337_ACCOUNT }}" >> $GITHUB_ENV
+          echo "ETHEREUM_PRIVATE_KEY=${{ secrets.MAIN_ETHEREUM_PRIVATE_KEY }}" >> $GITHUB_ENV
+          echo "POLYGON_PRIVATE_KEY=${{ secrets.MAIN_POLYGON_PRIVATE_KEY }}" >> $GITHUB_ENV
+
           # set env variables
           echo "ETHEREUM_RPC_URL=${{ vars[format('{0}_ETHEREUM_RPC_URL', env.PREFIX)] }}" >> $GITHUB_ENV
           echo "POLYGON_RPC_URL=${{ vars[format('{0}_POLYGON_RPC_URL', env.PREFIX)] }}" >> $GITHUB_ENV
@@ -52,6 +70,11 @@ jobs:
           echo "ETH_4337_ACCOUNT=${{ vars[format('{0}_ETH_4337_ACCOUNT', env.PREFIX)] }}" >> $GITHUB_ENV
           echo "ETHEREUM_PRIVATE_KEY=${{ secrets[format('{0}_ETHEREUM_PRIVATE_KEY', env.PREFIX)] }}" >> $GITHUB_ENV
           echo "POLYGON_PRIVATE_KEY=${{ secrets[format('{0}_POLYGON_PRIVATE_KEY', env.PREFIX)] }}" >> $GITHUB_ENV
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: nightly
 
       - name: Run Forge build
         run: |
