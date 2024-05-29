@@ -18,6 +18,7 @@ struct ECDSAValidatorStorage {
 // 1. default mode, use preset validator for the kernel
 // 2. enable mode, enable a new validator for given action and use it for current userOp
 // 3. sudo mode, use default plugin for current userOp
+
 contract KernelIntentValidator is IKernelValidator {
     // Custom errors
     error EndLessThanStart();
@@ -39,7 +40,7 @@ contract KernelIntentValidator is IKernelValidator {
         emit OwnerChanged(msg.sender, oldOwner, owner);
     }
 
-        /**
+    /**
      * @dev Expose _slice for testing
      */
     function slice(bytes memory data, uint256 start, uint256 end) external pure returns (bytes memory result) {
@@ -106,7 +107,7 @@ contract KernelIntentValidator is IKernelValidator {
 
         // Extract the first 65 bytes of the signature
         bytes memory signature65 = _userOp.signature[:SIGNATURE_LENGTH];
-        
+
         if (owner == ECDSA.recover(hash, signature65)) {
             return ValidationData.wrap(0);
         }
@@ -116,7 +117,7 @@ contract KernelIntentValidator is IKernelValidator {
 
     function validateSignature(bytes32 hash, bytes calldata signature) public view override returns (ValidationData) {
         address owner = ecdsaValidatorStorage[msg.sender].owner;
-                
+
         // Extract the first 65 bytes of the signature
         bytes memory signature65 = signature[:SIGNATURE_LENGTH];
 
@@ -139,7 +140,11 @@ contract KernelIntentValidator is IKernelValidator {
         return keccak256(packIntentOp(userOp, callData));
     }
 
-    function packIntentOp(UserOperation calldata userOp, bytes memory callData) internal pure returns (bytes memory ret) {
+    function packIntentOp(UserOperation calldata userOp, bytes memory callData)
+        internal
+        pure
+        returns (bytes memory ret)
+    {
         address sender = getSender(userOp);
         uint256 nonce = userOp.nonce;
         bytes32 hashInitCode = calldataKeccak(userOp.initCode);
@@ -152,10 +157,15 @@ contract KernelIntentValidator is IKernelValidator {
         bytes32 hashPaymasterAndData = calldataKeccak(userOp.paymasterAndData);
 
         return abi.encode(
-            sender, nonce,
-            hashInitCode, hashCallData,
-            callGasLimit, verificationGasLimit, preVerificationGas,
-            maxFeePerGas, maxPriorityFeePerGas,
+            sender,
+            nonce,
+            hashInitCode,
+            hashCallData,
+            callGasLimit,
+            verificationGasLimit,
+            preVerificationGas,
+            maxFeePerGas,
+            maxPriorityFeePerGas,
             hashPaymasterAndData
         );
     }
@@ -163,14 +173,16 @@ contract KernelIntentValidator is IKernelValidator {
     function getSender(UserOperation calldata userOp) internal pure returns (address) {
         address data;
         //read sender from userOp, which is first userOp member (saves 800 gas...)
-        assembly {data := calldataload(userOp)}
+        assembly {
+            data := calldataload(userOp)
+        }
         return address(uint160(data));
     }
 
     /**
-    * keccak function over memory.
-    * @dev directly use memory data for keccak.
-    */
+     * keccak function over memory.
+     * @dev directly use memory data for keccak.
+     */
     function memoryKeccak(bytes memory data) private pure returns (bytes32 ret) {
         assembly {
             // First 32 bytes of the bytes array 'data' stores the length of the data
@@ -181,11 +193,11 @@ contract KernelIntentValidator is IKernelValidator {
             ret := keccak256(dataPtr, len)
         }
     }
-    
+
     /**
-    * keccak function over calldata.
-    * @dev copy calldata into memory, do keccak and drop allocated memory. Strangely, this is more efficient than letting solidity do it.
-    */
+     * keccak function over calldata.
+     * @dev copy calldata into memory, do keccak and drop allocated memory. Strangely, this is more efficient than letting solidity do it.
+     */
     function calldataKeccak(bytes calldata data) private pure returns (bytes32 ret) {
         assembly {
             let mem := mload(0x40)
