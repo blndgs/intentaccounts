@@ -7,13 +7,14 @@ import {IKernelValidator} from "../lib/kernel/src/interfaces/IKernelValidator.so
 import {UserOperation} from "../lib/kernel/lib/I4337/src/interfaces/UserOperation.sol";
 import {IKernel} from "../lib/kernel/src/interfaces/IKernel.sol";
 import {KernelIntentExecutor} from "../src/KernelIntentExecutor.sol";
+import {KernelIntentValidator} from "../src/KernelIntentECDSAValidator.sol";
 import {Operation} from "../lib/kernel/src/common/Enums.sol";
 import {Kernel} from "../lib/kernel/src/Kernel.sol";
 import {KernelFactory} from "../lib/kernel/src/factory/KernelFactory.sol";
 import {KernelStorage} from "../lib/kernel/src/abstract/KernelStorage.sol";
 import {KERNEL_STORAGE_SLOT} from "../lib/kernel/src/common/Constants.sol";
 import {ValidAfter, ValidUntil} from "../lib/kernel/src/common/Types.sol";
-import {WalletKernelStorage} from "../lib/kernel/src/common/Structs.sol";
+import {WalletKernelStorage, ExecutionDetail} from "../lib/kernel/src/common/Structs.sol";
 import "forge-std/Test.sol";
 
 contract KernelPluginModeTest is Test {
@@ -31,7 +32,7 @@ contract KernelPluginModeTest is Test {
     KernelFactory _factory;
     Kernel kernelImpl;
 
-    function testSetOwner() public {
+    function setOwner() public {
         string memory privateKeyString = vm.envString("ETHEREUM_PRIVATE_KEY");
         console2.log("privateKeyString:", privateKeyString);
 
@@ -45,55 +46,81 @@ contract KernelPluginModeTest is Test {
         assertFalse(_ownerAddress == address(0), "Owner address should not be the zero address");
     }
 
-    function getInitializeData() internal view returns (bytes memory) {       
-        return abi.encodeWithSelector(KernelStorage.initialize.selector, _defaultValidator, abi.encodePacked(_ownerAddress));
+    function getInitializeData() internal view returns (bytes memory) {
+        return abi.encodeWithSelector(
+            KernelStorage.initialize.selector, _defaultValidator, abi.encodePacked(_ownerAddress)
+        );
     }
 
     function _createAccount() internal {
         bytes memory initData = getInitializeData();
         console2.log("initData:");
         console2.logBytes(initData);
-        vm.prank(0xa4BFe126D3aD137F972695dDdb1780a29065e556);
-        _factory.setImplementation(address(kernelImpl), true);        
+        _factory.setImplementation(address(kernelImpl), true);
         _account = Kernel(payable(address(_factory.createAccount(address(kernelImpl), initData, 0))));
-        uint n = _account.getNonce();
-        console2.log("account nonce:", n);
+        // console2.log("account nonce:", n);
         vm.deal(address(_account), 1e30);
     }
 
     function setUp() public {
+        setOwner();
+        vm.startPrank(_ownerAddress);
+        this.logSender();
         entryPoint = IEntryPoint(payable(ENTRYPOINT_V06));
-        _factory = new KernelFactory(0xa4BFe126D3aD137F972695dDdb1780a29065e556, entryPoint);
-        // _factory = KernelFactory(0x5de4839a76cf55d0c90e2061ef4386d962E15ae3);
+        _factory = new KernelFactory(_ownerAddress, entryPoint);
         console2.log("factory:", address(_factory));
         _defaultValidator = new ECDSAValidator();
-        testSetOwner();
         kernelImpl = new Kernel(entryPoint);
         console2.log("kernelImpl:", address(kernelImpl));
         _createAccount();
         intentExecutor = new KernelIntentExecutor();
-        intentValidator = IKernelValidator(0x0B250D3dF2f90249CD70C746C6eaC55c24C7C923);
+        intentValidator = new KernelIntentValidator();
         registerExecutors(_ownerAddress, address(intentExecutor));
+        console2.log("After registerExecutors");
+        this.logSender();
     }
 
     function registerExecutors(address ownerAddress, address executorAddress) internal {
         console2.log("registerExecutors ownerAddress:", ownerAddress);
+        this.logSender();
         // Encode enableData with the owner address
         bytes memory enableData = abi.encodePacked(ownerAddress);
+        _defaultValidator.enable(enableData);
+        intentValidator.enable(enableData);
+
+        vm.startPrank(address(_account));
 
         // Register each function
         _account.setExecution(
-            KernelIntentExecutor.doNothing.selector, executorAddress, intentValidator, ValidUntil.wrap(0), ValidAfter.wrap(0), enableData
+            KernelIntentExecutor.doNothing.selector,
+            executorAddress,
+            intentValidator,
+            ValidUntil.wrap(0),
+            ValidAfter.wrap(0),
+            enableData
         );
+
         _account.setExecution(
-            KernelIntentExecutor.execute.selector, executorAddress, intentValidator, ValidUntil.wrap(0), ValidAfter.wrap(0), enableData
+            KernelIntentExecutor.execute.selector,
+            executorAddress,
+            intentValidator,
+            ValidUntil.wrap(0),
+            ValidAfter.wrap(0),
+            enableData
         );
+
         _account.setExecution(
-            KernelIntentExecutor.executeBatch.selector, executorAddress, intentValidator, ValidUntil.wrap(0), ValidAfter.wrap(0), enableData
+            KernelIntentExecutor.executeBatch.selector,
+            executorAddress,
+            intentValidator,
+            ValidUntil.wrap(0),
+            ValidAfter.wrap(0),
+            enableData
         );
+
         _account.setExecution(
             KernelIntentExecutor.execValueBatch.selector,
-                executorAddress,
+            executorAddress,
             intentValidator,
             ValidUntil.wrap(0),
             ValidAfter.wrap(0),
@@ -102,6 +129,8 @@ contract KernelPluginModeTest is Test {
     }
 
     function testRegistration() public {
+        vm.startPrank(_ownerAddress);
+        logSender();
         // Test doNothing
         (bool success,) = address(_account).call(abi.encodeWithSelector(KernelIntentExecutor.doNothing.selector));
         assertTrue(success, "doNothing failed");
@@ -109,7 +138,8 @@ contract KernelPluginModeTest is Test {
         // Test execute
         address target = address(0xdeadbeef);
         bytes memory data = abi.encodeWithSignature("doSomething()");
-        (success,) = address(_account).call(abi.encodeWithSelector(KernelIntentExecutor.execute.selector, target, 0, data));
+        (success,) =
+            address(_account).call(abi.encodeWithSelector(KernelIntentExecutor.execute.selector, target, 0, data));
         assertTrue(success, "execute failed");
 
         // Test executeBatch
@@ -119,7 +149,8 @@ contract KernelPluginModeTest is Test {
         bytes[] memory datas = new bytes[](2);
         datas[0] = abi.encodeWithSignature("doSomething()");
         datas[1] = abi.encodeWithSignature("doSomethingElse()");
-        (success,) = address(_account).call(abi.encodeWithSelector(KernelIntentExecutor.executeBatch.selector, targets, datas));
+        (success,) =
+            address(_account).call(abi.encodeWithSelector(KernelIntentExecutor.executeBatch.selector, targets, datas));
         assertTrue(success, "executeBatch failed");
 
         // Test execValueBatch
@@ -132,10 +163,32 @@ contract KernelPluginModeTest is Test {
         datas = new bytes[](2);
         datas[0] = abi.encodeWithSignature("doSomething()");
         datas[1] = abi.encodeWithSignature("doSomethingElse()");
-        (success,) = address(_account).call(abi.encodeWithSelector(KernelIntentExecutor.execValueBatch.selector, values, targets, datas));
+        (success,) = address(_account).call(
+            abi.encodeWithSelector(KernelIntentExecutor.execValueBatch.selector, values, targets, datas)
+        );
         assertTrue(success, "execValueBatch failed");
     }
-    
+
+    function logSender() public view {
+        console2.log("msg.sender:", msg.sender);
+    }
+
+    function logExecutionDetails(bytes4 selector) public view {
+        ExecutionDetail memory detail = _account.getExecution(selector);
+        console2.log("detail.executor:", detail.executor);
+        console2.log("detail.validator:", address(detail.validator));
+        ValidUntil validUntil = detail.validUntil;
+        ValidAfter validAfter = detail.validAfter;
+        uint256 til;
+        uint256 aft;
+        assembly {
+            til := sload(validUntil)
+            aft := sload(validAfter)
+        }
+        console2.log(til);
+        console2.log(aft);
+    }
+
     // function test_set_execution_detail() public {
     //     bytes memory enableData = abi.encodePacked(_ownerAddress);
     //     UserOperation memory op = buildUserOperation(
@@ -189,4 +242,18 @@ contract KernelPluginModeTest is Test {
     //     emit DefaultValidatorChanged(address(oldValidator), address(_defaultValidator));
     //     _defaultValidator.enable(_data);
     // }
+}
+
+// Example target contract for testing purposes
+contract TestTarget {
+    event DidSomething();
+    event DidSomethingElse();
+
+    function doSomething() external {
+        emit DidSomething();
+    }
+
+    function doSomethingElse() external {
+        emit DidSomethingElse();
+    }
 }
