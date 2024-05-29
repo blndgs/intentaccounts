@@ -2,12 +2,15 @@
 pragma solidity ^0.8.0;
 
 import {IEntryPoint} from "../lib/kernel/lib/I4337/src/interfaces/IEntryPoint.sol";
-import {KernelTestBase} from "../lib/kernel/src/utils/KernelTestBase.sol";
 import {IKernelValidator} from "../lib/kernel/src/interfaces/IKernelValidator.sol";
 import {UserOperation} from "../lib/kernel/lib/I4337/src/interfaces/UserOperation.sol";
 import {IKernel} from "../lib/kernel/src/interfaces/IKernel.sol";
+import {KernelIntentExecutor} from "../src/KernelIntentExecutor.sol";
 import {Kernel} from "../lib/kernel/src/Kernel.sol";
 import {KernelFactory} from "../lib/kernel/src/factory/KernelFactory.sol";
+import {KernelStorage} from "../lib/kernel/src/abstract/KernelStorage.sol";
+import {KERNEL_STORAGE_SLOT} from "../lib/kernel/src/common/Constants.sol";
+import {WalletKernelStorage} from "../lib/kernel/src/common/Structs.sol";
 import "forge-std/Test.sol";
 import "../lib/kernel/lib/solady/src/utils/ECDSA.sol";
 
@@ -16,6 +19,7 @@ contract KernelEnableModeTest is Test {
     IEntryPoint entryPoint;
 
     IKernelValidator intentValidator;
+    KernelIntentExecutor intentExecutor;
 
     address private _ownerAddress;
     uint256 private _ownerPrivateKey;
@@ -39,19 +43,31 @@ contract KernelEnableModeTest is Test {
         assertFalse(_ownerAddress == address(0), "Owner address should not be the zero address");
     }
 
-    function getInitializeData() internal view virtual returns (bytes memory);
+    function getInitializeData() internal view returns (bytes memory) {
+        IKernelValidator defValidator = getKernelStorage().defaultValidator;
+        return abi.encodeWithSelector(KernelStorage.initialize.selector, defValidator, abi.encodePacked(_ownerAddress));
+    }
+
+    // Function to get the wallet kernel storage
+    function getKernelStorage() internal pure returns (WalletKernelStorage storage ws) {
+        assembly {
+            ws.slot := KERNEL_STORAGE_SLOT
+        }
+    }
 
     function _createAccount() internal {
         _account = Kernel(payable(address(_factory.createAccount(address(kernelImpl), getInitializeData(), 0))));
         vm.deal(address(_account), 1e30);
     }
 
-    function setUp() public override {
-        intentValidator = IKernelValidator(0x0B250D3dF2f90249CD70C746C6eaC55c24C7C923);
+    function setUp() public {
         entryPoint = IEntryPoint(payable(ENTRYPOINT_V06));
-        testSetOwner(_network);
-        _factory = KernelFactory(0x5de4839a76cf55d0c90e2061ef4386d962e15ae3);
+        testSetOwner();
+        _factory = KernelFactory(0x5de4839a76cf55d0c90e2061ef4386d962E15ae3);
         kernelImpl = new Kernel(entryPoint);
+        _createAccount();
+        intentValidator = IKernelValidator(0x0B250D3dF2f90249CD70C746C6eaC55c24C7C923);
+        intentExecutor = new KernelIntentExecutor();
     }
 
     function test_enable_custom_validator() public {
@@ -74,7 +90,7 @@ contract KernelEnableModeTest is Test {
         op.signature = signUserOp(op);
         UserOperation[] memory ops = new UserOperation[](1);
         ops[0] = op;
-        address payable beneficiary = address(0xa4BFe126D3aD137F972695dDdb1780a29065e556);
+        address payable beneficiary = payable(0xa4BFe126D3aD137F972695dDdb1780a29065e556);
         entryPoint.handleOps(ops, beneficiary);
     }
 
