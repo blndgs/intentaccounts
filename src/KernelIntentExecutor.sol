@@ -6,6 +6,12 @@ import {IKernel} from "../lib/kernel/src/interfaces/IKernel.sol";
 
 contract KernelIntentExecutor {
     address private constant ENTRYPOINT_V06 = 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789;
+    event ExecutorDoNothing();
+
+    function doNothing() external {
+        // do nothing
+        emit ExecutorDoNothing();
+    }
 
     // Modifier to check if the function is called by the entry point, the contract itself or the owner
     modifier onlyFromEntryPointOrSelf() {
