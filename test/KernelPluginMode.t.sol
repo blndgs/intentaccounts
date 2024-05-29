@@ -202,35 +202,8 @@ contract KernelPluginModeTest is Test {
     //     assertEq(address(detail.validator), address(intentValidator));
     // }
 
-    /*
+
      * Copied below from KernelStorage.sol for reference
-     */
-
-    /// @notice Changes the execution details for a specific function selector
-    /// @dev This function can only be called from the EntryPoint contract, the contract owner, or itself
-    /// @param _selector The selector of the function for which execution details are being set
-    /// @param _executor The executor to be associated with the function selector
-    /// @param _validator The validator contract that will be responsible for validating operations associated with this function selector
-    /// @param _validUntil The timestamp until which the execution details are valid
-    /// @param _validAfter The timestamp after which the execution details are valid
-    // function setExecution(
-    //     bytes4 _selector,
-    //     address _executor,
-    //     IKernelValidator _validator,
-    //     ValidUntil _validUntil,
-    //     ValidAfter _validAfter,
-    //     bytes calldata _enableData
-    // ) external payable override onlyFromEntryPointOrSelf {
-    //     getKernelStorage().execution[_selector] = ExecutionDetail({
-    //         executor: _executor,
-    //         validator: _validator,
-    //         validUntil: _validUntil,
-    //         validAfter: _validAfter
-    //     });
-    //     _validator.enable(_enableData);
-    //     emit ExecutionChanged(_selector, _executor, address(_validator));
-    // }
-
     // function setDefaultValidator(IKernelValidator _defaultValidator, bytes calldata _data)
     //     external
     //     payable
