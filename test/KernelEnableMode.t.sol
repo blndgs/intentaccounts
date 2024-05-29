@@ -28,7 +28,7 @@ contract KernelEnableModeTest is Test {
     KernelFactory _factory;
     Kernel kernelImpl;
 
-    function testSetOwner() public {
+    function setOwner() public {
         string memory privateKeyEnv = string(abi.encodePacked(_network, "ETHEREUM_PRIVATE_KEY"));
         console2.log("NETWORK:", _network);
         string memory privateKeyString = vm.envString(privateKeyEnv);
@@ -62,7 +62,7 @@ contract KernelEnableModeTest is Test {
 
     function setUp() public {
         entryPoint = IEntryPoint(payable(ENTRYPOINT_V06));
-        testSetOwner();
+        setOwner();
         _factory = KernelFactory(0x5de4839a76cf55d0c90e2061ef4386d962E15ae3);
         kernelImpl = new Kernel(entryPoint);
         _createAccount();
