@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
+import {ECDSAValidator} from "../lib/kernel/src/validator/ECDSAValidator.sol";
 import {IEntryPoint} from "../lib/kernel/lib/I4337/src/interfaces/IEntryPoint.sol";
 import {IKernelValidator} from "../lib/kernel/src/interfaces/IKernelValidator.sol";
 import {UserOperation} from "../lib/kernel/lib/I4337/src/interfaces/UserOperation.sol";
@@ -18,6 +19,7 @@ import "forge-std/Test.sol";
 contract KernelPluginModeTest is Test {
     address constant ENTRYPOINT_V06 = 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789;
     IEntryPoint entryPoint;
+    ECDSAValidator _defaultValidator;
 
     IKernelValidator intentValidator;
     KernelIntentExecutor intentExecutor;
@@ -30,9 +32,8 @@ contract KernelPluginModeTest is Test {
     Kernel kernelImpl;
 
     function testSetOwner() public {
-        string memory privateKeyEnv = string(abi.encodePacked(_network, "ETHEREUM_PRIVATE_KEY"));
-        console2.log("NETWORK:", _network);
-        string memory privateKeyString = vm.envString(privateKeyEnv);
+        string memory privateKeyString = vm.envString("ETHEREUM_PRIVATE_KEY");
+        console2.log("privateKeyString:", privateKeyString);
 
         // Derive the Ethereum address from the private key
         _ownerPrivateKey = vm.parseUint(privateKeyString);
@@ -44,28 +45,31 @@ contract KernelPluginModeTest is Test {
         assertFalse(_ownerAddress == address(0), "Owner address should not be the zero address");
     }
 
-    function getInitializeData() internal view returns (bytes memory) {
-        IKernelValidator defValidator = getKernelStorage().defaultValidator;
-        return abi.encodeWithSelector(KernelStorage.initialize.selector, defValidator, abi.encodePacked(_ownerAddress));
-    }
-
-    // Function to get the wallet kernel storage
-    function getKernelStorage() internal pure returns (WalletKernelStorage storage ws) {
-        assembly {
-            ws.slot := KERNEL_STORAGE_SLOT
-        }
+    function getInitializeData() internal view returns (bytes memory) {       
+        return abi.encodeWithSelector(KernelStorage.initialize.selector, _defaultValidator, abi.encodePacked(_ownerAddress));
     }
 
     function _createAccount() internal {
-        _account = Kernel(payable(address(_factory.createAccount(address(kernelImpl), getInitializeData(), 0))));
+        bytes memory initData = getInitializeData();
+        console2.log("initData:");
+        console2.logBytes(initData);
+        vm.prank(0xa4BFe126D3aD137F972695dDdb1780a29065e556);
+        _factory.setImplementation(address(kernelImpl), true);        
+        _account = Kernel(payable(address(_factory.createAccount(address(kernelImpl), initData, 0))));
+        uint n = _account.getNonce();
+        console2.log("account nonce:", n);
         vm.deal(address(_account), 1e30);
     }
 
     function setUp() public {
         entryPoint = IEntryPoint(payable(ENTRYPOINT_V06));
+        _factory = new KernelFactory(0xa4BFe126D3aD137F972695dDdb1780a29065e556, entryPoint);
+        // _factory = KernelFactory(0x5de4839a76cf55d0c90e2061ef4386d962E15ae3);
+        console2.log("factory:", address(_factory));
+        _defaultValidator = new ECDSAValidator();
         testSetOwner();
-        _factory = KernelFactory(0x5de4839a76cf55d0c90e2061ef4386d962E15ae3);
         kernelImpl = new Kernel(entryPoint);
+        console2.log("kernelImpl:", address(kernelImpl));
         _createAccount();
         intentExecutor = new KernelIntentExecutor();
         intentValidator = IKernelValidator(0x0B250D3dF2f90249CD70C746C6eaC55c24C7C923);
@@ -73,6 +77,7 @@ contract KernelPluginModeTest is Test {
     }
 
     function registerExecutors(address ownerAddress, address executorAddress) internal {
+        console2.log("registerExecutors ownerAddress:", ownerAddress);
         // Encode enableData with the owner address
         bytes memory enableData = abi.encodePacked(ownerAddress);
 
