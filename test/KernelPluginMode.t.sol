@@ -72,12 +72,10 @@ contract KernelPluginModeTest is Test {
         _factory = new KernelFactory(_ownerAddress, entryPoint);
         _defaultValidator = new ECDSAValidator();
         kernelImpl = new Kernel(entryPoint);
-        _createAccount();
 
         // Plugin setup and intent execution
         intentExecutor = new KernelIntentExecutor();
         intentValidator = new KernelIntentValidator();
-        registerExecutors(_ownerAddress, address(intentExecutor));
 
         this.logSender();
     }
@@ -129,14 +127,28 @@ contract KernelPluginModeTest is Test {
         );
     }
 
-    function testRegistration() public {
+    function testRegistrationByApi() public {
+        _createAccount();
+
+        IKernelValidator validator = _account.getExecution(KernelIntentExecutor.doNothing.selector).validator;
+        assertEq(address(validator), 0x0000000000000000000000000000000000000000, "Only default Validator is set");
+
+        registerExecutors(_ownerAddress, address(intentExecutor));
+
+        IKernelValidator validatorNew = _account.getExecution(KernelIntentExecutor.doNothing.selector).validator;
+        assertNotEq(address(validator), address(validatorNew), "Validator should have changed");
+        assertEq(address(validatorNew), address(intentValidator), "Validator should be intentValidator");
+        assertEq(address(_account.getExecution(KernelIntentExecutor.doNothing.selector).executor), address(intentExecutor), "Executor should be intentExecutor");
+
         vm.startPrank(_ownerAddress);
+
         logSender();
-        // Test doNothing
+
+        // Test doNothing() in new validator
         (bool success,) = address(_account).call(abi.encodeWithSelector(KernelIntentExecutor.doNothing.selector));
         assertTrue(success, "doNothing failed");
 
-        // Test execute
+        // Test execute()
         bytes memory data = abi.encodeWithSignature("doSomething()");
 
         // Expect the DidSomething event to be emitted
@@ -189,6 +201,10 @@ contract KernelPluginModeTest is Test {
             abi.encodeWithSelector(KernelIntentExecutor.execValueBatch.selector, values, targets, datas)
         );
         assertTrue(success, "execValueBatch failed");
+    }
+
+    function testRegistrationByUserOp() public {
+
     }
 
     function logSender() public view {
