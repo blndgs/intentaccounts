@@ -33,7 +33,27 @@ contract KernelPluginModeTest is Test {
     Kernel kernelImpl;
     address private targetContractAddress;
 
-    function setOwner() public {
+    function setUp() public {
+        entryPoint = IEntryPoint(payable(ENTRYPOINT_V06));
+        readEnvVars();
+
+        // Create default ECDSA account
+        vm.startPrank(_factoryOwnerAddress);
+        kernelImpl = new Kernel(entryPoint);
+        _factory.setImplementation(address(kernelImpl), true);
+        _defaultValidator = new ECDSAValidator();
+
+        // Plugin setup and intent execution
+        intentExecutor = new KernelIntentExecutor();
+        intentValidator = new KernelIntentValidator();
+
+        // Deploy a test target contract (could be any contract with functions to call)
+        vm.startPrank(_ownerAddress);
+        FooContract targetContract = new FooContract();
+        targetContractAddress = address(targetContract);
+
+        this.logSender();
+    }
         string memory privateKeyString = vm.envString("ETHEREUM_PRIVATE_KEY");
         console2.log("privateKeyString:", privateKeyString);
 
