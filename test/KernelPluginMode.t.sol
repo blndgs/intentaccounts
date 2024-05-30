@@ -31,6 +31,7 @@ contract KernelPluginModeTest is Test {
     IKernel _account;
     KernelFactory _factory;
     Kernel kernelImpl;
+    address private targetContractAddress;
 
     function setOwner() public {
         string memory privateKeyString = vm.envString("ETHEREUM_PRIVATE_KEY");
@@ -42,7 +43,6 @@ contract KernelPluginModeTest is Test {
 
         console2.log("Owner address:", _ownerAddress);
 
-        // Assert that the owner address is not the zero address
         assertFalse(_ownerAddress == address(0), "Owner address should not be the zero address");
     }
 
@@ -54,40 +54,41 @@ contract KernelPluginModeTest is Test {
 
     function _createAccount() internal {
         bytes memory initData = getInitializeData();
-        console2.log("initData:");
-        console2.logBytes(initData);
         _factory.setImplementation(address(kernelImpl), true);
         _account = Kernel(payable(address(_factory.createAccount(address(kernelImpl), initData, 0))));
-        // console2.log("account nonce:", n);
         vm.deal(address(_account), 1e30);
     }
 
     function setUp() public {
         setOwner();
         vm.startPrank(_ownerAddress);
-        this.logSender();
         entryPoint = IEntryPoint(payable(ENTRYPOINT_V06));
+
+        // Deploy a test target contract (could be any contract with functions to call)
+        FooContract targetContract = new FooContract();
+        targetContractAddress = address(targetContract);
+
+        // Create default ECDSA account
         _factory = new KernelFactory(_ownerAddress, entryPoint);
-        console2.log("factory:", address(_factory));
         _defaultValidator = new ECDSAValidator();
         kernelImpl = new Kernel(entryPoint);
-        console2.log("kernelImpl:", address(kernelImpl));
         _createAccount();
+
+        // Plugin setup and intent execution
         intentExecutor = new KernelIntentExecutor();
         intentValidator = new KernelIntentValidator();
         registerExecutors(_ownerAddress, address(intentExecutor));
-        console2.log("After registerExecutors");
+
         this.logSender();
     }
 
     function registerExecutors(address ownerAddress, address executorAddress) internal {
-        console2.log("registerExecutors ownerAddress:", ownerAddress);
         this.logSender();
+
         // Encode enableData with the owner address
         bytes memory enableData = abi.encodePacked(ownerAddress);
-        _defaultValidator.enable(enableData);
-        intentValidator.enable(enableData);
 
+        // necessary: accepting from self or entry point
         vm.startPrank(address(_account));
 
         // Register each function
@@ -136,19 +137,35 @@ contract KernelPluginModeTest is Test {
         assertTrue(success, "doNothing failed");
 
         // Test execute
-        address target = address(0xdeadbeef);
         bytes memory data = abi.encodeWithSignature("doSomething()");
-        (success,) =
-            address(_account).call(abi.encodeWithSelector(KernelIntentExecutor.execute.selector, target, 0, data));
+
+        // Expect the DidSomething event to be emitted
+        /*
+         * true: event to be emitted.
+         * false: check the indexed parameters.
+         * false: check non-indexed parameters of the event.
+         * true: check the event's topic (function signature).
+         */
+        vm.expectEmit(true, true, true, true);
+        emit FooContract.DidSomething(0);
+
+        (success,) = address(_account).call(
+            abi.encodeWithSelector(KernelIntentExecutor.execute.selector, targetContractAddress, 0, data)
+        );
         assertTrue(success, "execute failed");
 
         // Test executeBatch
         address[] memory targets = new address[](2);
-        targets[0] = address(0xdeadbeef);
-        targets[1] = address(0xdeadbeef);
+        targets[0] = targetContractAddress;
+        targets[1] = targetContractAddress;
         bytes[] memory datas = new bytes[](2);
         datas[0] = abi.encodeWithSignature("doSomething()");
         datas[1] = abi.encodeWithSignature("doSomethingElse()");
+
+        // Expect the DidSomething and DidSomethingElse events to be emitted
+        emit FooContract.DidSomething(0);
+        emit FooContract.DidSomethingElse(0);
+
         (success,) =
             address(_account).call(abi.encodeWithSelector(KernelIntentExecutor.executeBatch.selector, targets, datas));
         assertTrue(success, "executeBatch failed");
@@ -158,11 +175,16 @@ contract KernelPluginModeTest is Test {
         values[0] = 1 ether;
         values[1] = 2 ether;
         targets = new address[](2);
-        targets[0] = address(0xdeadbeef);
-        targets[1] = address(0xdeadbeef);
+        targets[0] = targetContractAddress;
+        targets[1] = targetContractAddress;
         datas = new bytes[](2);
         datas[0] = abi.encodeWithSignature("doSomething()");
         datas[1] = abi.encodeWithSignature("doSomethingElse()");
+
+        // Expect the DidSomething and DidSomethingElse events to be emitted
+        emit FooContract.DidSomething(values[0]);
+        emit FooContract.DidSomethingElse(values[1]);
+
         (success,) = address(_account).call(
             abi.encodeWithSelector(KernelIntentExecutor.execValueBatch.selector, values, targets, datas)
         );
@@ -203,7 +225,7 @@ contract KernelPluginModeTest is Test {
     // }
 
 
-     * Copied below from KernelStorage.sol for reference
+    // Pasted for reference
     // function setDefaultValidator(IKernelValidator _defaultValidator, bytes calldata _data)
     //     external
     //     payable
@@ -218,15 +240,15 @@ contract KernelPluginModeTest is Test {
 }
 
 // Example target contract for testing purposes
-contract TestTarget {
-    event DidSomething();
-    event DidSomethingElse();
+contract FooContract {
+    event DidSomething(uint256 value);
+    event DidSomethingElse(uint256 value);
 
-    function doSomething() external {
-        emit DidSomething();
+    function doSomething() external payable {
+        emit DidSomething(msg.value);
     }
 
-    function doSomethingElse() external {
-        emit DidSomethingElse();
+    function doSomethingElse() external payable {
+        emit DidSomethingElse(msg.value);
     }
 }
