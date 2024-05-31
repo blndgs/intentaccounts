@@ -2,6 +2,7 @@
 pragma solidity ^0.8.0;
 
 import {ENTRYPOINT_0_6_ADDRESS, ENTRYPOINT_0_6_BYTECODE} from "I4337/artifacts/EntryPoint_0_6.sol";
+import {ECDSAValidator,ValidationData} from "../lib/kernel/src/validator/ECDSAValidator.sol";
 import {IEntryPoint} from "../lib/kernel/lib/I4337/src/interfaces/IEntryPoint.sol";
 import {IKernelValidator} from "../lib/kernel/src/interfaces/IKernelValidator.sol";
 import {UserOperation} from "../lib/kernel/lib/I4337/src/interfaces/UserOperation.sol";
@@ -23,7 +24,7 @@ contract KernelPluginModeTest is Test {
     IEntryPoint entryPoint;
     ECDSAValidator _defaultValidator;
 
-    IKernelValidator intentValidator;
+    KernelIntentValidator intentValidator;
     KernelIntentExecutor intentExecutor;
 
     address private _ownerAddress;
@@ -231,7 +232,6 @@ contract KernelPluginModeTest is Test {
             signature: bytes(hex"")
         });
 
-        // userOp.nonce = _account.getNonce();
         userOp.nonce = _account.getNonce();
         console2.log("nonce:", userOp.nonce);
 
@@ -243,9 +243,8 @@ contract KernelPluginModeTest is Test {
         verifySignature(userOp);
     }
 
-    function generateSignature(UserOperation memory userOp, uint256 chainID, uint256 signerPrvKey) internal returns (bytes memory) {
-        KernelIntentValidator validator = new KernelIntentValidator();
-        bytes32 userOpHash = validator.getUserOpHash(userOp, chainID);
+    function generateSignature(UserOperation memory userOp, uint256 chainID, uint256 signerPrvKey) view internal returns (bytes memory) {
+        bytes32 userOpHash = intentValidator.getUserOpHash(userOp, chainID);
 
         // Sign the hash with the owner's private key
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(signerPrvKey, ECDSA.toEthSignedMessageHash(userOpHash));
@@ -257,11 +256,9 @@ contract KernelPluginModeTest is Test {
     }
 
     function verifySignature(UserOperation memory userOp) internal returns (uint256) {
-        KernelIntentValidator validator = new KernelIntentValidator();
-
         // not supplying the userOpHash as _validateSignature calls for the Intent version
-        bytes32 userOpHash = validator.getUserOpHash(userOp, block.chainid);
-        ValidationData result = validator.validateSignature(userOpHash, userOp.signature);
+        bytes32 userOpHash = intentValidator.getUserOpHash(userOp, block.chainid);
+        ValidationData result = intentValidator.validateSignature(userOpHash, userOp.signature);
         assertEq(ValidationData.unwrap(result), 0, "Signature is not valid for the userOp");
 
         return ValidationData.unwrap(result);
@@ -302,7 +299,6 @@ contract KernelPluginModeTest is Test {
     //     assertEq(detail.executor, address(executor));
     //     assertEq(address(detail.validator), address(intentValidator));
     // }
-
 
     // Pasted for reference
     // function setDefaultValidator(IKernelValidator _defaultValidator, bytes calldata _data)
