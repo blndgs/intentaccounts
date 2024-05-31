@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import {ECDSAValidator} from "../lib/kernel/src/validator/ECDSAValidator.sol";
+import {ENTRYPOINT_0_6_ADDRESS, ENTRYPOINT_0_6_BYTECODE} from "I4337/artifacts/EntryPoint_0_6.sol";
 import {IEntryPoint} from "../lib/kernel/lib/I4337/src/interfaces/IEntryPoint.sol";
 import {IKernelValidator} from "../lib/kernel/src/interfaces/IKernelValidator.sol";
 import {UserOperation} from "../lib/kernel/lib/I4337/src/interfaces/UserOperation.sol";
@@ -27,6 +27,7 @@ contract KernelPluginModeTest is Test {
 
     address private _ownerAddress;
     uint256 private _ownerPrivateKey;
+    address private _factoryOwnerAddress;
     string _network;
     IKernel _account;
     KernelFactory _factory;
@@ -35,11 +36,13 @@ contract KernelPluginModeTest is Test {
 
     function setUp() public {
         entryPoint = IEntryPoint(payable(ENTRYPOINT_V06));
+        vm.etch(ENTRYPOINT_0_6_ADDRESS, ENTRYPOINT_0_6_BYTECODE);
         readEnvVars();
 
         // Create default ECDSA account
         vm.startPrank(_factoryOwnerAddress);
         kernelImpl = new Kernel(entryPoint);
+        _factory = new KernelFactory(_factoryOwnerAddress, entryPoint);
         _factory.setImplementation(address(kernelImpl), true);
         _defaultValidator = new ECDSAValidator();
 
@@ -56,6 +59,9 @@ contract KernelPluginModeTest is Test {
     }
         string memory privateKeyString = vm.envString("ETHEREUM_PRIVATE_KEY");
         console2.log("privateKeyString:", privateKeyString);
+
+        string memory factoryOwnerPrvKeyString = vm.envString("ETHEREUM_KERNEL_FACTORY_OWNER_PRIVATE_KEY");
+        _factoryOwnerAddress = vm.addr(vm.parseUint(factoryOwnerPrvKeyString));
 
         // Derive the Ethereum address from the private key
         _ownerPrivateKey = vm.parseUint(privateKeyString);
@@ -74,30 +80,8 @@ contract KernelPluginModeTest is Test {
 
     function _createAccount() internal {
         bytes memory initData = getInitializeData();
-        _factory.setImplementation(address(kernelImpl), true);
         _account = Kernel(payable(address(_factory.createAccount(address(kernelImpl), initData, 0))));
         vm.deal(address(_account), 1e30);
-    }
-
-    function setUp() public {
-        setOwner();
-        vm.startPrank(_ownerAddress);
-        entryPoint = IEntryPoint(payable(ENTRYPOINT_V06));
-
-        // Deploy a test target contract (could be any contract with functions to call)
-        FooContract targetContract = new FooContract();
-        targetContractAddress = address(targetContract);
-
-        // Create default ECDSA account
-        _factory = new KernelFactory(_ownerAddress, entryPoint);
-        _defaultValidator = new ECDSAValidator();
-        kernelImpl = new Kernel(entryPoint);
-
-        // Plugin setup and intent execution
-        intentExecutor = new KernelIntentExecutor();
-        intentValidator = new KernelIntentValidator();
-
-        this.logSender();
     }
 
     function registerExecutors(address ownerAddress, address executorAddress) internal {
