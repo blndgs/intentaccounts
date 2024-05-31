@@ -15,6 +15,7 @@ import {KernelStorage} from "../lib/kernel/src/abstract/KernelStorage.sol";
 import {KERNEL_STORAGE_SLOT} from "../lib/kernel/src/common/Constants.sol";
 import {ValidAfter, ValidUntil} from "../lib/kernel/src/common/Types.sol";
 import {WalletKernelStorage, ExecutionDetail} from "../lib/kernel/src/common/Structs.sol";
+import {ECDSA} from "../src/ECDSA.sol";
 import "forge-std/Test.sol";
 
 contract KernelPluginModeTest is Test {
@@ -57,6 +58,7 @@ contract KernelPluginModeTest is Test {
 
         this.logSender();
     }
+    function readEnvVars() public {
         string memory privateKeyString = vm.envString("ETHEREUM_PRIVATE_KEY");
         console2.log("privateKeyString:", privateKeyString);
 
@@ -212,7 +214,31 @@ contract KernelPluginModeTest is Test {
     }
 
     function testRegistrationByUserOp() public {
+    function generateSignature(UserOperation memory userOp, uint256 chainID, uint256 signerPrvKey) internal returns (bytes memory) {
+        KernelIntentValidator validator = new KernelIntentValidator();
+        bytes32 userOpHash = validator.getUserOpHash(userOp, chainID);
 
+        // Sign the hash with the owner's private key
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(signerPrvKey, ECDSA.toEthSignedMessageHash(userOpHash));
+
+        // Combine (v, r, s) into a signature
+        bytes memory signature = abi.encodePacked(r, s, v);
+
+        return signature;
+    }
+
+    function verifySignature(UserOperation memory userOp) internal returns (uint256) {
+        KernelIntentValidator validator = new KernelIntentValidator();
+
+        // not supplying the userOpHash as _validateSignature calls for the Intent version
+        bytes32 userOpHash = validator.getUserOpHash(userOp, block.chainid);
+        ValidationData result = validator.validateSignature(userOpHash, userOp.signature);
+        assertEq(ValidationData.unwrap(result), 0, "Signature is not valid for the userOp");
+
+        return ValidationData.unwrap(result);
+    }
+
+    // function testRegistrationByUserOp() public {
     }
 
     function logSender() public view {
