@@ -142,7 +142,11 @@ contract KernelPluginModeTest is Test {
         IKernelValidator validatorNew = _account.getExecution(KernelIntentExecutor.doNothing.selector).validator;
         assertNotEq(address(validator), address(validatorNew), "Validator should have changed");
         assertEq(address(validatorNew), address(intentValidator), "Validator should be intentValidator");
-        assertEq(address(_account.getExecution(KernelIntentExecutor.doNothing.selector).executor), address(intentExecutor), "Executor should be intentExecutor");
+        assertEq(
+            address(_account.getExecution(KernelIntentExecutor.doNothing.selector).executor),
+            address(intentExecutor),
+            "Executor should be intentExecutor"
+        );
 
         vm.startPrank(_ownerAddress);
 
