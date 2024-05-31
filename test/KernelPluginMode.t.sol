@@ -213,7 +213,36 @@ contract KernelPluginModeTest is Test {
         assertTrue(success, "execValueBatch failed");
     }
 
-    function testRegistrationByUserOp() public {
+    function testValidateEtherVanillaOp() public {
+        _createAccount();
+
+        // Prepare the UserOperation object to sign
+        UserOperation memory userOp = UserOperation({
+            sender: address(_account),
+            nonce: 0x0,
+            initCode: bytes(hex""),
+            callData: bytes(hex""),
+            callGasLimit: 500000,
+            verificationGasLimit: 65536,
+            preVerificationGas: 65536,
+            maxFeePerGas: 0,
+            maxPriorityFeePerGas: 0,
+            paymasterAndData: bytes(hex""),
+            signature: bytes(hex"")
+        });
+
+        // userOp.nonce = _account.getNonce();
+        userOp.nonce = _account.getNonce();
+        console2.log("nonce:", userOp.nonce);
+
+        // Generate the signature
+        userOp.signature = generateSignature(userOp, block.chainid, _ownerPrivateKey);
+        console2.log("signature:"); // 65 bytes or 130 hex characters. ECDSA signature
+        console2.logBytes(userOp.signature);
+
+        verifySignature(userOp);
+    }
+
     function generateSignature(UserOperation memory userOp, uint256 chainID, uint256 signerPrvKey) internal returns (bytes memory) {
         KernelIntentValidator validator = new KernelIntentValidator();
         bytes32 userOpHash = validator.getUserOpHash(userOp, chainID);
