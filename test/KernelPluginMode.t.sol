@@ -59,6 +59,7 @@ contract KernelPluginModeTest is Test {
 
         this.logSender();
     }
+
     function readEnvVars() public {
         string memory privateKeyString = vm.envString("ETHEREUM_PRIVATE_KEY");
         console2.log("privateKeyString:", privateKeyString);
@@ -214,7 +215,7 @@ contract KernelPluginModeTest is Test {
         assertTrue(success, "execValueBatch failed");
     }
 
-    function testValidateEtherVanillaOp() public {
+    function testValidateSigVanillaOp() public {
         _createAccount();
 
         // Prepare the UserOperation object to sign
@@ -240,7 +241,13 @@ contract KernelPluginModeTest is Test {
         console2.log("signature:"); // 65 bytes or 130 hex characters. ECDSA signature
         console2.logBytes(userOp.signature);
 
+        intentValidator.enable(abi.encodePacked(_ownerAddress));
+
         verifySignature(userOp);
+
+        ValidationData v =
+            _defaultValidator.validateUserOp(userOp, intentValidator.getUserOpHash(userOp, block.chainid), 0);
+        assertEq(ValidationData.unwrap(v), 0, "Signature is not valid for the userOp");
     }
 
     function generateSignature(UserOperation memory userOp, uint256 chainID, uint256 signerPrvKey) view internal returns (bytes memory) {
