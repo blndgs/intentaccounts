@@ -251,7 +251,14 @@ contract KernelPluginModeTest is Test {
     }
 
     function generateSignature(UserOperation memory userOp, uint256 chainID, uint256 signerPrvKey) view internal returns (bytes memory) {
+
+    function generateSignature(UserOperation memory userOp, uint256 chainID, uint256 signerPrvKey)
+        internal
+        view
+        returns (bytes memory)
+    {
         bytes32 userOpHash = intentValidator.getUserOpHash(userOp, chainID);
+        logBytes32Value("userOp hash generating sig:", userOpHash);
 
         // Sign the hash with the owner's private key
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(signerPrvKey, ECDSA.toEthSignedMessageHash(userOpHash));
@@ -263,8 +270,9 @@ contract KernelPluginModeTest is Test {
     }
 
     function verifySignature(UserOperation memory userOp) internal returns (uint256) {
-        // not supplying the userOpHash as _validateSignature calls for the Intent version
         bytes32 userOpHash = intentValidator.getUserOpHash(userOp, block.chainid);
+        logBytes32Value("userOp hash verifying sig:", userOpHash);
+
         ValidationData result = intentValidator.validateSignature(userOpHash, userOp.signature);
         assertEq(ValidationData.unwrap(result), 0, "Signature is not valid for the userOp");
 
