@@ -250,7 +250,59 @@ contract KernelPluginModeTest is Test {
         assertEq(ValidationData.unwrap(v), 0, "Signature is not valid for the userOp");
     }
 
-    function generateSignature(UserOperation memory userOp, uint256 chainID, uint256 signerPrvKey) view internal returns (bytes memory) {
+    function testExecSetExecutionDoNothingOp() public {
+        _createAccount();
+
+        bytes memory enableData = abi.encodePacked(_ownerAddress);
+
+        // Prepare the UserOperation object to sign
+        UserOperation memory userOp = UserOperation({
+            sender: address(_account),
+            nonce: 0x0,
+            initCode: bytes(hex""),
+            callData: abi.encodeWithSelector(
+                IKernel.setExecution.selector,
+                KernelIntentExecutor.doNothing.selector,
+                address(intentExecutor),
+                address(intentValidator),
+                ValidUntil.wrap(0),
+                ValidAfter.wrap(0),
+                enableData
+            ),
+            callGasLimit: 500000,
+            verificationGasLimit: 65536,
+            preVerificationGas: 65536,
+            maxFeePerGas: 0,
+            maxPriorityFeePerGas: 0,
+            paymasterAndData: bytes(hex""),
+            signature: bytes(hex"")
+        });
+
+        userOp.nonce = _account.getNonce();
+        console2.log("nonce:", userOp.nonce);
+
+        // Generate the signature
+        userOp.signature = generateSignature(userOp, block.chainid, _ownerPrivateKey);
+        console2.log("signature:"); // 65 bytes or 130 hex characters. ECDSA signature
+        console2.logBytes(userOp.signature);
+
+        ValidationData v =
+            _defaultValidator.validateUserOp(userOp, intentValidator.getUserOpHash(userOp, block.chainid), 0);
+        assertEq(ValidationData.unwrap(v), 0, "Signature is not valid for the userOp");
+
+        UserOperation[] memory userOps = new UserOperation[](1);
+        userOps[0] = userOp;
+
+        // Add the validating mode
+        userOp.signature = abi.encodePacked(bytes4(0x00000000), userOp.signature);
+
+        entryPoint.handleOps(userOps, payable(_ownerAddress));
+
+        ExecutionDetail memory detail = IKernel(address(_account)).getExecution(intentExecutor.doNothing.selector);
+        assertEq(detail.executor, address(intentExecutor));
+        assertEq(address(detail.validator), address(intentValidator));
+    }
+
 
     function generateSignature(UserOperation memory userOp, uint256 chainID, uint256 signerPrvKey)
         internal
