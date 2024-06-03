@@ -303,6 +303,8 @@ contract KernelPluginModeTest is Test {
         assertEq(address(detail.validator), address(intentValidator));
     }
 
+                KernelIntentExecutor.doNothing.selector, ValidUntil.wrap(0), ValidAfter.wrap(0), enableData
+                KernelIntentExecutor.doNothing.selector, ValidUntil.wrap(0), ValidAfter.wrap(0), enableData
 
     function generateSignature(UserOperation memory userOp, uint256 chainID, uint256 signerPrvKey)
         internal
