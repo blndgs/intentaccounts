@@ -455,6 +455,59 @@ contract KernelPluginModeTest is Test {
         return abi.encodePacked(r, s, v);
     }
 
+    function createUserOp(address sender, bytes memory callData) internal view returns (UserOperation memory) {
+        UserOperation memory userOp = UserOperation({
+            sender: sender,
+            nonce: 0,
+            initCode: bytes(hex""),
+            callData: callData,
+            callGasLimit: 1000000,
+            verificationGasLimit: 500000,
+            preVerificationGas: 65536,
+            maxFeePerGas: 0,
+            maxPriorityFeePerGas: 0,
+            paymasterAndData: bytes(hex""),
+            signature: bytes(hex"")
+        });
+
+        userOp.nonce = IKernel(sender).getNonce();
+
+        return userOp;
+    }
+
+    // default validation mode
+    uint256 constant VALIDATION_DEF_0 = 0;
+    // plugin validation mode
+    uint256 constant VALIDATION_PLUGIN_1 = 1;
+    // enable validator mode
+    uint256 constant VALIATION_ENABLED_2 = 2;
+
+    function createSignature(UserOperation memory userOp, uint256 ownerPrivateKey, uint256 mode)
+        internal
+        view
+        returns (bytes memory)
+    {
+        bytes memory signature = generateSignature(userOp, block.chainid, ownerPrivateKey);
+
+        bytes4 prefix;
+        if (mode == VALIDATION_DEF_0) {
+            prefix = bytes4(0x00000000);
+        } else if (mode == VALIDATION_PLUGIN_1) {
+            prefix = bytes4(0x00000001);
+        } else if (mode == VALIATION_ENABLED_2) {
+            prefix = bytes4(0x00000002);
+        } else {
+            revert("Invalid mode");
+        }
+
+        return abi.encodePacked(prefix, signature);
+    }
+
+    function executeUserOp(UserOperation memory userOp, address payable beneficiary) public {
+        UserOperation[] memory userOps = new UserOperation[](1);
+        userOps[0] = userOp;
+
+        IEntryPoint(entryPoint).handleOps(userOps, beneficiary);
     }
 
     function logSender() public view {
