@@ -49,6 +49,7 @@ contract KernelPluginModeTest is Test {
         _defaultValidator = new ECDSAValidator();
 
         // Plugin setup and intent execution
+        _defaultValidator = new ECDSAValidator();
         intentExecutor = new KernelIntentExecutor();
         intentValidator = new KernelIntentValidator();
 
@@ -362,6 +363,15 @@ contract KernelPluginModeTest is Test {
     }
 
     // function testRegistrationByUserOp() public {
+    function getEnableData() internal view returns (bytes memory) {
+        return abi.encodePacked(_ownerAddress);
+    }
+
+    function signHash(bytes32 hash) internal view returns (bytes memory) {
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(_ownerPrivateKey, ECDSA.toEthSignedMessageHash(hash));
+        return abi.encodePacked(r, s, v);
+    }
+
     }
 
     function logSender() public view {
