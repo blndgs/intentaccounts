@@ -2,7 +2,7 @@
 pragma solidity ^0.8.0;
 
 import {ENTRYPOINT_0_6_ADDRESS, ENTRYPOINT_0_6_BYTECODE} from "I4337/artifacts/EntryPoint_0_6.sol";
-import {ECDSAValidator,ValidationData} from "../lib/kernel/src/validator/ECDSAValidator.sol";
+import {ECDSAValidator, ValidationData} from "../lib/kernel/src/validator/ECDSAValidator.sol";
 import {IEntryPoint} from "../lib/kernel/lib/I4337/src/interfaces/IEntryPoint.sol";
 import {IKernelValidator} from "../lib/kernel/src/interfaces/IKernelValidator.sol";
 import {UserOperation} from "../lib/kernel/lib/I4337/src/interfaces/UserOperation.sol";
@@ -13,10 +13,16 @@ import {Operation} from "../lib/kernel/src/common/Enums.sol";
 import {Kernel} from "../lib/kernel/src/Kernel.sol";
 import {KernelFactory} from "../lib/kernel/src/factory/KernelFactory.sol";
 import {KernelStorage} from "../lib/kernel/src/abstract/KernelStorage.sol";
-import {KERNEL_STORAGE_SLOT} from "../lib/kernel/src/common/Constants.sol";
+import {
+    KERNEL_STORAGE_SLOT,
+    KERNEL_NAME,
+    KERNEL_VERSION,
+    VALIDATOR_APPROVED_STRUCT_HASH
+} from "../lib/kernel/src/common/Constants.sol";
 import {ValidAfter, ValidUntil} from "../lib/kernel/src/common/Types.sol";
 import {WalletKernelStorage, ExecutionDetail} from "../lib/kernel/src/common/Structs.sol";
 import {ECDSA} from "../src/ECDSA.sol";
+import {EIP712Library} from "./EIP712Library.sol";
 import "forge-std/Test.sol";
 
 contract KernelPluginModeTest is Test {
@@ -304,8 +310,48 @@ contract KernelPluginModeTest is Test {
         assertEq(address(detail.validator), address(intentValidator));
     }
 
+    function testEnableCustomValidator() public {
+        _createAccount();
+        bytes memory enableData = abi.encodePacked(_ownerAddress);
+
+        UserOperation memory userOp = UserOperation({
+            sender: address(_account),
+            nonce: 0x0,
+            initCode: bytes(hex""),
+            callData: abi.encodeWithSelector(
+                KernelIntentExecutor.doNothing.selector, ValidUntil.wrap(0), ValidAfter.wrap(0), enableData
+            ),
+            callGasLimit: 800000,
+            verificationGasLimit: 600000,
+            preVerificationGas: 65536,
+            maxFeePerGas: 0,
+            maxPriorityFeePerGas: 0,
+            paymasterAndData: bytes(hex""),
+            signature: bytes(hex"")
+        });
+
+        userOp.nonce = _account.getNonce();
+
+        userOp.signature = buildEnableSignature(
+            userOp,
+            KernelIntentExecutor.doNothing.selector,
+            0,
+            0,
+            intentValidator,
+            address(intentExecutor),
+            _ownerPrivateKey
+        );
+
+        UserOperation[] memory userOps = new UserOperation[](1);
+        userOps[0] = userOp;
+        entryPoint.handleOps(userOps, payable(_ownerAddress));
+
+        ExecutionDetail memory detail = IKernel(address(_account)).getExecution(intentExecutor.doNothing.selector);
+        assertEq(detail.executor, address(intentExecutor));
+        assertEq(address(detail.validator), address(intentValidator));
                 KernelIntentExecutor.doNothing.selector, ValidUntil.wrap(0), ValidAfter.wrap(0), enableData
                 KernelIntentExecutor.doNothing.selector, ValidUntil.wrap(0), ValidAfter.wrap(0), enableData
+    }
 
     function generateSignature(UserOperation memory userOp, uint256 chainID, uint256 signerPrvKey)
         internal
