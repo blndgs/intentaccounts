@@ -362,7 +362,37 @@ contract KernelPluginModeTest is Test {
         return string(hexString);
     }
 
-    // function testRegistrationByUserOp() public {
+    function buildEnableSignature(
+        UserOperation memory op,
+        bytes4 selector,
+        uint48 validAfter,
+        uint48 validUntil,
+        IKernelValidator validator,
+        address executor,
+        uint256 signerPrvKey
+    ) internal view returns (bytes memory sig) {
+        require(address(validator) != address(0), "validator not set");
+        require(executor != address(0), "executor not set");
+        bytes memory enableData = getEnableData();
+        bytes32 permitHash =
+            EIP712Library.getStructHash(selector, validUntil, validAfter, address(validator), executor, enableData);
+        bytes32 digest = EIP712Library.hashTypedData(KERNEL_NAME, KERNEL_VERSION, permitHash, op.sender);
+        bytes memory enableSig = signHash(digest);
+        sig = generateSignature(op, block.chainid, signerPrvKey);
+        sig = abi.encodePacked(
+            bytes4(0x00000002),
+            validAfter,
+            validUntil,
+            address(validator),
+            executor,
+            uint256(enableData.length),
+            enableData,
+            enableSig.length,
+            enableSig,
+            sig
+        );
+    }
+
     function getEnableData() internal view returns (bytes memory) {
         return abi.encodePacked(_ownerAddress);
     }
