@@ -349,8 +349,15 @@ contract KernelPluginModeTest is Test {
         ExecutionDetail memory detail = IKernel(address(_account)).getExecution(intentExecutor.doNothing.selector);
         assertEq(detail.executor, address(intentExecutor));
         assertEq(address(detail.validator), address(intentValidator));
+
+        userOp = createUserOp(
+            address(_account),
+            abi.encodeWithSelector(
                 KernelIntentExecutor.doNothing.selector, ValidUntil.wrap(0), ValidAfter.wrap(0), enableData
-                KernelIntentExecutor.doNothing.selector, ValidUntil.wrap(0), ValidAfter.wrap(0), enableData
+            )
+        );
+        userOp.signature = createSignature(userOp, _ownerPrivateKey, VALIDATION_DEF_0);
+        executeUserOp(userOp, payable(_ownerAddress));
     }
 
     function generateSignature(UserOperation memory userOp, uint256 chainID, uint256 signerPrvKey)
