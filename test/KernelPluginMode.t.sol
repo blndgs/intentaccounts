@@ -310,20 +310,16 @@ contract KernelPluginModeTest is Test {
         assertEq(address(detail.validator), address(intentValidator));
     }
 
-    function testEnableCustomValidatorDoNothing() public {
+    function testEnableIntentValidatorDoNothing() public {
         _createAccount();
-        bytes memory enableData = abi.encodePacked(_ownerAddress);
 
-        UserOperation memory userOp = createUserOp(
-            address(_account),
-            abi.encodeWithSelector(
-                KernelIntentExecutor.doNothing.selector, ValidUntil.wrap(0), ValidAfter.wrap(0), enableData
-            )
-        );
+        bytes4 selector = KernelIntentExecutor.doNothing.selector;
+
+        UserOperation memory userOp = createUserOp(address(_account), getEnableDoNothingCalldata(selector));
 
         userOp.signature = buildEnableSignature(
             userOp,
-            KernelIntentExecutor.doNothing.selector,
+            selector, /* selector must match the userOp calldata selector */
             0,
             0,
             intentValidator,
@@ -340,13 +336,13 @@ contract KernelPluginModeTest is Test {
         userOp = createUserOp(
             address(_account),
             abi.encodeWithSelector(
-                KernelIntentExecutor.doNothing.selector, ValidUntil.wrap(0), ValidAfter.wrap(0), enableData
+                KernelIntentExecutor.doNothing.selector, ValidUntil.wrap(0), ValidAfter.wrap(0), getEnableData()
             )
         );
         userOp.signature = createSignature(userOp, _ownerPrivateKey, VALIDATION_DEF_0);
         executeUserOp(userOp, payable(_ownerAddress));
     }
-            maxPriorityFeePerGas: 0,
+
             paymasterAndData: bytes(hex""),
             signature: bytes(hex"")
         });
@@ -396,6 +392,11 @@ contract KernelPluginModeTest is Test {
         bytes memory signature = abi.encodePacked(r, s, v);
 
         return signature;
+    }
+
+    // calldata for Kernel mode 2 (enable validator)
+    function getEnableDoNothingCalldata(bytes4 selector) internal view returns (bytes memory) {
+        return abi.encodeWithSelector(selector, ValidUntil.wrap(0), ValidAfter.wrap(0), getEnableData());
     }
 
     function verifySignature(UserOperation memory userOp) internal returns (uint256) {
