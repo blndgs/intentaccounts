@@ -310,21 +310,42 @@ contract KernelPluginModeTest is Test {
         assertEq(address(detail.validator), address(intentValidator));
     }
 
-    function testEnableCustomValidator() public {
+    function testEnableCustomValidatorDoNothing() public {
         _createAccount();
         bytes memory enableData = abi.encodePacked(_ownerAddress);
 
-        UserOperation memory userOp = UserOperation({
-            sender: address(_account),
-            nonce: 0x0,
-            initCode: bytes(hex""),
-            callData: abi.encodeWithSelector(
+        UserOperation memory userOp = createUserOp(
+            address(_account),
+            abi.encodeWithSelector(
                 KernelIntentExecutor.doNothing.selector, ValidUntil.wrap(0), ValidAfter.wrap(0), enableData
-            ),
-            callGasLimit: 800000,
-            verificationGasLimit: 600000,
-            preVerificationGas: 65536,
-            maxFeePerGas: 0,
+            )
+        );
+
+        userOp.signature = buildEnableSignature(
+            userOp,
+            KernelIntentExecutor.doNothing.selector,
+            0,
+            0,
+            intentValidator,
+            address(intentExecutor),
+            _ownerPrivateKey
+        );
+
+        executeUserOp(userOp, payable(_ownerAddress));
+
+        ExecutionDetail memory detail = IKernel(address(_account)).getExecution(intentExecutor.doNothing.selector);
+        assertEq(detail.executor, address(intentExecutor));
+        assertEq(address(detail.validator), address(intentValidator));
+
+        userOp = createUserOp(
+            address(_account),
+            abi.encodeWithSelector(
+                KernelIntentExecutor.doNothing.selector, ValidUntil.wrap(0), ValidAfter.wrap(0), enableData
+            )
+        );
+        userOp.signature = createSignature(userOp, _ownerPrivateKey, VALIDATION_DEF_0);
+        executeUserOp(userOp, payable(_ownerAddress));
+    }
             maxPriorityFeePerGas: 0,
             paymasterAndData: bytes(hex""),
             signature: bytes(hex"")
