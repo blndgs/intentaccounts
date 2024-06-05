@@ -343,15 +343,16 @@ contract KernelPluginModeTest is Test {
         executeUserOp(userOp, payable(_ownerAddress));
     }
 
-            paymasterAndData: bytes(hex""),
-            signature: bytes(hex"")
-        });
+    function testEnableIntentValidatorSetDefault() public {
+        _createAccount();
 
-        userOp.nonce = _account.getNonce();
+        bytes4 selector = IKernel.setDefaultValidator.selector;
+
+        UserOperation memory userOp = createUserOp(address(_account), getEnableSetDefaultCalldata(selector, address(intentValidator)));
 
         userOp.signature = buildEnableSignature(
             userOp,
-            KernelIntentExecutor.doNothing.selector,
+            selector, /* selector must match the userOp calldata selector */
             0,
             0,
             intentValidator,
@@ -359,22 +360,20 @@ contract KernelPluginModeTest is Test {
             _ownerPrivateKey
         );
 
-        UserOperation[] memory userOps = new UserOperation[](1);
-        userOps[0] = userOp;
-        entryPoint.handleOps(userOps, payable(_ownerAddress));
+        executeUserOp(userOp, payable(_ownerAddress));
 
-        ExecutionDetail memory detail = IKernel(address(_account)).getExecution(intentExecutor.doNothing.selector);
-        assertEq(detail.executor, address(intentExecutor));
-        assertEq(address(detail.validator), address(intentValidator));
+        // default validator changed to intentValidator
+        address defaultValidator = address(IKernel(address(_account)).getDefaultValidator());
+        assertEq(defaultValidator, address(intentValidator));
 
-        userOp = createUserOp(
-            address(_account),
-            abi.encodeWithSelector(
-                KernelIntentExecutor.doNothing.selector, ValidUntil.wrap(0), ValidAfter.wrap(0), enableData
-            )
-        );
+        // execute doNothing() with new validator
+        userOp = createUserOp(address(_account), getEnableDoNothingCalldata(KernelIntentExecutor.doNothing.selector));
         userOp.signature = createSignature(userOp, _ownerPrivateKey, VALIDATION_DEF_0);
         executeUserOp(userOp, payable(_ownerAddress));
+
+        // default validator remains intentValidator
+        defaultValidator = address(IKernel(address(_account)).getDefaultValidator());
+        assertEq(defaultValidator, address(intentValidator));
     }
 
     function generateSignature(UserOperation memory userOp, uint256 chainID, uint256 signerPrvKey)
@@ -397,6 +396,10 @@ contract KernelPluginModeTest is Test {
     // calldata for Kernel mode 2 (enable validator)
     function getEnableDoNothingCalldata(bytes4 selector) internal view returns (bytes memory) {
         return abi.encodeWithSelector(selector, ValidUntil.wrap(0), ValidAfter.wrap(0), getEnableData());
+    }
+
+    function getEnableSetDefaultCalldata(bytes4 selector, address arg) internal view returns (bytes memory) {
+        return abi.encodeWithSelector(selector, arg, getEnableData());
     }
 
     function verifySignature(UserOperation memory userOp) internal returns (uint256) {
