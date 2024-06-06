@@ -310,22 +310,17 @@ contract KernelPluginModeTest is Test {
             )
         );
 
-        // Generate the signature
+        // Generate the signature without Kernel mode prefix
         userOp.signature = generateSignature(userOp, block.chainid, _ownerPrivateKey);
-        console2.log("signature:"); // 65 bytes or 130 hex characters. ECDSA signature
-        console2.logBytes(userOp.signature);
 
         ValidationData v =
             _defaultValidator.validateUserOp(userOp, intentValidator.getUserOpHash(userOp, block.chainid), 0);
         assertEq(ValidationData.unwrap(v), 0, "Signature is not valid for the userOp");
 
-        UserOperation[] memory userOps = new UserOperation[](1);
-        userOps[0] = userOp;
+        // Signature creation with the validating mode
+        userOp.signature = createSignature(userOp, _ownerPrivateKey, VALIDATION_DEF_0);
 
-        // Add the validating mode
-        userOp.signature = abi.encodePacked(bytes4(0x00000000), userOp.signature);
-
-        entryPoint.handleOps(userOps, payable(_ownerAddress));
+        executeUserOp(userOp, payable(_ownerAddress));
 
         ExecutionDetail memory detail = IKernel(address(_account)).getExecution(intentExecutor.doNothing.selector);
         assertEq(detail.executor, address(intentExecutor));
