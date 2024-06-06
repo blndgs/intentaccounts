@@ -96,8 +96,17 @@ contract KernelPluginModeTest is Test {
         intentValidator.enable(abi.encodePacked(_ownerAddress));
     }
 
+    function initIntentValidator() internal view returns (bytes memory) {
+        return abi.encodeWithSelector(
+            KernelStorage.initialize.selector, intentValidator, abi.encodePacked(_ownerAddress)
+        );
+    }
+
+    function _createAccountIntent() internal {
+        bytes memory initData = initIntentValidator();
         _account = Kernel(payable(address(_factory.createAccount(address(kernelImpl), initData, 0))));
         vm.deal(address(_account), 1e30);
+        intentValidator.enable(abi.encodePacked(_ownerAddress));
     }
 
     function registerExecutors(address ownerAddress, address executorAddress) internal {
@@ -241,6 +250,23 @@ contract KernelPluginModeTest is Test {
 
         ValidationData v =
             _defaultValidator.validateUserOp(userOp, intentValidator.getUserOpHash(userOp, block.chainid), 0);
+        assertEq(ValidationData.unwrap(v), 0, "Signature is not valid for the userOp");
+    }
+
+    function testValidateIntentValidatorOp() public {
+        _createAccountIntent();
+
+        UserOperation memory userOp = createUserOp(address(_account), bytes(hex""));
+
+        // Generate the signature
+        userOp.signature = generateSignature(userOp, block.chainid, _ownerPrivateKey);
+        console2.log("signature:"); // 65 bytes or 130 hex characters. ECDSA signature
+        console2.logBytes(userOp.signature);
+
+        verifySignature(userOp);
+
+        ValidationData v =
+            intentValidator.validateUserOp(userOp, intentValidator.getUserOpHash(userOp, block.chainid), 0);
         assertEq(ValidationData.unwrap(v), 0, "Signature is not valid for the userOp");
     }
 
