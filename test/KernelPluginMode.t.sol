@@ -318,7 +318,7 @@ contract KernelPluginModeTest is Test {
         assertEq(ValidationData.unwrap(v), 0, "Signature is not valid for the userOp");
 
         // Signature creation with the validating mode
-        userOp.signature = createSignature(userOp, _ownerPrivateKey, VALIDATION_DEF_0);
+        userOp.signature = setKernelSignature(userOp, _ownerPrivateKey, VALIDATION_DEF_0);
 
         executeUserOp(userOp, payable(_ownerAddress));
 
@@ -356,7 +356,7 @@ contract KernelPluginModeTest is Test {
                 KernelIntentExecutor.doNothing.selector, ValidUntil.wrap(0), ValidAfter.wrap(0), getEnableData()
             )
         );
-        userOp.signature = createSignature(userOp, _ownerPrivateKey, VALIDATION_DEF_0);
+        userOp.signature = setKernelSignature(userOp, _ownerPrivateKey, VALIDATION_DEF_0);
         executeUserOp(userOp, payable(_ownerAddress));
     }
 
@@ -386,7 +386,7 @@ contract KernelPluginModeTest is Test {
 
         // execute doNothing() with new validator
         userOp = createUserOp(address(_account), getEnableDoNothingCalldata(KernelIntentExecutor.doNothing.selector));
-        userOp.signature = createSignature(userOp, _ownerPrivateKey, VALIDATION_DEF_0);
+        userOp.signature = setKernelSignature(userOp, _ownerPrivateKey, VALIDATION_DEF_0);
         executeUserOp(userOp, payable(_ownerAddress));
 
         // default validator remains intentValidator
@@ -615,12 +615,13 @@ contract KernelPluginModeTest is Test {
     // enable validator mode
     uint256 constant VALIATION_ENABLED_2 = 2;
 
-    function createSignature(UserOperation memory userOp, uint256 ownerPrivateKey, uint256 mode)
+    function setKernelSignature(UserOperation memory userOp, uint256 ownerPrivateKey, uint256 mode)
         internal
-        view
         returns (bytes memory)
     {
-        bytes memory signature = generateSignature(userOp, block.chainid, ownerPrivateKey);
+        userOp.signature = generateSignature(userOp, block.chainid, ownerPrivateKey);
+        // verify sig without prefix
+        verifySignature(userOp);
 
         bytes4 prefix;
         if (mode == VALIDATION_DEF_0) {
