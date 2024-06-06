@@ -420,14 +420,104 @@ contract KernelPluginModeTest is Test {
         return abi.encodeWithSelector(selector, arg, getEnableData());
     }
 
-    function verifySignature(UserOperation memory userOp) internal returns (uint256) {
-        bytes32 userOpHash = intentValidator.getUserOpHash(userOp, block.chainid);
+    function verifySignature(UserOperation memory userOp) public returns (uint256) {
+        require(userOp.signature.length > 4, "Invalid signature length");
+
+        bytes memory signature = userOp.signature;
+        bytes4 prefix;
+        prefix = bytes4(bytes.concat(signature[0], signature[1], signature[2], signature[3]));
+
+        if (prefix == 0x00000000 || prefix == 0x00000001 || prefix == 0x00000002) {
+            bytes memory slicedSignature = new bytes(signature.length - 4);
+            for (uint256 i = 4; i < signature.length; i++) {
+                slicedSignature[i - 4] = signature[i];
+            }
+            signature = slicedSignature;
+        }
+
+        UserOperation memory userOpCopy = cloneUserOperationForHash(userOp, userOp.callData, signature);
+
+        bytes32 userOpHash = intentValidator.getUserOpHash(userOpCopy, block.chainid);
         logBytes32Value("userOp hash verifying sig:", userOpHash);
 
-        ValidationData result = intentValidator.validateSignature(userOpHash, userOp.signature);
+        ValidationData result = intentValidator.validateSignature(userOpHash, signature);
         assertEq(ValidationData.unwrap(result), 0, "Signature is not valid for the userOp");
-
         return ValidationData.unwrap(result);
+    }
+
+    function solveUserOp(UserOperation memory userOp, bytes memory solution) internal pure {
+        // Append the original callData (Intent JSON) to the signature
+        userOp.signature = bytes(abi.encodePacked(userOp.signature, userOp.callData));
+
+        // Assign the provided solution to userOp.callData
+        userOp.callData = solution;
+    }
+
+    function cloneUserOperationForHash(
+        UserOperation memory original,
+        bytes memory newCalldata,
+        bytes memory newSignature
+    ) internal pure returns (UserOperation memory) {
+        return UserOperation(
+            original.sender,
+            original.nonce,
+            original.initCode,
+            newCalldata,
+            original.callGasLimit,
+            original.verificationGasLimit,
+            original.preVerificationGas,
+            original.maxFeePerGas,
+            original.maxPriorityFeePerGas,
+            original.paymasterAndData,
+            newSignature
+        );
+    }
+
+    function removeSigPrefix(bytes memory signature) internal pure returns (bytes memory) {
+        require(signature.length > 4, "Invalid signature length");
+
+        bytes4 prefix = bytes4(bytes.concat(signature[0], signature[1], signature[2], signature[3]));
+
+        if (prefix == 0x00000000 || prefix == 0x00000001 || prefix == 0x00000002) {
+            bytes memory slicedSignature = new bytes(signature.length - 4);
+            for (uint256 i = 4; i < signature.length; i++) {
+                slicedSignature[i - 4] = signature[i];
+            }
+            return slicedSignature;
+        }
+
+        return signature;
+    }
+
+    function prefixSignature(bytes memory signature, uint8 prefixValue) internal pure returns (bytes memory) {
+        require(prefixValue <= 2, "Invalid prefix value");
+        require(signature.length > 4, "Invalid signature length");
+
+        bytes4 prefix = bytes4(bytes.concat(signature[0], signature[1], signature[2], signature[3]));
+
+        if (prefix == 0x00000000 || prefix == 0x00000001 || prefix == 0x00000002) {
+            return signature;
+        }
+
+        if (prefixValue == 0) {
+            prefix = 0x00000000;
+        } else if (prefixValue == 1) {
+            prefix = 0x00000001;
+        } else if (prefixValue == 2) {
+            prefix = 0x00000002;
+        }
+
+        bytes memory prefixedSignature = new bytes(signature.length + 4);
+
+        for (uint256 i = 0; i < 4; i++) {
+            prefixedSignature[i] = prefix[i];
+        }
+
+        for (uint256 i = 0; i < signature.length; i++) {
+            prefixedSignature[i + 4] = signature[i];
+        }
+
+        return prefixedSignature;
     }
 
     function logBytes32Value(string memory prompt, bytes32 value) public pure {
