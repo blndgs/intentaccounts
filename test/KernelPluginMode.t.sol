@@ -83,14 +83,19 @@ contract KernelPluginModeTest is Test {
         assertFalse(_ownerAddress == address(0), "Owner address should not be the zero address");
     }
 
-    function getInitializeData() internal view returns (bytes memory) {
+    function initDefaultValidator() internal view returns (bytes memory) {
         return abi.encodeWithSelector(
             KernelStorage.initialize.selector, _defaultValidator, abi.encodePacked(_ownerAddress)
         );
     }
 
     function _createAccount() internal {
-        bytes memory initData = getInitializeData();
+        bytes memory initData = initDefaultValidator();
+        _account = Kernel(payable(address(_factory.createAccount(address(kernelImpl), initData, 0))));
+        vm.deal(address(_account), 1e30);
+        intentValidator.enable(abi.encodePacked(_ownerAddress));
+    }
+
         _account = Kernel(payable(address(_factory.createAccount(address(kernelImpl), initData, 0))));
         vm.deal(address(_account), 1e30);
     }
@@ -222,34 +227,16 @@ contract KernelPluginModeTest is Test {
         assertTrue(success, "execValueBatch failed");
     }
 
-    function testValidateSigVanillaOp() public {
+    function testValidateVanillaOp() public {
         _createAccount();
 
-        // Prepare the UserOperation object to sign
-        UserOperation memory userOp = UserOperation({
-            sender: address(_account),
-            nonce: 0x0,
-            initCode: bytes(hex""),
-            callData: bytes(hex""),
-            callGasLimit: 500000,
-            verificationGasLimit: 65536,
-            preVerificationGas: 65536,
-            maxFeePerGas: 0,
-            maxPriorityFeePerGas: 0,
-            paymasterAndData: bytes(hex""),
-            signature: bytes(hex"")
-        });
-
-        userOp.nonce = _account.getNonce();
-        console2.log("nonce:", userOp.nonce);
+        UserOperation memory userOp = createUserOp(address(_account), bytes(hex""));
 
         // Generate the signature
         userOp.signature = generateSignature(userOp, block.chainid, _ownerPrivateKey);
         console2.log("signature:"); // 65 bytes or 130 hex characters. ECDSA signature
         console2.logBytes(userOp.signature);
-
-        intentValidator.enable(abi.encodePacked(_ownerAddress));
-
+        
         verifySignature(userOp);
 
         ValidationData v =
@@ -262,12 +249,9 @@ contract KernelPluginModeTest is Test {
 
         bytes memory enableData = abi.encodePacked(_ownerAddress);
 
-        // Prepare the UserOperation object to sign
-        UserOperation memory userOp = UserOperation({
-            sender: address(_account),
-            nonce: 0x0,
-            initCode: bytes(hex""),
-            callData: abi.encodeWithSelector(
+        UserOperation memory userOp = createUserOp(
+            address(_account),
+            abi.encodeWithSelector(
                 IKernel.setExecution.selector,
                 KernelIntentExecutor.doNothing.selector,
                 address(intentExecutor),
@@ -275,18 +259,8 @@ contract KernelPluginModeTest is Test {
                 ValidUntil.wrap(0),
                 ValidAfter.wrap(0),
                 enableData
-            ),
-            callGasLimit: 500000,
-            verificationGasLimit: 65536,
-            preVerificationGas: 65536,
-            maxFeePerGas: 0,
-            maxPriorityFeePerGas: 0,
-            paymasterAndData: bytes(hex""),
-            signature: bytes(hex"")
-        });
-
-        userOp.nonce = _account.getNonce();
-        console2.log("nonce:", userOp.nonce);
+            )
+        );
 
         // Generate the signature
         userOp.signature = generateSignature(userOp, block.chainid, _ownerPrivateKey);
@@ -348,7 +322,8 @@ contract KernelPluginModeTest is Test {
 
         bytes4 selector = IKernel.setDefaultValidator.selector;
 
-        UserOperation memory userOp = createUserOp(address(_account), getEnableSetDefaultCalldata(selector, address(intentValidator)));
+        UserOperation memory userOp =
+            createUserOp(address(_account), getEnableSetDefaultCalldata(selector, address(intentValidator)));
 
         userOp.signature = buildEnableSignature(
             userOp,
