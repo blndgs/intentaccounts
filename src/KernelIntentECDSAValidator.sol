@@ -80,7 +80,7 @@ contract KernelIntentValidator is IKernelValidator {
 
     uint256 private constant SIGNATURE_LENGTH = 65;
 
-    function _getUserOpHash(UserOperation calldata userOp, uint256 chainID) internal pure returns (bytes32) {
+    function getUserOpHash(UserOperation calldata userOp, uint256 chainID) public pure returns (bytes32) {
         bytes memory callData = userOp.callData;
 
         uint256 sigLength = userOp.signature.length;
@@ -100,18 +100,18 @@ contract KernelIntentValidator is IKernelValidator {
         override
         returns (ValidationData validationData)
     {
-        bytes32 _userOpHash = _getUserOpHash(_userOp, block.chainid);
-
+        bytes32 _userOpHash = getUserOpHash(_userOp, block.chainid);
         address owner = ecdsaValidatorStorage[_userOp.sender].owner;
         bytes32 hash = ECDSA.toEthSignedMessageHash(_userOpHash);
 
         // Extract the first 65 bytes of the signature
         bytes memory signature65 = _userOp.signature[:SIGNATURE_LENGTH];
 
+        address recovered = ECDSA.recover(hash, signature65);
         if (owner == ECDSA.recover(hash, signature65)) {
             return ValidationData.wrap(0);
         }
-
+        address recovered2 = ECDSA.recover(hash, signature65);
         return SIG_VALIDATION_FAILED;
     }
 
@@ -121,11 +121,13 @@ contract KernelIntentValidator is IKernelValidator {
         // Extract the first 65 bytes of the signature
         bytes memory signature65 = signature[:SIGNATURE_LENGTH];
 
+        address recovered = ECDSA.recover(hash, signature65);
         if (owner == ECDSA.recover(hash, signature65)) {
             return ValidationData.wrap(0);
         }
+
         bytes32 ethHash = ECDSA.toEthSignedMessageHash(hash);
-        address recovered = ECDSA.recover(ethHash, signature65);
+        recovered = ECDSA.recover(ethHash, signature65);
         if (owner != recovered) {
             return SIG_VALIDATION_FAILED;
         }
