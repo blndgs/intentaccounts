@@ -634,7 +634,11 @@ contract KernelPluginModeTest is Test {
             revert("Invalid mode");
         }
 
-        return abi.encodePacked(prefix, signature);
+        userOp.signature = abi.encodePacked(prefix, userOp.signature);
+        // verify sig with prefix
+        verifySignature(userOp);
+
+        return userOp.signature;
     }
 
     function executeUserOp(UserOperation memory userOp, address payable beneficiary) public {
