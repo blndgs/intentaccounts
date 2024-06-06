@@ -97,9 +97,8 @@ contract KernelPluginModeTest is Test {
     }
 
     function initIntentValidator() internal view returns (bytes memory) {
-        return abi.encodeWithSelector(
-            KernelStorage.initialize.selector, intentValidator, abi.encodePacked(_ownerAddress)
-        );
+        return
+            abi.encodeWithSelector(KernelStorage.initialize.selector, intentValidator, abi.encodePacked(_ownerAddress));
     }
 
     function _createAccountIntent() internal {
@@ -236,7 +235,7 @@ contract KernelPluginModeTest is Test {
         assertTrue(success, "execValueBatch failed");
     }
 
-    function testValidateVanillaOp() public {
+    function testValidateEmptyOp() public {
         _createAccount();
 
         UserOperation memory userOp = createUserOp(address(_account), bytes(hex""));
@@ -245,7 +244,7 @@ contract KernelPluginModeTest is Test {
         userOp.signature = generateSignature(userOp, block.chainid, _ownerPrivateKey);
         console2.log("signature:"); // 65 bytes or 130 hex characters. ECDSA signature
         console2.logBytes(userOp.signature);
-        
+
         verifySignature(userOp);
 
         ValidationData v =
@@ -253,7 +252,7 @@ contract KernelPluginModeTest is Test {
         assertEq(ValidationData.unwrap(v), 0, "Signature is not valid for the userOp");
     }
 
-    function testValidateIntentValidatorOp() public {
+    function testValidateEmptyIntentOp() public {
         _createAccountIntent();
 
         UserOperation memory userOp = createUserOp(address(_account), bytes(hex""));
@@ -269,6 +268,29 @@ contract KernelPluginModeTest is Test {
             intentValidator.validateUserOp(userOp, intentValidator.getUserOpHash(userOp, block.chainid), 0);
         assertEq(ValidationData.unwrap(v), 0, "Signature is not valid for the userOp");
     }
+
+    function testValidateIntentValidatorOp() public {
+        _createAccountIntent();
+
+        UserOperation memory userOp = createUserOp(
+            address(_account),
+            bytes(
+                "{\"sender\":\"0xff6F893437e88040ffb70Ce6Aeff4CcbF8dc19A4\",\"from\":{\"type\":\"TOKEN\",\"address\":\"0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE\",\"amount\":\"0.8\",\"chainId\":\"1\"},\"to\":{\"type\":\"TOKEN\",\"address\":\"0xdac17f958d2ee523a2206206994597c13d831ec7\",\"chainId\":\"1\"}}"
+            )
+        );
+
+        // Generate the signature
+        userOp.signature = generateSignature(userOp, block.chainid, _ownerPrivateKey);
+        console2.log("signature:"); // 65 bytes or 130 hex characters. ECDSA signature
+        console2.logBytes(userOp.signature);
+
+        verifySignature(userOp);
+
+        ValidationData v =
+            intentValidator.validateUserOp(userOp, intentValidator.getUserOpHash(userOp, block.chainid), 0);
+        assertEq(ValidationData.unwrap(v), 0, "Signature is not valid for the userOp");
+    }
+
 
     function testExecSetExecutionDoNothingOp() public {
         _createAccount();
