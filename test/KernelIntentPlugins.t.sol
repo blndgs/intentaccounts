@@ -11,6 +11,7 @@ import {KernelIntentExecutor} from "../src/KernelIntentExecutor.sol";
 import {KernelIntentValidator} from "../src/KernelIntentECDSAValidator.sol";
 import {Operation} from "../lib/kernel/src/common/Enums.sol";
 import {Kernel} from "../lib/kernel/src/Kernel.sol";
+import {KernelDebug} from "../lib/kernel/src/KernelDebug.sol";
 import {KernelFactory} from "../lib/kernel/src/factory/KernelFactory.sol";
 import {KernelStorage} from "../lib/kernel/src/abstract/KernelStorage.sol";
 import {
@@ -25,7 +26,7 @@ import {ECDSA} from "../src/ECDSA.sol";
 import {EIP712Library} from "./EIP712Library.sol";
 import "forge-std/Test.sol";
 
-contract KernelPluginModeTest is Test {
+contract KernelIntentPluginsTest is Test {
     address constant ENTRYPOINT_V06 = 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789;
     IEntryPoint entryPoint;
     ECDSAValidator _defaultValidator;
@@ -39,7 +40,8 @@ contract KernelPluginModeTest is Test {
     string _network;
     IKernel _account;
     KernelFactory _factory;
-    Kernel kernelImpl;
+    // Kernel kernelImpl;
+    KernelDebug kernelImpl;
     address private targetContractAddress;
 
     function setUp() public {
@@ -49,7 +51,8 @@ contract KernelPluginModeTest is Test {
 
         // Create default ECDSA account
         vm.startPrank(_factoryOwnerAddress);
-        kernelImpl = new Kernel(entryPoint);
+        kernelImpl = new KernelDebug(entryPoint);
+        // kernelImpl = new Kernel(entryPoint);
         _factory = new KernelFactory(_factoryOwnerAddress, entryPoint);
         _factory.setImplementation(address(kernelImpl), true);
         _defaultValidator = new ECDSAValidator();
