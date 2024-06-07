@@ -357,6 +357,12 @@ contract KernelIntentPluginsTest is Test {
         assertEq(address(detail.validator), address(intentValidator));
     }
 
+    /**
+     * This test demonstrates switching to Intent validator for an executor api (doNothing)
+     * The disadvantage is that the first userOp with the enable signatures will be 
+     * validated by the default validator. The subsequent userOps will be validated 
+     * by the IntentValidator
+     */
     function testEnableIntentValidatorDoNothing() public {
         _createAccount();
 
@@ -387,11 +393,10 @@ contract KernelIntentPluginsTest is Test {
             )
         );
 
-        // execute validating with the IntentValidator
-        userOp.signature = setKernelSignature(userOp, _ownerPrivateKey, VALIDATION_DEF_0);
-        executeUserOp(userOp, payable(_ownerAddress));
-
         // execute validation with the Kernel default validator
+        console2.log("----------------------------------");
+        console2.log("Executing in plugin mode");
+        console2.log("----------------------------------");
         userOp.signature = setKernelSignature(userOp, _ownerPrivateKey, VALIDATION_PLUGIN_1);
         executeUserOp(userOp, payable(_ownerAddress));
     }
