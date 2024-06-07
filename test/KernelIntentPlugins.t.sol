@@ -386,7 +386,13 @@ contract KernelIntentPluginsTest is Test {
                 KernelIntentExecutor.doNothing.selector, ValidUntil.wrap(0), ValidAfter.wrap(0), getEnableData()
             )
         );
+
+        // execute validating with the IntentValidator
         userOp.signature = setKernelSignature(userOp, _ownerPrivateKey, VALIDATION_DEF_0);
+        executeUserOp(userOp, payable(_ownerAddress));
+
+        // execute validation with the Kernel default validator
+        userOp.signature = setKernelSignature(userOp, _ownerPrivateKey, VALIDATION_PLUGIN_1);
         executeUserOp(userOp, payable(_ownerAddress));
     }
 
