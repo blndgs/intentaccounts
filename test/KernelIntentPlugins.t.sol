@@ -324,6 +324,77 @@ contract KernelIntentPluginsTest is Test {
     }
 
     function testExecIntentOpWithVanillaAccount() public {
+    function testExecIntentOpWithVanillaAccountChangeValidatorForExecBatch() public {
+        // create account with the default validator
+        _createAccount();
+
+        // executeBatch is pointing to default validator and executor (no execution detail)
+        ExecutionDetail memory detail = IKernel(address(_account)).getExecution(intentExecutor.executeBatch.selector);
+        assertEq(detail.executor, address(0x0));
+        assertEq(address(detail.validator), address(0x0));
+
+        bytes4 selector = IKernel.setExecution.selector;
+
+        UserOperation memory userOp = createUserOp(
+            address(_account),
+            abi.encodeWithSelector(
+                selector,
+                KernelIntentExecutor.executeBatch.selector,
+                address(intentExecutor),
+                address(intentValidator),
+                ValidUntil.wrap(0),
+                ValidAfter.wrap(0),
+                getEnableData()
+            )
+        );
+
+        userOp.signature = buildEnableSignature(
+            userOp,
+            selector, // selector must match the userOp calldata selector
+            0,
+            0,
+            intentValidator,
+            address(intentExecutor),
+            _ownerPrivateKey
+        );
+
+        executeUserOp(userOp, payable(_ownerAddress));
+
+        // // executeBatch is now pointing to Intent validator and executor
+        detail = IKernel(address(_account)).getExecution(intentExecutor.executeBatch.selector);
+        assertEq(detail.executor, address(intentExecutor));
+        assertEq(address(detail.validator), address(intentValidator));
+
+        // 2nd Intent userOp with the changed validator set to Intent
+        userOp = createUserOp(
+            address(_account),
+            bytes(
+                "{\"sender\":\"0xff6F893437e88040ffb70Ce6Aeff4CcbF8dc19A4\",\"from\":{\"type\":\"TOKEN\",\"address\":\"0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE\",\"amount\":\"0.8\",\"chainId\":\"1\"},\"to\":{\"type\":\"TOKEN\",\"address\":\"0xdac17f958d2ee523a2206206994597c13d831ec7\",\"chainId\":\"1\"}}"
+            )
+        );
+
+        // Set signature to plugin mode to call execBatch
+        uint256 sigPrefix = VALIDATION_PLUGIN_1;
+        setKernelSignature(userOp, _ownerPrivateKey, VALIDATION_PLUGIN_1);
+
+        solveUserOp(
+            userOp,
+            hex"18dfb3c7000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000000a00000000000000000000000000000000000000000000000000000000000000002000000000000000000000000a0b86991c6218b36c1d19d4a2e9eb0ce3606eb48000000000000000000000000def1c0ded9bec7f1a1670819833240f027b25eff0000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000000c00000000000000000000000000000000000000000000000000000000000000044095ea7b3000000000000000000000000def1c0ded9bec7f1a1670819833240f027b25eff00000000000000000000000000000000000000000000000000000000000f4240000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000128d9627aa4000000000000000000000000000000000000000000000000000000000000008000000000000000000000000000000000000000000000000000000000000f4240000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002000000000000000000000000a0b86991c6218b36c1d19d4a2e9eb0ce3606eb48000000000000000000000000dac17f958d2ee523a2206206994597c13d831ec7869584cd00000000000000000000000010000000000000000000000000000000000000110000000000000000000000000000000015b9ca29df2cd4b929d481fcb4ab9642000000000000000000000000000000000000000000000000"
+        );
+
+        // simulate Kernel validation which removes the signature prefix
+        userOp.signature = removeSigPrefix(userOp.signature);
+        bytes32 nullBytes;
+        intentValidator.validateUserOp(userOp, nullBytes, 0);
+
+        // execute with the prefixed signature
+        bytes memory prefixedSig = prefixSignature(userOp.signature, sigPrefix);
+        userOp.signature = prefixedSig;
+
+        executeUserOp(userOp, payable(_ownerAddress));
+    }
+
+    function testExecIntentOpWithVanillaAccountChangeDefaultValidator() public {
         // create account with the default validator
         _createAccount();
 
