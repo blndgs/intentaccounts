@@ -304,7 +304,8 @@ contract KernelIntentPluginsTest is Test {
             )
         );
 
-        setKernelSignature(userOp, _ownerPrivateKey, VALIDATION_DEF_0);
+        uint256 prefix = VALIDATION_DEF_0;
+        setKernelSignature(userOp, _ownerPrivateKey, prefix);
 
         solveUserOp(
             userOp,
@@ -317,7 +318,7 @@ contract KernelIntentPluginsTest is Test {
         intentValidator.validateUserOp(userOp, nullBytes, 0);
 
         // execute with the prefixed signature
-        bytes memory prefixedSig = prefixSignature(userOp.signature, 0);
+        bytes memory prefixedSig = prefixSignature(userOp.signature, prefix);
         userOp.signature = prefixedSig;
         executeUserOp(userOp, payable(_ownerAddress));
     }
@@ -359,7 +360,8 @@ contract KernelIntentPluginsTest is Test {
             )
         );
 
-        setKernelSignature(userOp, _ownerPrivateKey, VALIDATION_DEF_0);
+        uint256 sigPrefix = VALIDATION_DEF_0;
+        setKernelSignature(userOp, _ownerPrivateKey, sigPrefix);
 
         solveUserOp(
             userOp,
@@ -372,7 +374,7 @@ contract KernelIntentPluginsTest is Test {
         intentValidator.validateUserOp(userOp, nullBytes, 0);
 
         // execute with the prefixed signature
-        bytes memory prefixedSig = prefixSignature(userOp.signature, 0);
+        bytes memory prefixedSig = prefixSignature(userOp.signature, sigPrefix);
         userOp.signature = prefixedSig;
         executeUserOp(userOp, payable(_ownerAddress));
     }
@@ -507,9 +509,9 @@ contract KernelIntentPluginsTest is Test {
         return signature;
     }
 
-    // calldata for Kernel mode 2 (enable validator)
-    function getEnableDoNothingCalldata(bytes4 selector) internal view returns (bytes memory) {
-        return abi.encodeWithSelector(selector, ValidUntil.wrap(0), ValidAfter.wrap(0), getEnableData());
+    // calldata for Kernel mode 2 (enable validator) with doNothing()
+    function getEnableDoNothingCalldata(bytes4 selector) internal pure returns (bytes memory) {
+        return abi.encodeWithSelector(selector);
     }
 
     function getEnableSetDefaultCalldata(bytes4 selector, address arg) internal view returns (bytes memory) {
@@ -585,7 +587,7 @@ contract KernelIntentPluginsTest is Test {
         return signature;
     }
 
-    function prefixSignature(bytes memory signature, uint8 prefixValue) internal pure returns (bytes memory) {
+    function prefixSignature(bytes memory signature, uint256 prefixValue) internal pure returns (bytes memory) {
         require(prefixValue <= 2, "Invalid prefix value");
         require(signature.length > 4, "Invalid signature length");
 
