@@ -107,11 +107,10 @@ contract KernelIntentValidator is IKernelValidator {
         // Extract the first 65 bytes of the signature
         bytes memory signature65 = _userOp.signature[:SIGNATURE_LENGTH];
 
-        address recovered = ECDSA.recover(hash, signature65);
         if (owner == ECDSA.recover(hash, signature65)) {
             return ValidationData.wrap(0);
         }
-        address recovered2 = ECDSA.recover(hash, signature65);
+
         return SIG_VALIDATION_FAILED;
     }
 
