@@ -11,7 +11,6 @@ import {KernelIntentExecutor} from "../src/KernelIntentExecutor.sol";
 import {KernelIntentValidator} from "../src/KernelIntentECDSAValidator.sol";
 import {Operation} from "../lib/kernel/src/common/Enums.sol";
 import {Kernel} from "../lib/kernel/src/Kernel.sol";
-import {KernelDebug} from "../lib/kernel/src/KernelDebug.sol";
 import {KernelFactory} from "../lib/kernel/src/factory/KernelFactory.sol";
 import {KernelStorage} from "../lib/kernel/src/abstract/KernelStorage.sol";
 import {
@@ -40,8 +39,7 @@ contract KernelIntentPluginsTest is Test {
     string _network;
     IKernel _account;
     KernelFactory _factory;
-    // Kernel kernelImpl;
-    KernelDebug kernelImpl;
+    Kernel kernelImpl;
     address private targetContractAddress;
 
     function setUp() public {
@@ -51,8 +49,7 @@ contract KernelIntentPluginsTest is Test {
 
         // Create default ECDSA account
         vm.startPrank(_factoryOwnerAddress);
-        kernelImpl = new KernelDebug(entryPoint);
-        // kernelImpl = new Kernel(entryPoint);
+        kernelImpl = new Kernel(entryPoint);
         _factory = new KernelFactory(_factoryOwnerAddress, entryPoint);
         _factory.setImplementation(address(kernelImpl), true);
         _defaultValidator = new ECDSAValidator();
