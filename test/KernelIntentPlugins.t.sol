@@ -487,8 +487,8 @@ contract KernelIntentPluginsTest is Test {
 
     /**
      * This test demonstrates switching to Intent validator for an executor api (doNothing)
-     * The disadvantage is that the first userOp with the enable signatures will be 
-     * validated by the default validator. The subsequent userOps will be validated 
+     * The disadvantage is that the first userOp with the enable signatures will be
+     * validated by the default validator. The subsequent userOps will be validated
      * by the IntentValidator
      */
     function testEnableIntentValidatorDoNothing() public {
