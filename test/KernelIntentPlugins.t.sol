@@ -111,6 +111,14 @@ contract KernelIntentPluginsTest is Test {
         intentValidator.enable(abi.encodePacked(_ownerAddress));
     }
 
+    function _createAccountIntent(uint256 key) internal returns (IKernel) {
+        bytes memory initData = initIntentValidator();
+        IKernel account = Kernel(payable(address(_factory.createAccount(address(kernelImpl), initData, key))));
+        vm.deal(address(account), 1e30);
+        intentValidator.enable(abi.encodePacked(_ownerAddress));
+        return account;
+    }
+
     function registerExecutors(address ownerAddress, address executorAddress) internal {
         this.logSender();
 
@@ -323,7 +331,44 @@ contract KernelIntentPluginsTest is Test {
         executeUserOp(userOp, payable(_ownerAddress));
     }
 
-    function testExecIntentOpWithVanillaAccount() public {
+    function testExecIntentOpWith2ndAccountIntentValidator() public {
+        // create account with the default validator
+        _createAccount();
+        IKernel newIntentAccount = _createAccountIntent(1);
+        console2.log("newIntentAccount:", address(newIntentAccount));
+
+        UserOperation memory userOp = createUserOp(
+            address(newIntentAccount),
+            bytes(
+                string(
+                    abi.encodePacked(
+                        "{\"sender\":\"",
+                        address(newIntentAccount),
+                        "\",\"from\":{\"type\":\"TOKEN\",\"address\":\"0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE\",\"amount\":\"0.8\",\"chainId\":\"1\"},\"to\":{\"type\":\"TOKEN\",\"address\":\"0xdac17f958d2ee523a2206206994597c13d831ec7\",\"chainId\":\"1\"}}"
+                    )
+                )
+            )
+        );
+
+        uint256 sigPrefix = VALIDATION_DEF_0;
+        setKernelSignature(userOp, _ownerPrivateKey, sigPrefix);
+
+        solveUserOp(
+            userOp,
+            hex"18dfb3c7000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000000a00000000000000000000000000000000000000000000000000000000000000002000000000000000000000000a0b86991c6218b36c1d19d4a2e9eb0ce3606eb48000000000000000000000000def1c0ded9bec7f1a1670819833240f027b25eff0000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000000c00000000000000000000000000000000000000000000000000000000000000044095ea7b3000000000000000000000000def1c0ded9bec7f1a1670819833240f027b25eff00000000000000000000000000000000000000000000000000000000000f4240000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000128d9627aa4000000000000000000000000000000000000000000000000000000000000008000000000000000000000000000000000000000000000000000000000000f4240000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002000000000000000000000000a0b86991c6218b36c1d19d4a2e9eb0ce3606eb48000000000000000000000000dac17f958d2ee523a2206206994597c13d831ec7869584cd00000000000000000000000010000000000000000000000000000000000000110000000000000000000000000000000015b9ca29df2cd4b929d481fcb4ab9642000000000000000000000000000000000000000000000000"
+        );
+
+        // simulate Kernel validation which removes the signature prefix
+        userOp.signature = removeSigPrefix(userOp.signature);
+        bytes32 nullBytes;
+        intentValidator.validateUserOp(userOp, nullBytes, 0);
+
+        // execute with the prefixed signature
+        bytes memory prefixedSig = prefixSignature(userOp.signature, sigPrefix);
+        userOp.signature = prefixedSig;
+        executeUserOp(userOp, payable(_ownerAddress));
+    }
+
     function testExecIntentOpWithVanillaAccountChangeValidatorForExecBatch() public {
         // create account with the default validator
         _createAccount();
