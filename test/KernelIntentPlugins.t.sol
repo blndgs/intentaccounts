@@ -536,7 +536,7 @@ contract KernelIntentPluginsTest is Test {
      * validated by the default validator. The subsequent userOps will be validated
      * by the IntentValidator
      */
-    function testEnableIntentValidatorDoNothing() public {
+    function testSignatureModeEnableAndPluginMode() public {
         _createAccount();
 
         bytes4 selector = KernelIntentExecutor.doNothing.selector;
@@ -566,10 +566,8 @@ contract KernelIntentPluginsTest is Test {
             )
         );
 
-        // execute validation with the Kernel default validator
-        console2.log("----------------------------------");
-        console2.log("Executing in plugin mode");
-        console2.log("----------------------------------");
+        // execute doNothing() in plugin mode with the IntentValidator
+        userOp.nonce = IKernel(_account).getNonce();
         userOp.signature = setKernelSignature(userOp, _ownerPrivateKey, VALIDATION_PLUGIN_1);
         executeUserOp(userOp, payable(_ownerAddress));
     }
