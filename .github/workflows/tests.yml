@@ -48,15 +48,6 @@ jobs:
           echo "ETHEREUM_PRIVATE_KEY=${{ secrets[format('{0}_ETHEREUM_PRIVATE_KEY', env.PREFIX)] }}"
           echo "POLYGON_PRIVATE_KEY=${{ secrets[format('{0}_POLYGON_PRIVATE_KEY', env.PREFIX)] }}"
 
-          echo "ETHEREUM_RPC_URL=${{ vars.MAIN_ETHEREUM_RPC_URL }}" >> $GITHUB_ENV
-          echo "POLYGON_RPC_URL=${{ vars.MAIN_POLYGON_RPC_URL }}" >> $GITHUB_ENV
-          echo "ETHEREUM_SALT=${{ vars.MAIN_ETHEREUM_SALT }}" >> $GITHUB_ENV
-          echo "POLYGON_SALT=${{ vars.MAIN_POLYGON_SALT }}" >> $GITHUB_ENV
-          echo "ETH_4337_FACTORY=${{ vars.MAIN_ETH_4337_FACTORY }}" >> $GITHUB_ENV
-          echo "ETH_4337_ACCOUNT=${{ vars.MAIN_ETH_4337_ACCOUNT }}" >> $GITHUB_ENV
-          echo "ETHEREUM_PRIVATE_KEY=${{ secrets.MAIN_ETHEREUM_PRIVATE_KEY }}" >> $GITHUB_ENV
-          echo "POLYGON_PRIVATE_KEY=${{ secrets.MAIN_POLYGON_PRIVATE_KEY }}" >> $GITHUB_ENV
-
           # set env variables
           echo "ETHEREUM_RPC_URL=${{ vars[format('{0}_ETHEREUM_RPC_URL', env.PREFIX)] }}" >> $GITHUB_ENV
           echo "POLYGON_RPC_URL=${{ vars[format('{0}_POLYGON_RPC_URL', env.PREFIX)] }}" >> $GITHUB_ENV
