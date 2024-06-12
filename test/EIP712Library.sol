@@ -2,7 +2,6 @@
 pragma solidity ^0.8.0;
 
 import {KERNEL_NAME, KERNEL_VERSION, VALIDATOR_APPROVED_STRUCT_HASH} from "../lib/kernel/src/common/Constants.sol";
-import {console2} from "forge-std/Console2.sol";
 
 library EIP712Library {
     bytes32 internal constant EIP712_DOMAIN_TYPEHASH =
