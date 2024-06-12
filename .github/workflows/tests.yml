@@ -61,19 +61,14 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: true
-          submodule-depth: 1
-  
-      - name: Manually Initialize and Update Submodules
-        run: |
-          git submodule update --init --recursive
+
+      - name: Manually Set Missing Submodule URL and Initialize
+        run: ./set_kernelsubmodule_url.sh
 
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
         with:
           version: nightly
-
-      - name: Verify Remappings
-        run: cat remappings.txt
 
       - name: Run Forge build
         run: |
