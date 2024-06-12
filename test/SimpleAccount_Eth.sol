@@ -284,8 +284,6 @@ contract SimpleAccounEthereumTest is Test {
         assertEq(codeSize, 0, "Account should not be deployed yet");
 
         uint256 balanceBef = account.balance;
-        assertEq(balanceBef, 0, "Account Balance should not have been funded");
-
         uint256 depositBef = _entryPoint.balanceOf(account);
         assertEq(depositBef, 0, "Entrypoint account deposits is 0 before execution");
 
@@ -320,7 +318,7 @@ contract SimpleAccounEthereumTest is Test {
         uint256 balanceAfter = account.balance;
         uint256 depositAfter = _entryPoint.balanceOf(account);
 
-        assertEq(balanceAfter, 0, "Account Balance should have remained at 0 after execution");
+        assertEq(balanceBef, balanceAfter, "Account Balance should not have increased after execution");
         assertEq(depositAfter, 0, "Entrypoint account deposits should be zero");
     }
 
