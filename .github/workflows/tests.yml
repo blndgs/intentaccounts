@@ -62,9 +62,11 @@ jobs:
         with:
           submodules: false
 
-      - name: Manually Initialize Submodules
+      - name: Initialize Top-Level Submodules
+        run: git submodule update --init
+
+      - name: Manually Handle Missing Submodule URL
         run: |
-          git submodule update --init --recursive
           cd lib/kernel
           git submodule deinit -f -- lib/ExcessivelySafeCall
           rm -rf .git/modules/lib/ExcessivelySafeCall
