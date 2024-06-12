@@ -65,7 +65,7 @@ jobs:
       - name: Manually Initialize and Update Submodules
         run: |
           git submodule init
-          git submodule update --recursive --remote
+          git submodule update --recursive --remote --init
 
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
