@@ -153,27 +153,6 @@ contract SimpleAccount is BaseAccount, TokenCallbackHandler, UUPSUpgradeable, In
     }
 
     /**
-     * @dev Slices a bytes array to return a portion specified by the start and end indices.
-     * @param data The bytes array to be sliced.
-     * @param start The index in the bytes array where the slice begins.
-     * @param end The index in the bytes array where the slice ends (exclusive).
-     * @return result The sliced portion of the bytes array.
-     * Note: The function reverts if the start index is not less than the end index,
-     *       if start or end is out of the bounds of the data array.
-     */
-    function _sliceSol(bytes memory data, uint256 start, uint256 end) internal pure returns (bytes memory) {
-        if (end <= start) revert EndLessThanStart();
-        if (end > data.length) revert EndOutOfBounds(data.length, end);
-        if (start >= data.length) revert StartOutOfBounds(data.length, start);
-
-        bytes memory result = new bytes(end - start);
-        for (uint256 i = start; i < end; i++) {
-            result[i - start] = data[i];
-        }
-        return result;
-    }
-
-    /**
      * @dev Expose _slice for testing
      */
     function slice(bytes memory data, uint256 start, uint256 end) external pure returns (bytes memory result) {
