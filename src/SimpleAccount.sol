@@ -176,17 +176,16 @@ contract SimpleAccount is BaseAccount, TokenCallbackHandler, UUPSUpgradeable, In
         assembly {
             // Allocate memory for the result
             result := mload(0x40)
-            mstore(result, sub(end, start)) // Set the length of the result
+            let resultLength := sub(end, start)
+            mstore(result, resultLength) // Set the length of the result
             let resultPtr := add(result, 0x20)
+            let dataPtr := add(add(data, 0x20), start)
 
-            // Copy the data from the start to the end
-            for { let i := start } lt(i, end) { i := add(i, 0x20) } {
-                let dataPtr := add(add(data, 0x20), i)
-                mstore(add(resultPtr, sub(i, start)), mload(dataPtr))
-            }
+            // v0.8.24: Copy the data from the start to the end
+            mcopy(resultPtr, dataPtr, resultLength)
 
             // Update the free memory pointer
-            mstore(0x40, add(resultPtr, sub(end, start)))
+            mstore(0x40, add(resultPtr, resultLength))
         }
     }
 
