@@ -3,7 +3,7 @@ pragma solidity ^0.8.12;
 
 /* solhint-disable no-inline-assembly */
 
-import {calldataKeccak,memoryKeccak} from "./Helpers.sol";
+import {calldataKeccak} from "./Helpers.sol";
 
 /**
  * User Operation struct

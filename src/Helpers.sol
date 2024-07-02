@@ -78,19 +78,3 @@ pragma solidity ^0.8.12;
             ret := keccak256(mem, len)
         }
     }
-
-
-    /**
-    * keccak function over memory.
-    * @dev directly use memory data for keccak.
-    */
-    function memoryKeccak(bytes memory data) pure returns (bytes32 ret) {
-        assembly {
-            // First 32 bytes of the bytes array 'data' stores the length of the data
-            let len := mload(data) // Load the length of the data
-            let dataPtr := add(data, 0x20) // Skip the first 32 bytes where the length is stored
-
-            // Perform the keccak hash on the memory data
-            ret := keccak256(dataPtr, len)
-        }
-    }
