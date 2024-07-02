@@ -77,14 +77,12 @@ contract KernelIntentValidator is IKernelValidator {
         // Extract the first 65 bytes of the signature
         bytes memory signature65 = signature[:SIGNATURE_LENGTH];
 
-        address recovered = ECDSA.recover(hash, signature65);
         if (owner == ECDSA.recover(hash, signature65)) {
             return ValidationData.wrap(0);
         }
 
         bytes32 ethHash = ECDSA.toEthSignedMessageHash(hash);
-        recovered = ECDSA.recover(ethHash, signature65);
-        if (owner != recovered) {
+        if (owner != ECDSA.recover(ethHash, signature65)) {
             return SIG_VALIDATION_FAILED;
         }
         return ValidationData.wrap(0);
@@ -101,29 +99,19 @@ contract KernelIntentValidator is IKernelValidator {
     function packIntentOp(UserOperation calldata userOp, bytes32 hashedCD)
         internal
         pure
-        returns (bytes memory ret)
+        returns (bytes memory)
     {
-        address sender = getSender(userOp);
-        uint256 nonce = userOp.nonce;
-        bytes32 hashInitCode = calldataKeccak(userOp.initCode);
-        uint256 callGasLimit = userOp.callGasLimit;
-        uint256 verificationGasLimit = userOp.verificationGasLimit;
-        uint256 preVerificationGas = userOp.preVerificationGas;
-        uint256 maxFeePerGas = userOp.maxFeePerGas;
-        uint256 maxPriorityFeePerGas = userOp.maxPriorityFeePerGas;
-        bytes32 hashPaymasterAndData = calldataKeccak(userOp.paymasterAndData);
-
         return abi.encode(
-            sender,
-            nonce,
-            hashInitCode,
+            getSender(userOp),
+            userOp.nonce,
+            calldataKeccak(userOp.initCode),
             hashedCD,
-            callGasLimit,
-            verificationGasLimit,
-            preVerificationGas,
-            maxFeePerGas,
-            maxPriorityFeePerGas,
-            hashPaymasterAndData
+            userOp.callGasLimit,
+            userOp.verificationGasLimit,
+            userOp.preVerificationGas,
+            userOp.maxFeePerGas,
+            userOp.maxPriorityFeePerGas,
+            calldataKeccak(userOp.paymasterAndData)
         );
     }
 
