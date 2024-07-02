@@ -81,14 +81,14 @@ contract KernelIntentValidator is IKernelValidator {
     uint256 private constant SIGNATURE_LENGTH = 65;
 
     function getUserOpHash(UserOperation calldata userOp, uint256 chainID) public pure returns (bytes32) {
-        bytes memory callData = userOp.callData;
+        bytes32 callData = calldataKeccak(userOp.callData);
 
         uint256 sigLength = userOp.signature.length;
 
         if (sigLength > SIGNATURE_LENGTH) {
             // There is an intent JSON at the end of the signature,
             // include the remaining part of signature > 65 (intent json) for hashing
-            callData = _slice(userOp.signature, SIGNATURE_LENGTH, sigLength);
+            callData = calldataKeccak(userOp.signature[SIGNATURE_LENGTH:]);
         }
 
         return keccak256(abi.encode(hashIntentOp(userOp, callData), ENTRYPOINT_V06, chainID));
@@ -137,11 +137,11 @@ contract KernelIntentValidator is IKernelValidator {
         return ecdsaValidatorStorage[msg.sender].owner == _caller;
     }
 
-    function hashIntentOp(UserOperation calldata userOp, bytes memory callData) internal pure returns (bytes32) {
-        return keccak256(packIntentOp(userOp, callData));
+    function hashIntentOp(UserOperation calldata userOp, bytes32 hashedCD) internal pure returns (bytes32) {
+        return keccak256(packIntentOp(userOp, hashedCD));
     }
 
-    function packIntentOp(UserOperation calldata userOp, bytes memory callData)
+    function packIntentOp(UserOperation calldata userOp, bytes32 hashedCD)
         internal
         pure
         returns (bytes memory ret)
@@ -149,7 +149,6 @@ contract KernelIntentValidator is IKernelValidator {
         address sender = getSender(userOp);
         uint256 nonce = userOp.nonce;
         bytes32 hashInitCode = calldataKeccak(userOp.initCode);
-        bytes32 hashCallData = memoryKeccak(callData);
         uint256 callGasLimit = userOp.callGasLimit;
         uint256 verificationGasLimit = userOp.verificationGasLimit;
         uint256 preVerificationGas = userOp.preVerificationGas;
@@ -161,7 +160,7 @@ contract KernelIntentValidator is IKernelValidator {
             sender,
             nonce,
             hashInitCode,
-            hashCallData,
+            hashedCD,
             callGasLimit,
             verificationGasLimit,
             preVerificationGas,
