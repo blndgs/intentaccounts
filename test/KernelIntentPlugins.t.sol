@@ -684,11 +684,7 @@ contract KernelIntentPluginsTest is Test {
         bytes4 prefix = bytes4(bytes.concat(signature[0], signature[1], signature[2], signature[3]));
 
         if (prefix == 0x00000000 || prefix == 0x00000001 || prefix == 0x00000002) {
-            bytes memory slicedSignature = new bytes(signature.length - 4);
-            for (uint256 i = 4; i < signature.length; i++) {
-                slicedSignature[i - 4] = signature[i];
-            }
-            return slicedSignature;
+            return _slice(signature, 4, signature.length);
         }
 
         return signature;
