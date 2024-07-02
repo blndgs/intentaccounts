@@ -139,54 +139,17 @@ contract SimpleAccount is BaseAccount, TokenCallbackHandler, UUPSUpgradeable, In
     }
 
     function _getUserOpHash(UserOperation calldata userOp, uint256 chainID) internal view returns (bytes32) {
-        bytes memory callData = userOp.callData;
+        bytes32 callData = calldataKeccak(userOp.callData);
 
         uint256 sigLength = userOp.signature.length;
 
         if (sigLength > SIGNATURE_LENGTH) {
             // There is an intent JSON at the end of the signature,
-            // include the remaining part of signature > 65 (intent json) for hashing
-            callData = _slice(userOp.signature, SIGNATURE_LENGTH, sigLength);
+            // include the remaining part of signature > 65 (ECDSA len) to hashing
+            callData = calldataKeccak(userOp.signature[SIGNATURE_LENGTH:]);
         }
 
         return keccak256(abi.encode(userOp.hashIntentOp(callData), address(_entryPoint), chainID));
-    }
-
-    /**
-     * @dev Expose _slice for testing
-     */
-    function slice(bytes memory data, uint256 start, uint256 end) external pure returns (bytes memory result) {
-        return _slice(data, start, end);
-    }
-
-    /**
-     * @dev Slices a bytes array to return a portion specified by the start and end indices.
-     * @param data The bytes array to be sliced.
-     * @param start The index in the bytes array where the slice begins.
-     * @param end The index in the bytes array where the slice ends (exclusive).
-     * @return result The sliced portion of the bytes array.
-     * Note: The function reverts if the start index is not less than the end index,
-     *       if start or end is out of the bounds of the data array.
-     */
-    function _slice(bytes memory data, uint256 start, uint256 end) internal pure returns (bytes memory result) {
-        if (end <= start) revert EndLessThanStart();
-        if (end > data.length) revert EndOutOfBounds(data.length, end);
-        if (start >= data.length) revert StartOutOfBounds(data.length, start);
-
-        assembly {
-            // Allocate memory for the result
-            result := mload(0x40)
-            let resultLength := sub(end, start)
-            mstore(result, resultLength) // Set the length of the result
-            let resultPtr := add(result, 0x20)
-            let dataPtr := add(add(data, 0x20), start)
-
-            // v0.8.24: Copy the data from the start to the end
-            mcopy(resultPtr, dataPtr, resultLength)
-
-            // Update the free memory pointer
-            mstore(0x40, add(resultPtr, resultLength))
-        }
     }
 
     /// implement template method of BaseAccount

@@ -644,39 +644,6 @@ contract SimpleAccounPolygonTest is Test {
         assertEq(newUserOpHash, expectedHash, "Hash values should match for conventional userOps");
     }
 
-    function testSliceNormal() public {
-        bytes memory data = bytes("Intents Rock");
-        bytes memory result = simpleAccount.slice(data, 0, 7);
-        assertEq(string(result), "Intents", "Slicing did not return the correct result");
-    }
-
-    function testSliceOutOfBounds() public {
-        bytes memory data = bytes("Intents Are Nice.");
-        try simpleAccount.slice(data, 0, 50) {
-            fail("slice should have thrown for end out of bounds");
-        } catch (bytes memory) {
-            // expected
-        }
-    }
-
-    function testSliceStartOutOfBounds() public {
-        bytes memory data = bytes("Intents Are Nice.");
-        try simpleAccount.slice(data, 50, 60) {
-            fail("slice should have thrown for start out of bounds");
-        } catch (bytes memory) {
-            // expected
-        }
-    }
-
-    function testSliceEndLessThanStart() public {
-        bytes memory data = bytes("Intents Are In!");
-        try simpleAccount.slice(data, 5, 2) {
-            fail("slice should have thrown for end less than start");
-        } catch (bytes memory) {
-            // expected
-        }
-    }
-
     function testValidateNewSimpleAccountAddress() public {
         // Define a unique salt for each account
         uint256 saltValue = uint256(keccak256(abi.encodePacked("unique salt")));
