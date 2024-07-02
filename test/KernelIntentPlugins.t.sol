@@ -909,19 +909,6 @@ contract KernelIntentPluginsTest is Test {
         console2.log(aft);
     }
 
-    // function test_set_execution_detail() public {
-    //     bytes memory enableData = abi.encodePacked(_ownerAddress);
-    //     UserOperation memory op = buildUserOperation(
-    //         abi.encodeWithSelector(
-    //             _account.setExecution.selector, address(intentValidator), address(intentExecutor), Operation.Call
-    //         )
-    //     );
-    //     performUserOperationWithSig(op);
-    //     ExecutionDetail memory detail = IKernel(address(kernel)).getExecution(executor.execute.selector);
-    //     assertEq(detail.executor, address(executor));
-    //     assertEq(address(detail.validator), address(intentValidator));
-    // }
-
     // Pasted for reference
     // function setDefaultValidator(IKernelValidator _defaultValidator, bytes calldata _data)
     //     external
