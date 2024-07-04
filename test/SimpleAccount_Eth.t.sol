@@ -321,12 +321,4 @@ contract SimpleAccounEthereumTest is Test {
         assertEq(balanceBef, balanceAfter, "Account Balance should not have increased after execution");
         assertEq(depositAfter, 0, "Entrypoint account deposits should be zero");
     }
-
-    function _weiToEther(uint256 weiAmount) private pure returns (uint256) {
-        return weiAmount / 1 ether;
-    }
-
-    function _weiToGwei(uint256 weiAmount) private pure returns (uint256) {
-        return weiAmount / 1 gwei;
-    }
 }

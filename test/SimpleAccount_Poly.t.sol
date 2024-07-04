@@ -697,12 +697,4 @@ contract SimpleAccounPolygonTest is Test {
 
         return result;
     }
-
-    function _weiToEther(uint256 weiAmount) private pure returns (uint256) {
-        return weiAmount / 1 ether;
-    }
-
-    function _weiToGwei(uint256 weiAmount) private pure returns (uint256) {
-        return weiAmount / 1 gwei;
-    }
 }
