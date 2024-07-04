@@ -21,7 +21,9 @@ import {
 } from "../lib/kernel/src/common/Constants.sol";
 import {ValidAfter, ValidUntil} from "../lib/kernel/src/common/Types.sol";
 import {WalletKernelStorage, ExecutionDetail} from "../lib/kernel/src/common/Structs.sol";
-import {ECDSA} from "../src/ECDSA.sol";
+// TODO discern which ECDSA library to use
+//import {ECDSA} from "../src/ECDSA.sol";
+import {ECDSA} from "solady/utils/ECDSA.sol"; // used by the plugin
 import {EIP712Library} from "./EIP712Library.sol";
 import "forge-std/Test.sol";
 

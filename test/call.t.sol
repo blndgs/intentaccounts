@@ -9,7 +9,8 @@ import "@account-abstraction/core/EntryPoint.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "../src/ECDSA.sol";
+import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+
 
 using Strings for bytes32;
 using UserOperationLib for UserOperation;
