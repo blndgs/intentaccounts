@@ -2,12 +2,12 @@
 pragma solidity ^0.8.24;
 
 import "forge-std/Test.sol";
-import "../src/SimpleAccount.sol";
-import "../src/IEntryPoint.sol";
-import "../src/EntryPoint.sol";
-import "../src/SimpleAccountFactory.sol";
-import "../src/ECDSA.sol";
-import "../src/UserOperation.sol";
+import "../src/IntentSimpleAccount.sol";
+import "@account-abstraction/interfaces/IEntryPoint.sol";
+import "@account-abstraction/core/EntryPoint.sol";
+import "../src/IntentSimpleAccountFactory.sol";
+import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import "../src/IntentUserOperation.sol";
 
 contract SimpleAccounEthereumTest is Test {
     using Strings for bytes32;

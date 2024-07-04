@@ -2,11 +2,10 @@
 pragma solidity ^0.8.24;
 
 import "forge-std/Test.sol";
-import "../src/Exec.sol";
-import "../src/SimpleAccount.sol";
-import "../src/IEntryPoint.sol";
-import "../src/EntryPoint.sol";
-import "../src/SimpleAccountFactory.sol";
+import "@account-abstraction/utils/Exec.sol";
+import "../src/IntentSimpleAccount.sol";
+import "@account-abstraction/interfaces/IEntryPoint.sol";
+import "@account-abstraction/core/EntryPoint.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";

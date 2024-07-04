@@ -2,7 +2,7 @@
 pragma solidity ^0.8.24;
 
 import "forge-std/Script.sol";
-import "../../src/SimpleAccount.sol";
+import "../../src/IntentSimpleAccount.sol";
 
 contract UpgradeSimpleAccount is Script {
     address private ENTRYPOINT_ADDRESS;
