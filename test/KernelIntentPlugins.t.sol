@@ -609,7 +609,8 @@ contract KernelIntentPluginsTest is Test {
         returns (bytes memory)
     {
         bytes32 userOpHash = intentValidator.getUserOpHash(userOp, chainID);
-        logBytes32Value("userOp hash generating sig:", userOpHash);
+        console2.log("userOp hash generating sig:");
+        console2.logBytes32(userOpHash);
 
         // Sign the hash with the owner's private key
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(signerPrvKey, ECDSA.toEthSignedMessageHash(userOpHash));
@@ -643,7 +644,8 @@ contract KernelIntentPluginsTest is Test {
         UserOperation memory userOpCopy = cloneUserOperationForHash(userOp, userOp.callData, signature);
 
         bytes32 userOpHash = intentValidator.getUserOpHash(userOpCopy, block.chainid);
-        logBytes32Value("userOp hash verifying sig:", userOpHash);
+        console2.log("userOp hash verifying sig:");
+        console2.logBytes32(userOpHash);
 
         ValidationData result = intentValidator.validateSignature(userOpHash, signature);
         assertEq(ValidationData.unwrap(result), 0, "Signature is not valid for the userOp");
@@ -719,34 +721,6 @@ contract KernelIntentPluginsTest is Test {
         }
 
         return prefixedSignature;
-    }
-
-    function logBytes32Value(string memory prompt, bytes32 value) public pure {
-        // Convert bytes32 to string
-        string memory valueAsString = toHexString(abi.encodePacked(value));
-
-        // Log the value
-        console2.log(prompt, valueAsString);
-    }
-
-    function toHexString(bytes memory b) internal pure returns (string memory) {
-        bytes memory hexString = new bytes(2 * b.length + 2);
-        hexString[0] = "0";
-        hexString[1] = "x";
-
-        for (uint256 i = 0; i < b.length; i++) {
-            uint256 value = uint8(b[i]);
-            uint256 hi = value / 16;
-            uint256 lo = value - (hi * 16);
-
-            bytes1 hiHexChar = bytes1(uint8(hi < 10 ? hi + 48 : hi + 87));
-            bytes1 loHexChar = bytes1(uint8(lo < 10 ? lo + 48 : lo + 87));
-
-            hexString[2 * i + 2] = hiHexChar;
-            hexString[2 * i + 3] = loHexChar;
-        }
-
-        return string(hexString);
     }
 
     function buildEnableSignature(
