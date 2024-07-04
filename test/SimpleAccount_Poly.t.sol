@@ -8,10 +8,12 @@ import "../src/EntryPoint.sol";
 import "../src/SimpleAccountFactory.sol";
 import "forge-std/interfaces/IERC20.sol";
 import "../src/ECDSA.sol";
+import "./TestSimpleAccountHelper.sol";
 
 contract SimpleAccounPolygonTest is Test {
     using Strings for bytes32;
     using UserOperationLib for UserOperation;
+    using TestSimpleAccountHelper for UserOperation;
 
     address constant ENTRYPOINT_V06 = 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789;
     uint256 public constant MUMBAI_CHAIN_ID = 80001;
