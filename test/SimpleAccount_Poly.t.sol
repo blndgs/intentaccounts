@@ -148,7 +148,7 @@ contract SimpleAccounPolygonTest is Test {
         userOp.signature = generatedSignature;
 
         // Test the _validateSignature method
-        uint256 result = simpleAccount.ValidateSignature(userOp, bytes32(0));
+        uint256 result = simpleAccount.validateSignature(userOp, bytes32(0));
         assertEq(result, 0, "Signature should be valid");
     }
 
@@ -588,7 +588,7 @@ contract SimpleAccounPolygonTest is Test {
         console2.log("intent signature:");
         console2.logBytes(userOp.signature);
 
-        // 6. Bundler submits solved userOp on-chain 
+        // 6. Bundler submits solved userOp on-chain
 
         verifySignature(userOp);
 
@@ -692,7 +692,7 @@ contract SimpleAccounPolygonTest is Test {
 
     function verifySignature(UserOperation memory userOp) internal returns (uint256) {
         // not supplying the userOpHash as _validateSignature calls for the Intent version
-        uint256 result = simpleAccount.ValidateSignature(userOp, bytes32(0));
+        uint256 result = simpleAccount.validateSignature(userOp, bytes32(0));
         assertEq(result, 0, "Signature is not valid for the userOp");
 
         return result;

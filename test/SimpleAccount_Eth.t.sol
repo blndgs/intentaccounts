@@ -104,7 +104,7 @@ contract SimpleAccounEthereumTest is Test {
 
     function verifySignature(UserOperation memory userOp) internal returns (uint256) {
         // not supplying the userOpHash as _validateSignature calls for the Intent version
-        uint256 result = _simpleAccount.ValidateSignature(userOp, bytes32(0));
+        uint256 result = _simpleAccount.validateSignature(userOp, bytes32(0));
         assertEq(result, 0, "Signature is not valid for the userOp");
 
         return result;
