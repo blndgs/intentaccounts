@@ -22,8 +22,8 @@ contract SimpleAccounPolygonTest is Test {
 
     using ECDSA for bytes32;
 
-    SimpleAccountFactory factory;
-    SimpleAccount simpleAccount;
+    IntentSimpleAccountFactory factory;
+    IntentSimpleAccount simpleAccount;
     uint256 salt;
     IEntryPoint public entryPoint;
     address public ownerAddress;
@@ -62,14 +62,14 @@ contract SimpleAccounPolygonTest is Test {
         uint256 startGas = gasleft();
 
         // Sync the factory with the deployed contract at Mannet
-        factory = SimpleAccountFactory(0x42E60c23aCe33c23e0945a07f6e2c1E53843a1d5);
-        console2.log("SimpleAccountFactory synced at:", address(factory));
+        factory = IntentSimpleAccountFactory(0x42E60c23aCe33c23e0945a07f6e2c1E53843a1d5);
+        console2.log("IntentSimpleAccountFactory synced at:", address(factory));
         uint256 endGas = gasleft();
         console2.log("Gas used for Factory sync: ", startGas - endGas);
         startGas = endGas;
 
         // Use the factory to create a new SimpleAccount instance
-        simpleAccount = SimpleAccount(payable (0x89D05CEc8CDdc6801feD02DDB54F0dA31953a1fC));
+        simpleAccount = IntentSimpleAccount(payable (0x89D05CEc8CDdc6801feD02DDB54F0dA31953a1fC));
         console2.log("SimpleAccount wallet created at:", address(simpleAccount));
         console2.log("Gas used for wallet creation: ", startGas - endGas);
         startGas = endGas;
@@ -533,7 +533,7 @@ contract SimpleAccounPolygonTest is Test {
         console2.log("intent signature:");
         console2.logBytes(userOp.signature);
 
-        // 6. Bundler submits solved userOp on-chain 
+        // 6. Bundler submits solved userOp on-chain
 
         verifySignature(userOp);
 
@@ -651,7 +651,7 @@ contract SimpleAccounPolygonTest is Test {
         uint256 saltValue = uint256(keccak256(abi.encodePacked("unique salt")));
 
         // Create an account using the factory
-        SimpleAccount simpleAccountSalted = factory.createAccount(ownerAddress, saltValue);
+        IntentSimpleAccount simpleAccountSalted = factory.createAccount(ownerAddress, saltValue);
 
         // Validate the account address
         console2.log("SimpleAccount address with salt:", address(simpleAccountSalted));

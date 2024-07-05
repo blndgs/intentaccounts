@@ -18,8 +18,8 @@ contract SimpleAccounEthereumTest is Test {
 
     using ECDSA for bytes32;
 
-    SimpleAccountFactory _factory;
-    SimpleAccount _simpleAccount;
+    IntentSimpleAccountFactory _factory;
+    IntentSimpleAccount _simpleAccount;
     uint256 _salt;
     IEntryPoint _entryPoint;
     address _ownerAddress;
@@ -56,15 +56,15 @@ contract SimpleAccounEthereumTest is Test {
 
         // Sync the _factory
         address factoryAddress = vm.envAddress("ETH_4337_FACTORY");
-        _factory = SimpleAccountFactory(factoryAddress);
-        console2.log("SimpleAccountFactory synced at:", address(_factory));
+        _factory = IntentSimpleAccountFactory(factoryAddress);
+        console2.log("IntentSimpleAccountFactory synced at:", address(_factory));
         uint256 endGas = gasleft();
         console2.log("Gas used for Factory sync: ", startGas - endGas);
         startGas = endGas;
 
         // Sync with deployed Eth mainnet 4337 wallet
         address account = vm.envAddress("ETH_4337_ACCOUNT");
-        _simpleAccount = SimpleAccount(payable(account));
+        _simpleAccount = IntentSimpleAccount(payable(account));
         console2.log("_SimpleAccount deployed at:", address(_simpleAccount));
     }
 
@@ -188,7 +188,7 @@ contract SimpleAccounEthereumTest is Test {
         console2.log("intent signature:");
         console2.logBytes(userOp.signature);
 
-        // 6. Bundler submits solved userOp on-chain 
+        // 6. Bundler submits solved userOp on-chain
 
         verifySignature(userOp);
 
@@ -200,14 +200,14 @@ contract SimpleAccounEthereumTest is Test {
         emit IEntryPoint.UserOperationEvent(0/* ignore userOp hash */, address(_simpleAccount), address(0) /* paymaster */, userOp.nonce, true, 0, 0);
         // 7. entryPoint executes the intent userOp
         _entryPoint.handleOps(userOps, payable(_ownerAddress));
-     
+
         uint256 balanceAfter = address(_simpleAccount).balance;
         // print the balance of the contract
         console2.log("Before, after Balance of SimpleAccount in Wei:", balanceBef, balanceAfter);
     }
 
      /**
-      * Tests wallet creation with user (counterfactual account's address) 
+      * Tests wallet creation with user (counterfactual account's address)
       * Ether funding.
       */
     function testCreateNewWalletUserEtherFunding() public {
@@ -260,7 +260,7 @@ contract SimpleAccounEthereumTest is Test {
         vm.expectEmit(false, true, true, false, 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789);
         emit IEntryPoint.UserOperationEvent(0/* ignore userOp hash */, account, address(0) /* paymaster */, userOp.nonce, true, 0, 0);
         _entryPoint.handleOps(userOps, payable(_ownerAddress));
-     
+
         uint256 balanceAfter = account.balance;
         uint256 depositAfter = _entryPoint.balanceOf(account);
 
@@ -314,7 +314,7 @@ contract SimpleAccounEthereumTest is Test {
         vm.expectEmit(false, true, true, false, 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789);
         emit IEntryPoint.UserOperationEvent(0/* ignore userOp hash */, account, address(0) /* paymaster */, userOp.nonce, true, 0, 0);
         _entryPoint.handleOps(userOps, payable(_ownerAddress));
-     
+
         uint256 balanceAfter = account.balance;
         uint256 depositAfter = _entryPoint.balanceOf(account);
 

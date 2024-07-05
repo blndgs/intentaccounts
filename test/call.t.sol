@@ -117,8 +117,7 @@ contract callsTest is Test {
 
     using ECDSA for bytes32;
 
-    SimpleAccountFactory public factory;
-    SimpleAccount _simpleAccount;
+    IntentSimpleAccount _simpleAccount;
     uint256 salt = 0;
     IEntryPoint public entryPoint;
     Smt smt;
@@ -147,7 +146,7 @@ contract callsTest is Test {
         address account = vm.envAddress("ETH_4337_ACCOUNT");
 
         // Sync with deployed Eth mainnet 4337 wallet
-        _simpleAccount = SimpleAccount(payable(account));
+        _simpleAccount = IntentSimpleAccount(payable(account));
         console2.log("_SimpleAccount deployed at:", address(_simpleAccount));
 
         // Create an SMT token
@@ -314,7 +313,7 @@ contract callsTest is Test {
         console2.log("intent signature:");
         console2.logBytes(userOp.signature);
 
-        // 6. Bundler submits solved userOp on-chain 
+        // 6. Bundler submits solved userOp on-chain
 
         verifySignature(userOp);
         console2.log("userOp signature verified");

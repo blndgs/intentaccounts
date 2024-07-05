@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.25;
 
-import "../src/UserOperation.sol";
+import "../src/IntentUserOperation.sol";
 import "./TestBytesHelper.sol";
 
 library TestSimpleAccountHelper {
