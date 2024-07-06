@@ -10,7 +10,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
-
+import "../src/IntentSimpleAccountFactory.sol";
 
 using Strings for bytes32;
 using UserOperationLib for UserOperation;
@@ -143,10 +143,10 @@ contract callsTest is Test {
         // Deploy ContractB
         b = new ContractB();
 
-        address account = vm.envAddress("ETH_4337_ACCOUNT");
 
-        // Sync with deployed Eth mainnet 4337 wallet
-        _simpleAccount = IntentSimpleAccount(payable(account));
+        // Create a 4337 wallet
+        IntentSimpleAccountFactory factory = new IntentSimpleAccountFactory(_entryPoint);
+        _simpleAccount = factory.createAccount(_ownerAddress, salt);
         console2.log("_SimpleAccount deployed at:", address(_simpleAccount));
 
         // Create an SMT token
