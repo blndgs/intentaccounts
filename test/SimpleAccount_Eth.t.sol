@@ -8,10 +8,13 @@ import "@account-abstraction/core/EntryPoint.sol";
 import "../src/IntentSimpleAccountFactory.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "../src/IntentUserOperation.sol";
+import "./TestSimpleAccountHelper.sol";
+
 
 contract SimpleAccounEthereumTest is Test {
     using Strings for bytes32;
     using UserOperationLib for UserOperation;
+    using TestSimpleAccountHelper for UserOperation;
 
     address public constant ENTRYPOINT_V06 = 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789;
     uint256 _ethereumFork;
@@ -237,8 +240,8 @@ contract SimpleAccounEthereumTest is Test {
         UserOperation memory userOp = UserOperation({
             sender: account,
             nonce: 0,
-            // Account factory address: 0x793bf47262290b0d02d4326bfc3654a0358e12de + createAccount(owner<0xd219ceeC68dE386AF92551F9b08a9Aef8910C4EA>, salt) calldata
-            initCode: bytes(hex"793bf47262290b0d02d4326bfc3654a0358e12de5fbfb9cf000000000000000000000000d219ceeC68dE386AF92551F9b08a9Aef8910C4EA0000000000000000000000000000000000000000000000000000000000000000"),
+            // <Account factory address> + createAccount(owner<0xd219ceeC68dE386AF92551F9b08a9Aef8910C4EA>, salt:0) calldata
+            initCode: TestSimpleAccountHelper.getInitCode(_factory, walletOwner, 0),
             callData: bytes(hex""),
             callGasLimit: 800000,
             verificationGasLimit: 628384,
@@ -291,8 +294,8 @@ contract SimpleAccounEthereumTest is Test {
         UserOperation memory userOp = UserOperation({
             sender: account,
             nonce: 0,
-            // Account factory address: 0x793bf47262290b0d02d4326bfc3654a0358e12de + createAccount(owner<0xd219ceeC68dE386AF92551F9b08a9Aef8910C4EA>, salt) calldata
-            initCode: bytes(hex"793bf47262290b0d02d4326bfc3654a0358e12de5fbfb9cf000000000000000000000000d219ceeC68dE386AF92551F9b08a9Aef8910C4EA0000000000000000000000000000000000000000000000000000000000000000"),
+            // <Account factory address> + createAccount(owner<0xd219ceeC68dE386AF92551F9b08a9Aef8910C4EA>, salt:0) calldata
+            initCode: TestSimpleAccountHelper.getInitCode(_factory, walletOwner, 0),
             callData: bytes(hex""),
             callGasLimit: 800000,
             verificationGasLimit: 628384,
