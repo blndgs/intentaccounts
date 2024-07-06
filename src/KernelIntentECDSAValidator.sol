@@ -71,17 +71,17 @@ contract KernelIntentValidator is IKernelValidator {
         return SIG_VALIDATION_FAILED;
     }
 
-    function validateSignature(bytes32 hash, bytes calldata signature) public view override returns (ValidationData) {
+    function validateSignature(bytes32 userOpHash, bytes calldata signature) external view override returns (ValidationData) {
         address owner = ecdsaValidatorStorage[msg.sender].owner;
 
         // Extract the first 65 bytes of the signature
         bytes memory signature65 = signature[:SIGNATURE_LENGTH];
 
-        if (owner == ECDSA.recover(hash, signature65)) {
+        if (owner == ECDSA.recover(userOpHash, signature65)) {
             return ValidationData.wrap(0);
         }
 
-        bytes32 ethHash = ECDSA.toEthSignedMessageHash(hash);
+        bytes32 ethHash = ECDSA.toEthSignedMessageHash(userOpHash);
         if (owner != ECDSA.recover(ethHash, signature65)) {
             return SIG_VALIDATION_FAILED;
         }
