@@ -155,12 +155,12 @@ contract SimpleAccounEthereumTest is Test {
             nonce: 0,
             initCode: bytes(hex""),
             callData: bytes(
-                "{\"sender\":\"0xff6F893437e88040ffb70Ce6Aeff4CcbF8dc19A4\",\"from\":{\"type\":\"TOKEN\",\"address\":\"0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE\",\"amount\":\"0.8\",\"chainId\":\"1\"},\"to\":{\"type\":\"TOKEN\",\"address\":\"0xdac17f958d2ee523a2206206994597c13d831ec7\",\"chainId\":\"1\"}}"
+                "{\"from\":{\"type\":\"TOKEN\",\"address\":\"0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE\",\"amount\":\"0.8\",\"chainId\":\"1\"},\"to\":{\"type\":\"TOKEN\",\"address\":\"0xdac17f958d2ee523a2206206994597c13d831ec7\",\"chainId\":\"1\"}}"
                 ),
             callGasLimit: 800000,
             verificationGasLimit: 500000,
             preVerificationGas: 500000,
-            maxFeePerGas: 0,
+            maxFeePerGas: 0, // Sponsored by the Bundler
             maxPriorityFeePerGas: 0,
             paymasterAndData: bytes(hex""),
             signature: bytes(hex"")
