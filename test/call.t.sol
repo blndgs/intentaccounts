@@ -268,6 +268,50 @@ contract callsTest is Test {
         require(success, "Yul call failed");
     }
 
+    /**
+     * @dev This function takes a fixed calldata template and replaces a specific address within it.
+     *      The template represents a call to SimpleAccount's execute function, which in turn calls the ERC20 approve function.
+     * @param smtAddress `(Super Mario Token)` or the address of the ERC20 token contract to be approved
+     * @return bytes The modified calldata with the correct token address
+     *
+     * @custom:structure The fixed calldata structure is as follows:
+     *   - bytes4  : Function selector for SimpleAccount's execute function (0xb61d27f6)
+     *   - address : Token address (to be replaced)
+     *   - uint256 : ETH Value (0 in this case)
+     *   - bytes   : Encoded call to approve function
+     *     - bytes4  : Function selector for ERC20's approve function (0x095ea7b3)
+     *     - address : Spender address
+     *     - uint256 : Amount to approve
+     *
+     * @custom:example
+     * Input:
+     *   smtAddress: 0x1234567890123456789012345678901234567890
+     *
+     * Output (hexadecimal):
+     *   b61d27f6
+     *   000000000000000000000000{smtAddress}
+     *   0000000000000000000000000000000000000000000000000000000000000000
+     *   0000000000000000000000000000000000000000000000000000000000000060
+     *   0000000000000000000000000000000000000000000000000000000000000044
+     *   095ea7b3
+     *   000000000000000000000000ead050515e10fdb3540ccd6f8236c46790508a76
+     *   0000000000000000000000000000000000000000000000000000000000000378
+     *   00000000000000000000000000000000000000000000000000000000
+     */
+    function generateCallData(address smtAddress) internal pure returns (bytes memory) {
+        bytes memory fixedCallData = hex"b61d27f60000000000000000000000002e234dae75c793f67a35089c9d99245e1c58470b000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000600000000000000000000000000000000000000000000000000000000000000044095ea7b3000000000000000000000000ead050515e10fdb3540ccd6f8236c46790508a76000000000000000000000000000000000000000000000000000000000000037800000000000000000000000000000000000000000000000000000000";
+
+        // Convert the Smt address to bytes
+        bytes memory smtAddressBytes = abi.encodePacked(smtAddress);
+
+        // Replace the incorrect address with the Smt address
+        for (uint i = 0; i < 20; i++) {
+            fixedCallData[i + 16] = smtAddressBytes[i];
+        }
+
+        return fixedCallData;
+    }
+
     function test4337Approve() public {
         console2.log("sender:", address(_simpleAccount));
 
@@ -307,9 +351,8 @@ contract callsTest is Test {
                 userOp.callData
             )
         );
-        userOp.callData = bytes(
-            hex"b61d27f60000000000000000000000002e234dae75c793f67a35089c9d99245e1c58470b000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000600000000000000000000000000000000000000000000000000000000000000044095ea7b3000000000000000000000000ead050515e10fdb3540ccd6f8236c46790508a76000000000000000000000000000000000000000000000000000000000000037800000000000000000000000000000000000000000000000000000000"
-        );
+        userOp.callData = generateCallData(address(smt));
+
         console2.log("intent signature:");
         console2.logBytes(userOp.signature);
 
