@@ -263,7 +263,33 @@ contract KernelIntentPluginsTest is Test {
         assertEq(ValidationData.unwrap(v), 0, "Signature is not valid for the userOp");
     }
 
-    function testValidateEmptyIntentOp() public {
+    function testValidateEtherVanillaOp() public {
+        // Prepare the UserOperation object to sign
+        _createAccountIntent();
+
+        UserOperation memory userOp = UserOperation({
+            sender: address(_account),
+            nonce: 0x0,
+            initCode: bytes(hex""),
+            callData: bytes(hex""),
+            callGasLimit: 0,
+            verificationGasLimit: 0,
+            preVerificationGas: 0,
+            maxFeePerGas: 0,
+            maxPriorityFeePerGas: 0,
+            paymasterAndData: bytes(hex""),
+            signature: bytes(hex"")
+        });
+
+        console2.log("sender:", userOp.sender);
+        userOp.signature = generateSignature(userOp, block.chainid, _ownerPrivateKey);
+        console2.log("signature:"); // 65 bytes or 130 hex characters. ECDSA signature
+        console2.logBytes(userOp.signature);
+
+        verifySignature(userOp);
+    }
+
+    function testValidateCustomIntentOp() public {
         _createAccountIntent();
 
         UserOperation memory userOp = createUserOp(address(_account), bytes(hex""));
