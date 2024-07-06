@@ -7,6 +7,7 @@ import "@account-abstraction/interfaces/IEntryPoint.sol";
 import "@account-abstraction/core/EntryPoint.sol";
 import "../src/IntentSimpleAccountFactory.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "../src/IntentUserOperation.sol";
 import "./TestSimpleAccountHelper.sol";
 
@@ -30,6 +31,10 @@ contract SimpleAccounEthereumTest is Test {
 
     string _network;
 
+    IERC20 constant USDC = IERC20(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48);
+    IERC20 constant USDT = IERC20(0xdAC17F958D2ee523a2206206994597C13D831ec7);
+    address constant USDC_WHALE = 0x47ac0Fb4F2D84898e4D9E7b4DaB3C24507a6D503;
+
     function setUp() public {
         string memory privateKeyEnv = string(abi.encodePacked(_network, "ETHEREUM_PRIVATE_KEY"));
         string memory privateKeyString = vm.envString(privateKeyEnv);
@@ -43,8 +48,6 @@ contract SimpleAccounEthereumTest is Test {
         string memory urlEnv = string(abi.encodePacked(_network, "ETHEREUM_RPC_URL"));
         _ethereumFork = vm.createSelectFork(vm.envString(urlEnv));
         console2.log("ChainID:", block.chainid);
-
-        vm.startPrank(_ownerAddress);
 
         // Deploy the EntryPoint contract or use an existing one
         _entryPoint = EntryPoint(payable(ENTRYPOINT_V06));
@@ -68,6 +71,13 @@ contract SimpleAccounEthereumTest is Test {
         _simpleAccount = _factory.createAccount(_ownerAddress, _salt);
         console2.log("_SimpleAccount deployed at:", address(_simpleAccount));
         vm.deal(address(_simpleAccount), 1e30);
+
+        // fund account with USDC
+        uint256 amount = 10000000000; // 1000 USDC
+        vm.prank(USDC_WHALE);
+        USDC.transfer(address(_simpleAccount), amount);
+
+        vm.startPrank(_ownerAddress);
     }
 
     function testSimpleAccountAddress() public {
@@ -147,7 +157,11 @@ contract SimpleAccounEthereumTest is Test {
     function testValidateExecute_SolverNative() public {
         console2.log("sender:", address(_simpleAccount));
 
-        uint256 balanceBef = address(_simpleAccount).balance;
+        uint256 balanceEthBef = address(_simpleAccount).balance;
+        uint256 usdcBalanceBefore = USDC.balanceOf(address(_simpleAccount));
+        uint256 usdtBalanceBefore = USDT.balanceOf(address(_simpleAccount));
+        console2.log("USDC Balance Before:", usdcBalanceBefore);
+        console2.log("USDT Balance Before:", usdtBalanceBefore);
 
         // 1. SDK setups the unsigned Intent UserOp
         UserOperation memory userOp = UserOperation({
@@ -203,9 +217,20 @@ contract SimpleAccounEthereumTest is Test {
         // 7. entryPoint executes the intent userOp
         _entryPoint.handleOps(userOps, payable(_ownerAddress));
 
-        uint256 balanceAfter = address(_simpleAccount).balance;
+        uint256 balanceEthAfter = address(_simpleAccount).balance;
         // print the balance of the contract
-        console2.log("Before, after Balance of SimpleAccount in Wei:", balanceBef, balanceAfter);
+        console2.log("Before, after Balance of SimpleAccount in Wei:", balanceEthBef, balanceEthAfter);
+        assertEq(balanceEthAfter, balanceEthBef, "ETH Balance should have remained the same");
+
+        uint256 usdcBalanceAfter = USDC.balanceOf(address(_simpleAccount));
+        uint256 usdtBalanceAfter = USDT.balanceOf(address(_simpleAccount));
+
+        console2.log("USDC Balance After:", usdcBalanceAfter);
+        console2.log("USDT Balance After:", usdtBalanceAfter);
+
+        assertLt(usdcBalanceAfter, usdcBalanceBefore, "USDC balance should decrease");
+        assertGt(usdtBalanceAfter, usdtBalanceBefore, "USDT balance should increase");
+        assertEq(usdcBalanceBefore - usdcBalanceAfter, 1 * 1e6, "Should have spent 1000 USDC");
     }
 
      /**
