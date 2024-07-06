@@ -20,6 +20,7 @@ struct ECDSAValidatorStorage {
 // 3. sudo mode, use default plugin for current userOp
 
 contract KernelIntentValidator is IKernelValidator {
+    using ECDSA for bytes32;
     event OwnerChanged(address indexed kernel, address indexed oldOwner, address indexed newOwner);
 
     mapping(address => ECDSAValidatorStorage) public ecdsaValidatorStorage;
@@ -51,41 +52,41 @@ contract KernelIntentValidator is IKernelValidator {
         return keccak256(abi.encode(hashIntentOp(userOp, callData), ENTRYPOINT_V06, chainID));
     }
 
+    /**
+     * Generate the hash of the intent operation. We don't trust the incoming hash
+     * to be aware of the intent JSON in the signature.
+     */
     function validateUserOp(UserOperation calldata _userOp, bytes32, uint256)
-        external
-        payable
-        override
-        returns (ValidationData validationData)
+    external
+    payable
+    override
+    returns (ValidationData validationData)
     {
         bytes32 _userOpHash = getUserOpHash(_userOp, block.chainid);
-        address owner = ecdsaValidatorStorage[_userOp.sender].owner;
-        bytes32 hash = ECDSA.toEthSignedMessageHash(_userOpHash);
-
-        // Extract the first 65 bytes of the signature
         bytes memory signature65 = _userOp.signature[:SIGNATURE_LENGTH];
+        return _validateSignature(_userOpHash, signature65, _userOp.sender);
+    }
 
-        if (owner == ECDSA.recover(hash, signature65)) {
+    function validateSignature(bytes32 userOpHash, bytes calldata signature)
+    external view override
+    returns (ValidationData) {
+        bytes memory signature65 = signature[:SIGNATURE_LENGTH];
+        return _validateSignature(userOpHash, signature65, msg.sender);
+    }
+
+    function _validateSignature(bytes32 hash, bytes memory signature65, address sender) internal view returns (ValidationData) {
+        address owner = ecdsaValidatorStorage[sender].owner;
+
+        if (owner == hash.recover(signature65)) {
+            return ValidationData.wrap(0);
+        }
+
+        bytes32 ethHash = hash.toEthSignedMessageHash();
+        if (owner == ethHash.recover(signature65)) {
             return ValidationData.wrap(0);
         }
 
         return SIG_VALIDATION_FAILED;
-    }
-
-    function validateSignature(bytes32 userOpHash, bytes calldata signature) external view override returns (ValidationData) {
-        address owner = ecdsaValidatorStorage[msg.sender].owner;
-
-        // Extract the first 65 bytes of the signature
-        bytes memory signature65 = signature[:SIGNATURE_LENGTH];
-
-        if (owner == ECDSA.recover(userOpHash, signature65)) {
-            return ValidationData.wrap(0);
-        }
-
-        bytes32 ethHash = ECDSA.toEthSignedMessageHash(userOpHash);
-        if (owner != ECDSA.recover(ethHash, signature65)) {
-            return SIG_VALIDATION_FAILED;
-        }
-        return ValidationData.wrap(0);
     }
 
     function validCaller(address _caller, bytes calldata) external view override returns (bool) {
