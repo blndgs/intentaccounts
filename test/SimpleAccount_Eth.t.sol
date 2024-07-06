@@ -58,17 +58,16 @@ contract SimpleAccounEthereumTest is Test {
         uint256 startGas = gasleft();
 
         // Sync the _factory
-        address factoryAddress = vm.envAddress("ETH_4337_FACTORY");
-        _factory = IntentSimpleAccountFactory(factoryAddress);
+        _factory = new IntentSimpleAccountFactory(_entryPoint);
         console2.log("IntentSimpleAccountFactory synced at:", address(_factory));
         uint256 endGas = gasleft();
         console2.log("Gas used for Factory sync: ", startGas - endGas);
         startGas = endGas;
 
-        // Sync with deployed Eth mainnet 4337 wallet
-        address account = vm.envAddress("ETH_4337_ACCOUNT");
-        _simpleAccount = IntentSimpleAccount(payable(account));
+        // Create an account
+        _simpleAccount = _factory.createAccount(_ownerAddress, _salt);
         console2.log("_SimpleAccount deployed at:", address(_simpleAccount));
+        vm.deal(address(_simpleAccount), 1e30);
     }
 
     function testSimpleAccountAddress() public {
