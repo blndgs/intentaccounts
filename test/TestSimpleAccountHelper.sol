@@ -80,7 +80,7 @@ library TestSimpleAccountHelper {
      */
     function getInitCode(IntentSimpleAccountFactory factory, address owner, uint256 salt)
         internal
-        view
+        pure
         returns (bytes memory)
     {
         return abi.encodePacked(address(factory), abi.encodeWithSelector(factory.createAccount.selector, owner, salt));
