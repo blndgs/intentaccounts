@@ -93,7 +93,10 @@ contract KernelIntentPluginsTest is Test {
         bytes memory initData = initDefaultValidator();
         _account = Kernel(payable(address(_factory.createAccount(address(kernelImpl), initData, 0))));
         vm.deal(address(_account), 1e30);
+
+        /*********** Register owner ***************/
         intentValidator.enable(abi.encodePacked(_ownerAddress));
+
     }
 
     function initIntentValidator() internal view returns (bytes memory) {
