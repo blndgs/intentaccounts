@@ -25,3 +25,5 @@ node_modules
 broadcast
 
 lcov.info
+
+.DS_Store
