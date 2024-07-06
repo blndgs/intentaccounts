@@ -67,10 +67,14 @@ contract IntentSimpleAccount is SimpleAccount {
         returns (uint256 validationData)
     {
         bytes32 userOpHash = _getUserOpHash(userOp, block.chainid);
-        bytes32 hash = userOpHash.toEthSignedMessageHash();
-        if (owner != hash.recover(userOp.signature)) {
+        bytes32 ethHash = userOpHash.toEthSignedMessageHash();
+
+        // Extract the first 65 bytes of the signature
+        bytes memory signature65 = userOp.signature[:SIGNATURE_LENGTH];
+        if (owner != ethHash.recover(signature65)) {
             return SIG_VALIDATION_FAILED;
         }
+
         return 0; // Ok
     }
 
