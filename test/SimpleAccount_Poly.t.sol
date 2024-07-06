@@ -62,14 +62,14 @@ contract SimpleAccounPolygonTest is Test {
         uint256 startGas = gasleft();
 
         // Sync the factory with the deployed contract at Mannet
-        factory = IntentSimpleAccountFactory(0x42E60c23aCe33c23e0945a07f6e2c1E53843a1d5);
+        factory = new IntentSimpleAccountFactory(entryPoint);
         console2.log("IntentSimpleAccountFactory synced at:", address(factory));
         uint256 endGas = gasleft();
         console2.log("Gas used for Factory sync: ", startGas - endGas);
         startGas = endGas;
 
         // Use the factory to create a new SimpleAccount instance
-        simpleAccount = IntentSimpleAccount(payable (0x89D05CEc8CDdc6801feD02DDB54F0dA31953a1fC));
+        simpleAccount = factory.createAccount(ownerAddress, salt);
         console2.log("SimpleAccount wallet created at:", address(simpleAccount));
         console2.log("Gas used for wallet creation: ", startGas - endGas);
         startGas = endGas;
