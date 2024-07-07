@@ -9,19 +9,15 @@ import "@account-abstraction/interfaces/UserOperation.sol";
  * Utility functions helpful when working with UserOperation structs.
  */
 library IntentUserOperationLib {
-    // wrapping UserOperationLib for UserOperation
+    // wrapping eth_infinity UserOperationLib for UserOperation
     using UserOperationLib for UserOperation;
 
     function hashIntentOp(UserOperation calldata userOp, bytes32 hashedCD) internal pure returns (bytes32) {
         return keccak256(packIntentOp(userOp, hashedCD));
     }
 
-    function getSender(UserOperation calldata userOp) internal pure returns (address) {
-        return userOp.getSender();
-    }
-
     function packIntentOp(UserOperation calldata userOp, bytes32 hashedCD) internal pure returns (bytes memory ret) {
-        address sender = getSender(userOp);
+        address sender = userOp.getSender();
         uint256 nonce = userOp.nonce;
         bytes32 hashInitCode = calldataKeccak(userOp.initCode);
         uint256 callGasLimit = userOp.callGasLimit;
