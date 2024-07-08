@@ -143,7 +143,6 @@ contract callsTest is Test {
         // Deploy ContractB
         b = new ContractB();
 
-
         // Create a 4337 wallet
         IntentSimpleAccountFactory factory = new IntentSimpleAccountFactory(_entryPoint);
         _simpleAccount = factory.createAccount(_ownerAddress, salt);
@@ -299,13 +298,14 @@ contract callsTest is Test {
      *   00000000000000000000000000000000000000000000000000000000
      */
     function generateCallData(address smtAddress) internal pure returns (bytes memory) {
-        bytes memory fixedCallData = hex"b61d27f60000000000000000000000002e234dae75c793f67a35089c9d99245e1c58470b000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000600000000000000000000000000000000000000000000000000000000000000044095ea7b3000000000000000000000000ead050515e10fdb3540ccd6f8236c46790508a76000000000000000000000000000000000000000000000000000000000000037800000000000000000000000000000000000000000000000000000000";
+        bytes memory fixedCallData =
+            hex"b61d27f60000000000000000000000002e234dae75c793f67a35089c9d99245e1c58470b000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000600000000000000000000000000000000000000000000000000000000000000044095ea7b3000000000000000000000000ead050515e10fdb3540ccd6f8236c46790508a76000000000000000000000000000000000000000000000000000000000000037800000000000000000000000000000000000000000000000000000000";
 
         // Convert the Smt address to bytes
         bytes memory smtAddressBytes = abi.encodePacked(smtAddress);
 
         // Replace the incorrect address with the Smt address
-        for (uint i = 0; i < 20; i++) {
+        for (uint256 i = 0; i < 20; i++) {
             fixedCallData[i + 16] = smtAddressBytes[i];
         }
 
@@ -322,7 +322,7 @@ contract callsTest is Test {
             initCode: bytes(hex""),
             callData: bytes(
                 "{\"from\":{\"type\":\"TOKEN\",\"address\":\"0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE\",\"amount\":\"0.8\",\"chainId\":\"1\"},\"to\":{\"type\":\"TOKEN\",\"address\":\"0xdac17f958d2ee523a2206206994597c13d831ec7\",\"chainId\":\"1\"}}"
-                ),
+            ),
             callGasLimit: 800000,
             verificationGasLimit: 100000,
             preVerificationGas: 10000,
@@ -345,12 +345,7 @@ contract callsTest is Test {
         // 4. Bundler submits userOp to the Solver
 
         // 5. Solver solves Intent userOp
-        userOp.signature = bytes(
-            abi.encodePacked(
-                userOp.signature,
-                userOp.callData
-            )
-        );
+        userOp.signature = bytes(abi.encodePacked(userOp.signature, userOp.callData));
         userOp.callData = generateCallData(address(smt));
 
         console2.log("intent signature:");
@@ -366,11 +361,13 @@ contract callsTest is Test {
 
         // entryPoint emits events
         vm.expectEmit(false, true, true, false, 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789);
-        emit IEntryPoint.UserOperationEvent(0/* ignore userOp hash */, address(_simpleAccount), address(0) /* paymaster */, userOp.nonce, true, 0, 0);
+        emit IEntryPoint.UserOperationEvent(
+            0, /* ignore userOp hash */ address(_simpleAccount), address(0), /* paymaster */ userOp.nonce, true, 0, 0
+        );
         // 7. entryPoint executes the intent userOp
         _entryPoint.handleOps(userOps, payable(_ownerAddress));
 
-        uint allowance = smt.allowance(address(_simpleAccount), spender);
+        uint256 allowance = smt.allowance(address(_simpleAccount), spender);
         assertEq(allowance, 888, "Allowance should be 888 for simpleAccount");
     }
 

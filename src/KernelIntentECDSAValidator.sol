@@ -7,6 +7,7 @@ import {ECDSA} from "solady/utils/ECDSA.sol";
 import {IKernelValidator} from "../lib/kernel/src/interfaces/IKernelValidator.sol";
 import {ValidationData} from "../lib/kernel/src/common/Types.sol";
 import {SIG_VALIDATION_FAILED} from "../lib/kernel/src/common/Constants.sol";
+import "forge-std/Console2.sol";
 
 address constant ENTRYPOINT_V06 = 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789;
 
@@ -21,6 +22,7 @@ struct ECDSAValidatorStorage {
 
 contract KernelIntentValidator is IKernelValidator {
     using ECDSA for bytes32;
+
     event OwnerChanged(address indexed kernel, address indexed oldOwner, address indexed newOwner);
 
     mapping(address => ECDSAValidatorStorage) public ecdsaValidatorStorage;
@@ -57,10 +59,10 @@ contract KernelIntentValidator is IKernelValidator {
      * to be aware of the intent JSON in the signature.
      */
     function validateUserOp(UserOperation calldata _userOp, bytes32, uint256)
-    external
-    payable
-    override
-    returns (ValidationData validationData)
+        external
+        payable
+        override
+        returns (ValidationData validationData)
     {
         bytes32 _userOpHash = getUserOpHash(_userOp, block.chainid);
         bytes memory signature65 = _userOp.signature[:SIGNATURE_LENGTH];
@@ -68,13 +70,20 @@ contract KernelIntentValidator is IKernelValidator {
     }
 
     function validateSignature(bytes32 userOpHash, bytes calldata signature)
-    external view override
-    returns (ValidationData) {
+        external
+        view
+        override
+        returns (ValidationData)
+    {
         bytes memory signature65 = signature[:SIGNATURE_LENGTH];
         return _validateSignature(userOpHash, signature65, msg.sender);
     }
 
-    function _validateSignature(bytes32 hash, bytes memory signature65, address sender) internal view returns (ValidationData) {
+    function _validateSignature(bytes32 hash, bytes memory signature65, address sender)
+        internal
+        view
+        returns (ValidationData)
+    {
         address owner = ecdsaValidatorStorage[sender].owner;
 
         if (owner == hash.recover(signature65)) {
@@ -97,11 +106,7 @@ contract KernelIntentValidator is IKernelValidator {
         return keccak256(packIntentOp(userOp, hashedCD));
     }
 
-    function packIntentOp(UserOperation calldata userOp, bytes32 hashedCD)
-        internal
-        pure
-        returns (bytes memory)
-    {
+    function packIntentOp(UserOperation calldata userOp, bytes32 hashedCD) internal pure returns (bytes memory) {
         return abi.encode(
             getSender(userOp),
             userOp.nonce,

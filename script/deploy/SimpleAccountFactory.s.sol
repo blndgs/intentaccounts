@@ -57,9 +57,8 @@ contract DeploySimpleAccountFactory is Script {
                 address expectedAddress = factory.getAddress(signer, salt);
                 assert(address(account) == expectedAddress);
                 console2.log("New simpleAccount address:", expectedAddress);
-                uint nonce = account.getNonce();
+                uint256 nonce = account.getNonce();
                 console2.log("Account nonce", nonce);
-
             } catch Error(string memory reason) {
                 console2.log("An error occurred when created a wallet:", reason);
             } catch Panic(uint256 errorCode) {

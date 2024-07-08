@@ -28,10 +28,15 @@ library IntentUserOperationLib {
         bytes32 hashPaymasterAndData = calldataKeccak(userOp.paymasterAndData);
 
         return abi.encode(
-            sender, nonce,
-            hashInitCode, hashedCD,
-            callGasLimit, verificationGasLimit, preVerificationGas,
-            maxFeePerGas, maxPriorityFeePerGas,
+            sender,
+            nonce,
+            hashInitCode,
+            hashedCD,
+            callGasLimit,
+            verificationGasLimit,
+            preVerificationGas,
+            maxFeePerGas,
+            maxPriorityFeePerGas,
             hashPaymasterAndData
         );
     }
