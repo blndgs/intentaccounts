@@ -60,8 +60,21 @@ jobs:
 
       - uses: actions/checkout@v4
         with:
-            submodules: recursive
-  
+          submodules: false
+
+      - name: Initialize Top-Level Submodules
+        run: git submodule update --init
+
+      - name: Manually Handle Missing Submodule URL
+        run: |
+          cd lib/kernel
+          git submodule deinit -f -- lib/ExcessivelySafeCall
+          rm -rf .git/modules/lib/ExcessivelySafeCall
+          git rm -f lib/ExcessivelySafeCall
+          git submodule add https://github.com/nomad-xyz/ExcessivelySafeCall lib/ExcessivelySafeCall
+          git submodule update --init --recursive
+          cd ../..
+
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
         with:
