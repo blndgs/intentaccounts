@@ -21,7 +21,7 @@ import {
 } from "../lib/kernel/src/common/Constants.sol";
 import {ValidAfter, ValidUntil} from "../lib/kernel/src/common/Types.sol";
 import {WalletKernelStorage, ExecutionDetail} from "../lib/kernel/src/common/Structs.sol";
-import {ECDSA} from "../src/ECDSA.sol";
+import {ECDSA} from "solady/utils/ECDSA.sol"; // used by the plugin
 import {EIP712Library} from "./EIP712Library.sol";
 import "forge-std/Test.sol";
 
@@ -93,6 +93,10 @@ contract KernelIntentPluginsTest is Test {
         bytes memory initData = initDefaultValidator();
         _account = Kernel(payable(address(_factory.createAccount(address(kernelImpl), initData, 0))));
         vm.deal(address(_account), 1e30);
+
+        /**
+         * Register owner **************
+         */
         intentValidator.enable(abi.encodePacked(_ownerAddress));
     }
 
@@ -260,7 +264,33 @@ contract KernelIntentPluginsTest is Test {
         assertEq(ValidationData.unwrap(v), 0, "Signature is not valid for the userOp");
     }
 
-    function testValidateEmptyIntentOp() public {
+    function testValidateEtherVanillaOp() public {
+        // Prepare the UserOperation object to sign
+        _createAccountIntent();
+
+        UserOperation memory userOp = UserOperation({
+            sender: address(_account),
+            nonce: 0x0,
+            initCode: bytes(hex""),
+            callData: bytes(hex""),
+            callGasLimit: 0,
+            verificationGasLimit: 0,
+            preVerificationGas: 0,
+            maxFeePerGas: 0,
+            maxPriorityFeePerGas: 0,
+            paymasterAndData: bytes(hex""),
+            signature: bytes(hex"")
+        });
+
+        console2.log("sender:", userOp.sender);
+        userOp.signature = generateSignature(userOp, block.chainid, _ownerPrivateKey);
+        console2.log("signature:"); // 65 bytes or 130 hex characters. ECDSA signature
+        console2.logBytes(userOp.signature);
+
+        verifySignature(userOp);
+    }
+
+    function testValidateCustomIntentOp() public {
         _createAccountIntent();
 
         UserOperation memory userOp = createUserOp(address(_account), bytes(hex""));
@@ -609,7 +639,8 @@ contract KernelIntentPluginsTest is Test {
         returns (bytes memory)
     {
         bytes32 userOpHash = intentValidator.getUserOpHash(userOp, chainID);
-        logBytes32Value("userOp hash generating sig:", userOpHash);
+        console2.log("userOp hash generating sig:");
+        console2.logBytes32(userOpHash);
 
         // Sign the hash with the owner's private key
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(signerPrvKey, ECDSA.toEthSignedMessageHash(userOpHash));
@@ -637,17 +668,14 @@ contract KernelIntentPluginsTest is Test {
         prefix = bytes4(bytes.concat(signature[0], signature[1], signature[2], signature[3]));
 
         if (prefix == 0x00000000 || prefix == 0x00000001 || prefix == 0x00000002) {
-            bytes memory slicedSignature = new bytes(signature.length - 4);
-            for (uint256 i = 4; i < signature.length; i++) {
-                slicedSignature[i - 4] = signature[i];
-            }
-            signature = slicedSignature;
+            signature = _slice(signature, 4, signature.length);
         }
 
         UserOperation memory userOpCopy = cloneUserOperationForHash(userOp, userOp.callData, signature);
 
         bytes32 userOpHash = intentValidator.getUserOpHash(userOpCopy, block.chainid);
-        logBytes32Value("userOp hash verifying sig:", userOpHash);
+        console2.log("userOp hash verifying sig:");
+        console2.logBytes32(userOpHash);
 
         ValidationData result = intentValidator.validateSignature(userOpHash, signature);
         assertEq(ValidationData.unwrap(result), 0, "Signature is not valid for the userOp");
@@ -688,11 +716,7 @@ contract KernelIntentPluginsTest is Test {
         bytes4 prefix = bytes4(bytes.concat(signature[0], signature[1], signature[2], signature[3]));
 
         if (prefix == 0x00000000 || prefix == 0x00000001 || prefix == 0x00000002) {
-            bytes memory slicedSignature = new bytes(signature.length - 4);
-            for (uint256 i = 4; i < signature.length; i++) {
-                slicedSignature[i - 4] = signature[i];
-            }
-            return slicedSignature;
+            return _slice(signature, 4, signature.length);
         }
 
         return signature;
@@ -729,34 +753,6 @@ contract KernelIntentPluginsTest is Test {
         return prefixedSignature;
     }
 
-    function logBytes32Value(string memory prompt, bytes32 value) public pure {
-        // Convert bytes32 to string
-        string memory valueAsString = toHexString(abi.encodePacked(value));
-
-        // Log the value
-        console2.log(prompt, valueAsString);
-    }
-
-    function toHexString(bytes memory b) internal pure returns (string memory) {
-        bytes memory hexString = new bytes(2 * b.length + 2);
-        hexString[0] = "0";
-        hexString[1] = "x";
-
-        for (uint256 i = 0; i < b.length; i++) {
-            uint256 value = uint8(b[i]);
-            uint256 hi = value / 16;
-            uint256 lo = value - (hi * 16);
-
-            bytes1 hiHexChar = bytes1(uint8(hi < 10 ? hi + 48 : hi + 87));
-            bytes1 loHexChar = bytes1(uint8(lo < 10 ? lo + 48 : lo + 87));
-
-            hexString[2 * i + 2] = hiHexChar;
-            hexString[2 * i + 3] = loHexChar;
-        }
-
-        return string(hexString);
-    }
-
     function buildEnableSignature(
         UserOperation memory op,
         bytes4 selector,
@@ -786,6 +782,42 @@ contract KernelIntentPluginsTest is Test {
             enableSig,
             sig
         );
+    }
+
+    // Custom errors
+    error EndLessThanStart();
+    error EndOutOfBounds(uint256 dataLength, uint256 end);
+    error StartOutOfBounds(uint256 dataLength, uint256 start);
+
+    /**
+     * @dev Slices a bytes array to return a portion specified by the start and end indices.
+     * @param data The bytes array to be sliced.
+     * @param start The index in the bytes array where the slice begins.
+     * @param end The index in the bytes array where the slice ends (exclusive).
+     * @return result The sliced portion of the bytes array.
+     * Note: The function reverts if the start index is not less than the end index,
+     *       if start or end is out of the bounds of the data array.
+     */
+    function _slice(bytes memory data, uint256 start, uint256 end) internal pure returns (bytes memory result) {
+        if (end <= start) revert EndLessThanStart();
+        if (end > data.length) revert EndOutOfBounds(data.length, end);
+        if (start >= data.length) revert StartOutOfBounds(data.length, start);
+
+        assembly {
+            // Allocate memory for the result
+            result := mload(0x40)
+            mstore(result, sub(end, start)) // Set the length of the result
+            let resultPtr := add(result, 0x20)
+
+            // Copy the data from the start to the end
+            for { let i := start } lt(i, end) { i := add(i, 0x20) } {
+                let dataPtr := add(add(data, 0x20), i)
+                mstore(add(resultPtr, sub(i, start)), mload(dataPtr))
+            }
+
+            // Update the free memory pointer
+            mstore(0x40, add(resultPtr, sub(end, start)))
+        }
     }
 
     function getEnableData() internal view returns (bytes memory) {
@@ -876,19 +908,6 @@ contract KernelIntentPluginsTest is Test {
         console2.log(til);
         console2.log(aft);
     }
-
-    // function test_set_execution_detail() public {
-    //     bytes memory enableData = abi.encodePacked(_ownerAddress);
-    //     UserOperation memory op = buildUserOperation(
-    //         abi.encodeWithSelector(
-    //             _account.setExecution.selector, address(intentValidator), address(intentExecutor), Operation.Call
-    //         )
-    //     );
-    //     performUserOperationWithSig(op);
-    //     ExecutionDetail memory detail = IKernel(address(kernel)).getExecution(executor.execute.selector);
-    //     assertEq(detail.executor, address(executor));
-    //     assertEq(address(detail.validator), address(intentValidator));
-    // }
 
     // Pasted for reference
     // function setDefaultValidator(IKernelValidator _defaultValidator, bytes calldata _data)

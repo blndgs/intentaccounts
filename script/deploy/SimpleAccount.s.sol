@@ -2,9 +2,12 @@
 pragma solidity ^0.8.24;
 
 import "forge-std/Script.sol";
-import "../../src/SimpleAccountFactory.sol";
+import "@account-abstraction/samples/SimpleAccountFactory.sol";
+import "../ScriptUintHelper.sol";
 
 contract DeploySimpleAccountFactory is Script {
+    using ScriptUintHelper for uint256;
+
     string _network;
 
     function setUp() public {
@@ -22,8 +25,8 @@ contract DeploySimpleAccountFactory is Script {
 
         // Start impersonating the deployer account
         console2.log("Network ID:", block.chainid);
-        console2.log("Balance of signer in Ether:", _weiToEther(signer.balance), "ETH");
-        console2.log("Balance of signer in Gwei:", _weiToGwei(signer.balance), "Gwei");
+        console2.log("Balance of signer in Ether:", signer.balance._weiToEther(), "ETH");
+        console2.log("Balance of signer in Gwei:", signer.balance._weiToGwei(), "Gwei");
 
         console2.log("Owner of SimpleAccount", signer);
         console2.log("msg.sender", msg.sender);
@@ -54,19 +57,11 @@ contract DeploySimpleAccountFactory is Script {
         address expectedAddress = factory.getAddress(signer, salt);
         assert(address(account) == expectedAddress);
         console2.log("New simpleAccount address:", expectedAddress);
-        uint nonce = account.getNonce();
+        uint256 nonce = account.getNonce();
         console2.log("Account nonce", nonce);
 
         vm.stopBroadcast(); // End the broadcast session
 
-        console2.log("Balance of signer in Gwei:", _weiToGwei(signer.balance), "Gwei");
-    }
-
-    function _weiToEther(uint256 weiAmount) private pure returns (uint256) {
-        return weiAmount / 1 ether;
-    }
-
-    function _weiToGwei(uint256 weiAmount) private pure returns (uint256) {
-        return weiAmount / 1 gwei;
+        console2.log("Balance of signer in Gwei:", signer.balance._weiToGwei(), "Gwei");
     }
 }

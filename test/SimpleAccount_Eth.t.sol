@@ -2,30 +2,37 @@
 pragma solidity ^0.8.24;
 
 import "forge-std/Test.sol";
-import "../src/SimpleAccount.sol";
-import "../src/IEntryPoint.sol";
-import "../src/EntryPoint.sol";
-import "../src/SimpleAccountFactory.sol";
-import "../src/ECDSA.sol";
-import "../src/UserOperation.sol";
+import "../src/IntentSimpleAccount.sol";
+import "@account-abstraction/interfaces/IEntryPoint.sol";
+import "@account-abstraction/core/EntryPoint.sol";
+import "../src/IntentSimpleAccountFactory.sol";
+import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "../src/IntentUserOperation.sol";
+import "./TestSimpleAccountHelper.sol";
 
 contract SimpleAccounEthereumTest is Test {
     using Strings for bytes32;
     using UserOperationLib for UserOperation;
+    using TestSimpleAccountHelper for UserOperation;
 
     address public constant ENTRYPOINT_V06 = 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789;
     uint256 _ethereumFork;
 
     using ECDSA for bytes32;
 
-    SimpleAccountFactory _factory;
-    SimpleAccount _simpleAccount;
+    IntentSimpleAccountFactory _factory;
+    IntentSimpleAccount _simpleAccount;
     uint256 _salt;
     IEntryPoint _entryPoint;
     address _ownerAddress;
     uint256 _ownerPrivateKey;
 
     string _network;
+
+    IERC20 constant USDC = IERC20(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48);
+    IERC20 constant USDT = IERC20(0xdAC17F958D2ee523a2206206994597C13D831ec7);
+    address constant USDC_WHALE = 0x47ac0Fb4F2D84898e4D9E7b4DaB3C24507a6D503;
 
     function setUp() public {
         string memory privateKeyEnv = string(abi.encodePacked(_network, "ETHEREUM_PRIVATE_KEY"));
@@ -41,8 +48,6 @@ contract SimpleAccounEthereumTest is Test {
         _ethereumFork = vm.createSelectFork(vm.envString(urlEnv));
         console2.log("ChainID:", block.chainid);
 
-        vm.startPrank(_ownerAddress);
-
         // Deploy the EntryPoint contract or use an existing one
         _entryPoint = EntryPoint(payable(ENTRYPOINT_V06));
         console2.log("EntryPoint deployed at:", address(_entryPoint));
@@ -55,17 +60,23 @@ contract SimpleAccounEthereumTest is Test {
         uint256 startGas = gasleft();
 
         // Sync the _factory
-        address factoryAddress = vm.envAddress("ETH_4337_FACTORY");
-        _factory = SimpleAccountFactory(factoryAddress);
-        console2.log("SimpleAccountFactory synced at:", address(_factory));
+        _factory = new IntentSimpleAccountFactory(_entryPoint);
+        console2.log("IntentSimpleAccountFactory synced at:", address(_factory));
         uint256 endGas = gasleft();
         console2.log("Gas used for Factory sync: ", startGas - endGas);
         startGas = endGas;
 
-        // Sync with deployed Eth mainnet 4337 wallet
-        address account = vm.envAddress("ETH_4337_ACCOUNT");
-        _simpleAccount = SimpleAccount(payable(account));
+        // Create an account
+        _simpleAccount = _factory.createAccount(_ownerAddress, _salt);
         console2.log("_SimpleAccount deployed at:", address(_simpleAccount));
+        vm.deal(address(_simpleAccount), 1e30);
+
+        // fund account with USDC
+        uint256 amount = 10000000000; // 1000 USDC
+        vm.prank(USDC_WHALE);
+        USDC.transfer(address(_simpleAccount), amount);
+
+        vm.startPrank(_ownerAddress);
     }
 
     function testSimpleAccountAddress() public {
@@ -90,7 +101,11 @@ contract SimpleAccounEthereumTest is Test {
         return generateSignature(userOp, chainID, _ownerPrivateKey);
     }
 
-    function generateSignature(UserOperation memory userOp, uint256 chainID, uint256 signerPrvKey) internal view returns (bytes memory) {
+    function generateSignature(UserOperation memory userOp, uint256 chainID, uint256 signerPrvKey)
+        internal
+        view
+        returns (bytes memory)
+    {
         bytes32 userOpHash = _simpleAccount.getUserOpHash(userOp, chainID);
 
         // Sign the hash with the owner's private key
@@ -104,7 +119,7 @@ contract SimpleAccounEthereumTest is Test {
 
     function verifySignature(UserOperation memory userOp) internal returns (uint256) {
         // not supplying the userOpHash as _validateSignature calls for the Intent version
-        uint256 result = _simpleAccount.ValidateSignature(userOp, bytes32(0));
+        uint256 result = _simpleAccount.validateSignature(userOp, bytes32(0));
         assertEq(result, 0, "Signature is not valid for the userOp");
 
         return result;
@@ -120,15 +135,13 @@ contract SimpleAccounEthereumTest is Test {
             nonce: 0x0,
             initCode: bytes(hex""),
             callData: bytes(hex""),
-            callGasLimit: 500000,
-            verificationGasLimit: 65536,
-            preVerificationGas: 65536,
+            callGasLimit: 0,
+            verificationGasLimit: 0,
+            preVerificationGas: 0,
             maxFeePerGas: 0,
             maxPriorityFeePerGas: 0,
             paymasterAndData: bytes(hex""),
-            signature: bytes(
-                hex""
-                )
+            signature: bytes(hex"")
         });
 
         userOp.nonce = _simpleAccount.getNonce();
@@ -145,7 +158,11 @@ contract SimpleAccounEthereumTest is Test {
     function testValidateExecute_SolverNative() public {
         console2.log("sender:", address(_simpleAccount));
 
-        uint256 balanceBef = address(_simpleAccount).balance;
+        uint256 balanceEthBef = address(_simpleAccount).balance;
+        uint256 usdcBalanceBefore = USDC.balanceOf(address(_simpleAccount));
+        uint256 usdtBalanceBefore = USDT.balanceOf(address(_simpleAccount));
+        console2.log("USDC Balance Before:", usdcBalanceBefore);
+        console2.log("USDT Balance Before:", usdtBalanceBefore);
 
         // 1. SDK setups the unsigned Intent UserOp
         UserOperation memory userOp = UserOperation({
@@ -153,12 +170,12 @@ contract SimpleAccounEthereumTest is Test {
             nonce: 0,
             initCode: bytes(hex""),
             callData: bytes(
-                "{\"sender\":\"0xff6F893437e88040ffb70Ce6Aeff4CcbF8dc19A4\",\"from\":{\"type\":\"TOKEN\",\"address\":\"0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE\",\"amount\":\"0.8\",\"chainId\":\"1\"},\"to\":{\"type\":\"TOKEN\",\"address\":\"0xdac17f958d2ee523a2206206994597c13d831ec7\",\"chainId\":\"1\"}}"
-                ),
+                "{\"from\":{\"type\":\"TOKEN\",\"address\":\"0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE\",\"amount\":\"0.8\",\"chainId\":\"1\"},\"to\":{\"type\":\"TOKEN\",\"address\":\"0xdac17f958d2ee523a2206206994597c13d831ec7\",\"chainId\":\"1\"}}"
+            ),
             callGasLimit: 800000,
             verificationGasLimit: 500000,
             preVerificationGas: 500000,
-            maxFeePerGas: 0,
+            maxFeePerGas: 0, // Sponsored by the Bundler
             maxPriorityFeePerGas: 0,
             paymasterAndData: bytes(hex""),
             signature: bytes(hex"")
@@ -188,7 +205,7 @@ contract SimpleAccounEthereumTest is Test {
         console2.log("intent signature:");
         console2.logBytes(userOp.signature);
 
-        // 6. Bundler submits solved userOp on-chain 
+        // 6. Bundler submits solved userOp on-chain
 
         verifySignature(userOp);
 
@@ -197,29 +214,42 @@ contract SimpleAccounEthereumTest is Test {
 
         // entryPoint emits events
         vm.expectEmit(false, true, true, false, 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789);
-        emit IEntryPoint.UserOperationEvent(0/* ignore userOp hash */, address(_simpleAccount), address(0) /* paymaster */, userOp.nonce, true, 0, 0);
+        emit IEntryPoint.UserOperationEvent(
+            0, /* ignore userOp hash */ address(_simpleAccount), address(0), /* paymaster */ userOp.nonce, true, 0, 0
+        );
         // 7. entryPoint executes the intent userOp
         _entryPoint.handleOps(userOps, payable(_ownerAddress));
-     
-        uint256 balanceAfter = address(_simpleAccount).balance;
+
+        uint256 balanceEthAfter = address(_simpleAccount).balance;
         // print the balance of the contract
-        console2.log("Before, after Balance of SimpleAccount in Wei:", balanceBef, balanceAfter);
+        console2.log("Before, after Balance of SimpleAccount in Wei:", balanceEthBef, balanceEthAfter);
+        assertEq(balanceEthAfter, balanceEthBef, "ETH Balance should have remained the same");
+
+        uint256 usdcBalanceAfter = USDC.balanceOf(address(_simpleAccount));
+        uint256 usdtBalanceAfter = USDT.balanceOf(address(_simpleAccount));
+
+        console2.log("USDC Balance After:", usdcBalanceAfter);
+        console2.log("USDT Balance After:", usdtBalanceAfter);
+
+        assertLt(usdcBalanceAfter, usdcBalanceBefore, "USDC balance should decrease");
+        assertGt(usdtBalanceAfter, usdtBalanceBefore, "USDT balance should increase");
+        assertEq(usdcBalanceBefore - usdcBalanceAfter, 1 * 1e6, "Should have spent 1000 USDC");
     }
 
-     /**
-      * Tests wallet creation with user (counterfactual account's address) 
-      * Ether funding.
-      */
+    /**
+     * Tests wallet creation with user (counterfactual account's address)
+     * Ether funding.
+     */
     function testCreateNewWalletUserEtherFunding() public {
         // New owner without a smart account wallet
-        uint ownerPrivateKey = 0x150c8f7379076d4d9244ed39a9bfba489f664760e37b71d1bd4f231c5662d62e;
+        uint256 ownerPrivateKey = 0x150c8f7379076d4d9244ed39a9bfba489f664760e37b71d1bd4f231c5662d62e;
         address walletOwner = 0xd219ceeC68dE386AF92551F9b08a9Aef8910C4EA;
 
         console2.log("walletOwner:", walletOwner);
         address account = _factory.getAddress(walletOwner, 0);
         console2.log("counterfactual address for new wallet:", account);
 
-        uint codeSize = account.code.length;
+        uint256 codeSize = account.code.length;
         assertEq(codeSize, 0, "Account should not be deployed yet");
 
         // **************************************************************
@@ -237,8 +267,8 @@ contract SimpleAccounEthereumTest is Test {
         UserOperation memory userOp = UserOperation({
             sender: account,
             nonce: 0,
-            // Account factory address: 0x793bf47262290b0d02d4326bfc3654a0358e12de + createAccount(owner<0xd219ceeC68dE386AF92551F9b08a9Aef8910C4EA>, salt) calldata
-            initCode: bytes(hex"793bf47262290b0d02d4326bfc3654a0358e12de5fbfb9cf000000000000000000000000d219ceeC68dE386AF92551F9b08a9Aef8910C4EA0000000000000000000000000000000000000000000000000000000000000000"),
+            // <Account factory address> + createAccount(owner<0xd219ceeC68dE386AF92551F9b08a9Aef8910C4EA>, salt:0) calldata
+            initCode: TestSimpleAccountHelper.getInitCode(_factory, walletOwner, 0),
             callData: bytes(hex""),
             callGasLimit: 800000,
             verificationGasLimit: 628384,
@@ -258,9 +288,11 @@ contract SimpleAccounEthereumTest is Test {
 
         // entryPoint emits successful userOp execution events
         vm.expectEmit(false, true, true, false, 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789);
-        emit IEntryPoint.UserOperationEvent(0/* ignore userOp hash */, account, address(0) /* paymaster */, userOp.nonce, true, 0, 0);
+        emit IEntryPoint.UserOperationEvent(
+            0, /* ignore userOp hash */ account, address(0), /* paymaster */ userOp.nonce, true, 0, 0
+        );
         _entryPoint.handleOps(userOps, payable(_ownerAddress));
-     
+
         uint256 balanceAfter = account.balance;
         uint256 depositAfter = _entryPoint.balanceOf(account);
 
@@ -268,19 +300,19 @@ contract SimpleAccounEthereumTest is Test {
         assertGt(depositAfter, depositBef, "Entrypoint account deposits should have increased after execution");
     }
 
-     /**
-      * Tests sponsored wallet creation by bundler.
-      */
+    /**
+     * Tests sponsored wallet creation by bundler.
+     */
     function testCreateNewWalletFundingByBundler() public {
         // New owner without a smart account wallet
-        uint ownerPrivateKey = 0x150c8f7379076d4d9244ed39a9bfba489f664760e37b71d1bd4f231c5662d62e;
+        uint256 ownerPrivateKey = 0x150c8f7379076d4d9244ed39a9bfba489f664760e37b71d1bd4f231c5662d62e;
         address walletOwner = 0xd219ceeC68dE386AF92551F9b08a9Aef8910C4EA;
 
         console2.log("walletOwner:", walletOwner);
         address account = _factory.getAddress(walletOwner, 0);
         console2.log("counterfactual address for new wallet:", account);
 
-        uint codeSize = account.code.length;
+        uint256 codeSize = account.code.length;
         assertEq(codeSize, 0, "Account should not be deployed yet");
 
         uint256 balanceBef = account.balance;
@@ -291,8 +323,8 @@ contract SimpleAccounEthereumTest is Test {
         UserOperation memory userOp = UserOperation({
             sender: account,
             nonce: 0,
-            // Account factory address: 0x793bf47262290b0d02d4326bfc3654a0358e12de + createAccount(owner<0xd219ceeC68dE386AF92551F9b08a9Aef8910C4EA>, salt) calldata
-            initCode: bytes(hex"793bf47262290b0d02d4326bfc3654a0358e12de5fbfb9cf000000000000000000000000d219ceeC68dE386AF92551F9b08a9Aef8910C4EA0000000000000000000000000000000000000000000000000000000000000000"),
+            // <Account factory address> + createAccount(owner<0xd219ceeC68dE386AF92551F9b08a9Aef8910C4EA>, salt:0) calldata
+            initCode: TestSimpleAccountHelper.getInitCode(_factory, walletOwner, 0),
             callData: bytes(hex""),
             callGasLimit: 800000,
             verificationGasLimit: 628384,
@@ -312,49 +344,15 @@ contract SimpleAccounEthereumTest is Test {
 
         // entryPoint emits successful userOp execution events
         vm.expectEmit(false, true, true, false, 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789);
-        emit IEntryPoint.UserOperationEvent(0/* ignore userOp hash */, account, address(0) /* paymaster */, userOp.nonce, true, 0, 0);
+        emit IEntryPoint.UserOperationEvent(
+            0, /* ignore userOp hash */ account, address(0), /* paymaster */ userOp.nonce, true, 0, 0
+        );
         _entryPoint.handleOps(userOps, payable(_ownerAddress));
-     
+
         uint256 balanceAfter = account.balance;
         uint256 depositAfter = _entryPoint.balanceOf(account);
 
         assertEq(balanceBef, balanceAfter, "Account Balance should not have increased after execution");
         assertEq(depositAfter, 0, "Entrypoint account deposits should be zero");
-    }
-
-    function _weiToEther(uint256 weiAmount) private pure returns (uint256) {
-        return weiAmount / 1 ether;
-    }
-
-    function _weiToGwei(uint256 weiAmount) private pure returns (uint256) {
-        return weiAmount / 1 gwei;
-    }
-
-    function logBytes32Value(string memory prompt, bytes32 value) public pure {
-        // Convert bytes32 to string
-        string memory valueAsString = toHexString(abi.encodePacked(value));
-
-        // Log the value
-        console2.log(prompt, valueAsString);
-    }
-
-    function toHexString(bytes memory b) internal pure returns (string memory) {
-        bytes memory hexString = new bytes(2 * b.length + 2);
-        hexString[0] = "0";
-        hexString[1] = "x";
-
-        for (uint256 i = 0; i < b.length; i++) {
-            uint256 value = uint8(b[i]);
-            uint256 hi = value / 16;
-            uint256 lo = value - (hi * 16);
-
-            bytes1 hiHexChar = bytes1(uint8(hi < 10 ? hi + 48 : hi + 87));
-            bytes1 loHexChar = bytes1(uint8(lo < 10 ? lo + 48 : lo + 87));
-
-            hexString[2 * i + 2] = hiHexChar;
-            hexString[2 * i + 3] = loHexChar;
-        }
-
-        return string(hexString);
     }
 }

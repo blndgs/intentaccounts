@@ -20,10 +20,7 @@ struct ECDSAValidatorStorage {
 // 3. sudo mode, use default plugin for current userOp
 
 contract KernelIntentValidator is IKernelValidator {
-    // Custom errors
-    error EndLessThanStart();
-    error EndOutOfBounds(uint256 dataLength, uint256 end);
-    error StartOutOfBounds(uint256 dataLength, uint256 start);
+    using ECDSA for bytes32;
 
     event OwnerChanged(address indexed kernel, address indexed oldOwner, address indexed newOwner);
 
@@ -40,60 +37,26 @@ contract KernelIntentValidator is IKernelValidator {
         emit OwnerChanged(msg.sender, oldOwner, owner);
     }
 
-    /**
-     * @dev Expose _slice for testing
-     */
-    function slice(bytes memory data, uint256 start, uint256 end) external pure returns (bytes memory result) {
-        return _slice(data, start, end);
-    }
-
-    /**
-     * @dev Slices a bytes array to return a portion specified by the start and end indices.
-     * @param data The bytes array to be sliced.
-     * @param start The index in the bytes array where the slice begins.
-     * @param end The index in the bytes array where the slice ends (exclusive).
-     * @return result The sliced portion of the bytes array.
-     * Note: The function reverts if the start index is not less than the end index,
-     *       if start or end is out of the bounds of the data array.
-     */
-    function _slice(bytes memory data, uint256 start, uint256 end) internal pure returns (bytes memory result) {
-        if (end <= start) revert EndLessThanStart();
-        if (end > data.length) revert EndOutOfBounds(data.length, end);
-        if (start >= data.length) revert StartOutOfBounds(data.length, start);
-
-        assembly {
-            // Allocate memory for the result
-            result := mload(0x40)
-            mstore(result, sub(end, start)) // Set the length of the result
-            let resultPtr := add(result, 0x20)
-
-            // Copy the data from the start to the end
-            for { let i := start } lt(i, end) { i := add(i, 0x20) } {
-                let dataPtr := add(add(data, 0x20), i)
-                mstore(add(resultPtr, sub(i, start)), mload(dataPtr))
-            }
-
-            // Update the free memory pointer
-            mstore(0x40, add(resultPtr, sub(end, start)))
-        }
-    }
-
     uint256 private constant SIGNATURE_LENGTH = 65;
 
     function getUserOpHash(UserOperation calldata userOp, uint256 chainID) public pure returns (bytes32) {
-        bytes memory callData = userOp.callData;
+        bytes32 callData = calldataKeccak(userOp.callData);
 
         uint256 sigLength = userOp.signature.length;
 
         if (sigLength > SIGNATURE_LENGTH) {
             // There is an intent JSON at the end of the signature,
             // include the remaining part of signature > 65 (intent json) for hashing
-            callData = _slice(userOp.signature, SIGNATURE_LENGTH, sigLength);
+            callData = calldataKeccak(userOp.signature[SIGNATURE_LENGTH:]);
         }
 
         return keccak256(abi.encode(hashIntentOp(userOp, callData), ENTRYPOINT_V06, chainID));
     }
 
+    /**
+     * Generate the hash of the intent operation. We don't trust the incoming hash
+     * to be aware of the intent JSON in the signature.
+     */
     function validateUserOp(UserOperation calldata _userOp, bytes32, uint256)
         external
         payable
@@ -101,73 +64,59 @@ contract KernelIntentValidator is IKernelValidator {
         returns (ValidationData validationData)
     {
         bytes32 _userOpHash = getUserOpHash(_userOp, block.chainid);
-        address owner = ecdsaValidatorStorage[_userOp.sender].owner;
-        bytes32 hash = ECDSA.toEthSignedMessageHash(_userOpHash);
-
-        // Extract the first 65 bytes of the signature
         bytes memory signature65 = _userOp.signature[:SIGNATURE_LENGTH];
+        return _validateSignature(_userOpHash, signature65, _userOp.sender);
+    }
 
-        if (owner == ECDSA.recover(hash, signature65)) {
+    function validateSignature(bytes32 userOpHash, bytes calldata signature)
+        external
+        view
+        override
+        returns (ValidationData)
+    {
+        bytes memory signature65 = signature[:SIGNATURE_LENGTH];
+        return _validateSignature(userOpHash, signature65, msg.sender);
+    }
+
+    function _validateSignature(bytes32 hash, bytes memory signature65, address sender)
+        internal
+        view
+        returns (ValidationData)
+    {
+        address owner = ecdsaValidatorStorage[sender].owner;
+
+        if (owner == hash.recover(signature65)) {
+            return ValidationData.wrap(0);
+        }
+
+        bytes32 ethHash = hash.toEthSignedMessageHash();
+        if (owner == ethHash.recover(signature65)) {
             return ValidationData.wrap(0);
         }
 
         return SIG_VALIDATION_FAILED;
     }
 
-    function validateSignature(bytes32 hash, bytes calldata signature) public view override returns (ValidationData) {
-        address owner = ecdsaValidatorStorage[msg.sender].owner;
-
-        // Extract the first 65 bytes of the signature
-        bytes memory signature65 = signature[:SIGNATURE_LENGTH];
-
-        address recovered = ECDSA.recover(hash, signature65);
-        if (owner == ECDSA.recover(hash, signature65)) {
-            return ValidationData.wrap(0);
-        }
-
-        bytes32 ethHash = ECDSA.toEthSignedMessageHash(hash);
-        recovered = ECDSA.recover(ethHash, signature65);
-        if (owner != recovered) {
-            return SIG_VALIDATION_FAILED;
-        }
-        return ValidationData.wrap(0);
-    }
-
     function validCaller(address _caller, bytes calldata) external view override returns (bool) {
         return ecdsaValidatorStorage[msg.sender].owner == _caller;
     }
 
-    function hashIntentOp(UserOperation calldata userOp, bytes memory callData) internal pure returns (bytes32) {
-        return keccak256(packIntentOp(userOp, callData));
+    function hashIntentOp(UserOperation calldata userOp, bytes32 hashedCD) internal pure returns (bytes32) {
+        return keccak256(packIntentOp(userOp, hashedCD));
     }
 
-    function packIntentOp(UserOperation calldata userOp, bytes memory callData)
-        internal
-        pure
-        returns (bytes memory ret)
-    {
-        address sender = getSender(userOp);
-        uint256 nonce = userOp.nonce;
-        bytes32 hashInitCode = calldataKeccak(userOp.initCode);
-        bytes32 hashCallData = memoryKeccak(callData);
-        uint256 callGasLimit = userOp.callGasLimit;
-        uint256 verificationGasLimit = userOp.verificationGasLimit;
-        uint256 preVerificationGas = userOp.preVerificationGas;
-        uint256 maxFeePerGas = userOp.maxFeePerGas;
-        uint256 maxPriorityFeePerGas = userOp.maxPriorityFeePerGas;
-        bytes32 hashPaymasterAndData = calldataKeccak(userOp.paymasterAndData);
-
+    function packIntentOp(UserOperation calldata userOp, bytes32 hashedCD) internal pure returns (bytes memory) {
         return abi.encode(
-            sender,
-            nonce,
-            hashInitCode,
-            hashCallData,
-            callGasLimit,
-            verificationGasLimit,
-            preVerificationGas,
-            maxFeePerGas,
-            maxPriorityFeePerGas,
-            hashPaymasterAndData
+            getSender(userOp),
+            userOp.nonce,
+            calldataKeccak(userOp.initCode),
+            hashedCD,
+            userOp.callGasLimit,
+            userOp.verificationGasLimit,
+            userOp.preVerificationGas,
+            userOp.maxFeePerGas,
+            userOp.maxPriorityFeePerGas,
+            calldataKeccak(userOp.paymasterAndData)
         );
     }
 
@@ -178,21 +127,6 @@ contract KernelIntentValidator is IKernelValidator {
             data := calldataload(userOp)
         }
         return address(uint160(data));
-    }
-
-    /**
-     * keccak function over memory.
-     * @dev directly use memory data for keccak.
-     */
-    function memoryKeccak(bytes memory data) private pure returns (bytes32 ret) {
-        assembly {
-            // First 32 bytes of the bytes array 'data' stores the length of the data
-            let len := mload(data) // Load the length of the data
-            let dataPtr := add(data, 0x20) // Skip the first 32 bytes where the length is stored
-
-            // Perform the keccak hash on the memory data
-            ret := keccak256(dataPtr, len)
-        }
     }
 
     /**

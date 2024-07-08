@@ -2,7 +2,7 @@
 pragma solidity ^0.8.24;
 
 import "forge-std/Script.sol";
-import "../../src/SimpleAccount.sol";
+import "../../src/IntentSimpleAccount.sol";
 
 contract UpgradeSimpleAccount is Script {
     address private ENTRYPOINT_ADDRESS;
@@ -38,26 +38,26 @@ contract UpgradeSimpleAccount is Script {
         console2.log("Balance of signer in Ether:", _weiToEther(signer.balance), "ETH");
         console2.log("Balance of signer in Gwei:", _weiToGwei(signer.balance), "Gwei");
 
-        console2.log("Owner of SimpleAccount", signer);
+        console2.log("Owner of IntentSimpleAccount", signer);
         console2.log("msg.sender", msg.sender);
         console2.log("tx.origin", tx.origin);
-        address accountOwner = SimpleAccount(proxyAddress).owner();
+        address accountOwner = IntentSimpleAccount(proxyAddress).owner();
         console2.log("Account owner:", accountOwner);
         assert(accountOwner == signer);
 
         vm.startBroadcast(signerPrivateKey);
 
-        SimpleAccount newImplementation = SimpleAccount(payable(0x16c83BBacc3Ec35fD3484F153C965e2978f371f4));
-        console2.log("Deployed SimpleAccount implementation at:", address(newImplementation));
+        IntentSimpleAccount newImplementation = IntentSimpleAccount(payable(0x16c83BBacc3Ec35fD3484F153C965e2978f371f4));
+        console2.log("Deployed IntentSimpleAccount implementation at:", address(newImplementation));
 
-        bytes memory data = abi.encodeWithSelector(SimpleAccount.initialize.selector, signer);
-        SimpleAccount(proxyAddress).upgradeToAndCall(address(newImplementation), data);
+        bytes memory data = abi.encodeWithSelector(IntentSimpleAccount.initialize.selector, signer);
+        IntentSimpleAccount(proxyAddress).upgradeToAndCall(address(newImplementation), data);
         console2.log(
-            "Upgraded SimpleAccount proxy at", proxyAddress, "to new implementation:", address(newImplementation)
+            "Upgraded IntentSimpleAccount proxy at", proxyAddress, "to new implementation:", address(newImplementation)
         );
 
         // verify proxy implementation has been upgraded
-        SimpleAccount upgradedAccount = SimpleAccount(proxyAddress);
+        IntentSimpleAccount upgradedAccount = IntentSimpleAccount(proxyAddress);
 
         // calling a function in the new implementation with empty data should have no effect
         upgradedAccount.execValueBatch(new uint256[](0), new address[](0), new bytes[](0));

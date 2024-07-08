@@ -2,15 +2,15 @@
 pragma solidity ^0.8.24;
 
 import "forge-std/Test.sol";
-import "../src/Exec.sol";
-import "../src/SimpleAccount.sol";
-import "../src/IEntryPoint.sol";
-import "../src/EntryPoint.sol";
-import "../src/SimpleAccountFactory.sol";
+import "@account-abstraction/utils/Exec.sol";
+import "../src/IntentSimpleAccount.sol";
+import "@account-abstraction/interfaces/IEntryPoint.sol";
+import "@account-abstraction/core/EntryPoint.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "../src/ECDSA.sol";
+import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import "../src/IntentSimpleAccountFactory.sol";
 
 using Strings for bytes32;
 using UserOperationLib for UserOperation;
@@ -117,8 +117,7 @@ contract callsTest is Test {
 
     using ECDSA for bytes32;
 
-    SimpleAccountFactory public factory;
-    SimpleAccount _simpleAccount;
+    IntentSimpleAccount _simpleAccount;
     uint256 salt = 0;
     IEntryPoint public entryPoint;
     Smt smt;
@@ -144,10 +143,9 @@ contract callsTest is Test {
         // Deploy ContractB
         b = new ContractB();
 
-        address account = vm.envAddress("ETH_4337_ACCOUNT");
-
-        // Sync with deployed Eth mainnet 4337 wallet
-        _simpleAccount = SimpleAccount(payable(account));
+        // Create a 4337 wallet
+        IntentSimpleAccountFactory factory = new IntentSimpleAccountFactory(_entryPoint);
+        _simpleAccount = factory.createAccount(_ownerAddress, salt);
         console2.log("_SimpleAccount deployed at:", address(_simpleAccount));
 
         // Create an SMT token
@@ -269,6 +267,51 @@ contract callsTest is Test {
         require(success, "Yul call failed");
     }
 
+    /**
+     * @dev This function takes a fixed calldata template and replaces a specific address within it.
+     *      The template represents a call to SimpleAccount's execute function, which in turn calls the ERC20 approve function.
+     * @param smtAddress `(Super Mario Token)` or the address of the ERC20 token contract to be approved
+     * @return bytes The modified calldata with the correct token address
+     *
+     * @custom:structure The fixed calldata structure is as follows:
+     *   - bytes4  : Function selector for SimpleAccount's execute function (0xb61d27f6)
+     *   - address : Token address (to be replaced)
+     *   - uint256 : ETH Value (0 in this case)
+     *   - bytes   : Encoded call to approve function
+     *     - bytes4  : Function selector for ERC20's approve function (0x095ea7b3)
+     *     - address : Spender address
+     *     - uint256 : Amount to approve
+     *
+     * @custom:example
+     * Input:
+     *   smtAddress: 0x1234567890123456789012345678901234567890
+     *
+     * Output (hexadecimal):
+     *   b61d27f6
+     *   000000000000000000000000{smtAddress}
+     *   0000000000000000000000000000000000000000000000000000000000000000
+     *   0000000000000000000000000000000000000000000000000000000000000060
+     *   0000000000000000000000000000000000000000000000000000000000000044
+     *   095ea7b3
+     *   000000000000000000000000ead050515e10fdb3540ccd6f8236c46790508a76
+     *   0000000000000000000000000000000000000000000000000000000000000378
+     *   00000000000000000000000000000000000000000000000000000000
+     */
+    function generateCallData(address smtAddress) internal pure returns (bytes memory) {
+        bytes memory fixedCallData =
+            hex"b61d27f60000000000000000000000002e234dae75c793f67a35089c9d99245e1c58470b000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000600000000000000000000000000000000000000000000000000000000000000044095ea7b3000000000000000000000000ead050515e10fdb3540ccd6f8236c46790508a76000000000000000000000000000000000000000000000000000000000000037800000000000000000000000000000000000000000000000000000000";
+
+        // Convert the Smt address to bytes
+        bytes memory smtAddressBytes = abi.encodePacked(smtAddress);
+
+        // Replace the incorrect address with the Smt address
+        for (uint256 i = 0; i < 20; i++) {
+            fixedCallData[i + 16] = smtAddressBytes[i];
+        }
+
+        return fixedCallData;
+    }
+
     function test4337Approve() public {
         console2.log("sender:", address(_simpleAccount));
 
@@ -278,8 +321,8 @@ contract callsTest is Test {
             nonce: 0,
             initCode: bytes(hex""),
             callData: bytes(
-                "{\"sender\":\"0xff6F893437e88040ffb70Ce6Aeff4CcbF8dc19A4\",\"from\":{\"type\":\"TOKEN\",\"address\":\"0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE\",\"amount\":\"0.8\",\"chainId\":\"1\"},\"to\":{\"type\":\"TOKEN\",\"address\":\"0xdac17f958d2ee523a2206206994597c13d831ec7\",\"chainId\":\"1\"}}"
-                ),
+                "{\"from\":{\"type\":\"TOKEN\",\"address\":\"0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE\",\"amount\":\"0.8\",\"chainId\":\"1\"},\"to\":{\"type\":\"TOKEN\",\"address\":\"0xdac17f958d2ee523a2206206994597c13d831ec7\",\"chainId\":\"1\"}}"
+            ),
             callGasLimit: 800000,
             verificationGasLimit: 100000,
             preVerificationGas: 10000,
@@ -302,19 +345,13 @@ contract callsTest is Test {
         // 4. Bundler submits userOp to the Solver
 
         // 5. Solver solves Intent userOp
-        userOp.signature = bytes(
-            abi.encodePacked(
-                userOp.signature,
-                userOp.callData
-            )
-        );
-        userOp.callData = bytes(
-            hex"b61d27f60000000000000000000000002e234dae75c793f67a35089c9d99245e1c58470b000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000600000000000000000000000000000000000000000000000000000000000000044095ea7b3000000000000000000000000ead050515e10fdb3540ccd6f8236c46790508a76000000000000000000000000000000000000000000000000000000000000037800000000000000000000000000000000000000000000000000000000"
-        );
+        userOp.signature = bytes(abi.encodePacked(userOp.signature, userOp.callData));
+        userOp.callData = generateCallData(address(smt));
+
         console2.log("intent signature:");
         console2.logBytes(userOp.signature);
 
-        // 6. Bundler submits solved userOp on-chain 
+        // 6. Bundler submits solved userOp on-chain
 
         verifySignature(userOp);
         console2.log("userOp signature verified");
@@ -324,11 +361,13 @@ contract callsTest is Test {
 
         // entryPoint emits events
         vm.expectEmit(false, true, true, false, 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789);
-        emit IEntryPoint.UserOperationEvent(0/* ignore userOp hash */, address(_simpleAccount), address(0) /* paymaster */, userOp.nonce, true, 0, 0);
+        emit IEntryPoint.UserOperationEvent(
+            0, /* ignore userOp hash */ address(_simpleAccount), address(0), /* paymaster */ userOp.nonce, true, 0, 0
+        );
         // 7. entryPoint executes the intent userOp
         _entryPoint.handleOps(userOps, payable(_ownerAddress));
 
-        uint allowance = smt.allowance(address(_simpleAccount), spender);
+        uint256 allowance = smt.allowance(address(_simpleAccount), spender);
         assertEq(allowance, 888, "Allowance should be 888 for simpleAccount");
     }
 
@@ -346,7 +385,7 @@ contract callsTest is Test {
 
     function verifySignature(UserOperation memory userOp) internal returns (uint256) {
         // not supplying the userOpHash as _validateSignature calls for the Intent version
-        uint256 result = _simpleAccount.ValidateSignature(userOp, bytes32(0));
+        uint256 result = _simpleAccount.validateSignature(userOp, bytes32(0));
         assertEq(result, 0, "Signature is not valid for the userOp");
 
         return result;

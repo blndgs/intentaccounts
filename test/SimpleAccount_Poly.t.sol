@@ -2,26 +2,27 @@
 pragma solidity ^0.8.24;
 
 import "forge-std/Test.sol";
-import "../src/SimpleAccount.sol";
-import "../src/IEntryPoint.sol";
-import "../src/EntryPoint.sol";
-import "../src/SimpleAccountFactory.sol";
+import "../src/IntentSimpleAccount.sol";
+import "../src/IntentSimpleAccountFactory.sol";
+import "@account-abstraction/interfaces/IEntryPoint.sol";
+import "@account-abstraction/core/EntryPoint.sol";
 import "forge-std/interfaces/IERC20.sol";
-import "../src/ECDSA.sol";
+import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import "./TestSimpleAccountHelper.sol";
 
 contract SimpleAccounPolygonTest is Test {
     using Strings for bytes32;
+    using ECDSA for bytes32;
     using UserOperationLib for UserOperation;
+    using TestSimpleAccountHelper for UserOperation;
 
     address constant ENTRYPOINT_V06 = 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789;
     uint256 public constant MUMBAI_CHAIN_ID = 80001;
     uint256 public constant POLYGON_CHAIN_ID = 137;
     uint256 mumbaiFork;
 
-    using ECDSA for bytes32;
-
-    SimpleAccountFactory factory;
-    SimpleAccount simpleAccount;
+    IntentSimpleAccountFactory factory;
+    IntentSimpleAccount simpleAccount;
     uint256 salt;
     IEntryPoint public entryPoint;
     address public ownerAddress;
@@ -60,14 +61,14 @@ contract SimpleAccounPolygonTest is Test {
         uint256 startGas = gasleft();
 
         // Sync the factory with the deployed contract at Mannet
-        factory = SimpleAccountFactory(0x42E60c23aCe33c23e0945a07f6e2c1E53843a1d5);
-        console2.log("SimpleAccountFactory synced at:", address(factory));
+        factory = new IntentSimpleAccountFactory(entryPoint);
+        console2.log("IntentSimpleAccountFactory synced at:", address(factory));
         uint256 endGas = gasleft();
         console2.log("Gas used for Factory sync: ", startGas - endGas);
         startGas = endGas;
 
         // Use the factory to create a new SimpleAccount instance
-        simpleAccount = SimpleAccount(payable (0x89D05CEc8CDdc6801feD02DDB54F0dA31953a1fC));
+        simpleAccount = factory.createAccount(ownerAddress, salt);
         console2.log("SimpleAccount wallet created at:", address(simpleAccount));
         console2.log("Gas used for wallet creation: ", startGas - endGas);
         startGas = endGas;
@@ -140,13 +141,13 @@ contract SimpleAccounPolygonTest is Test {
         });
 
         // Generate the signature
-        bytes memory generatedSignature = generateSignature(userOp, block.chainid);
+        bytes memory generatedSignature = generateSignature(userOp, simpleAccount, block.chainid, ownerPrivateKey);
 
         // Update the user operation with the generated signature
         userOp.signature = generatedSignature;
 
         // Test the _validateSignature method
-        uint256 result = simpleAccount.ValidateSignature(userOp, bytes32(0));
+        uint256 result = simpleAccount.validateSignature(userOp, bytes32(0));
         assertEq(result, 0, "Signature should be valid");
     }
 
@@ -165,15 +166,15 @@ contract SimpleAccounPolygonTest is Test {
             paymasterAndData: bytes(hex""),
             signature: bytes(
                 hex"92f25342760a82b7e5649ed7c6d2d7cb93c0093f66c916d7e57de4af0ae00e2b0524bf364778c6b30c491354be332a1ce521e8a57c5e26f94f8069a404520e931b"
-                )
+            )
         });
 
         userOp.nonce = simpleAccount.getNonce();
 
         // Generate the signature
-        userOp.signature = generateSignature(userOp, block.chainid);
+        userOp.signature = generateSignature(userOp, simpleAccount, block.chainid, ownerPrivateKey);
 
-        verifySignature(userOp);
+        verifySignature(userOp, simpleAccount);
     }
 
     function testValidateMumbaiLongCallData() public {
@@ -184,7 +185,7 @@ contract SimpleAccounPolygonTest is Test {
             initCode: bytes(hex""),
             callData: bytes(
                 hex"b61d27f60000000000000000000000008c42cf13fbea2ac15b0fe5a5f3cf35eec65d7d7d000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000600000000000000000000000000000000000000000000000000000000000000dc4c7cd97480000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000012000000000000000000000000066c0aee289c4d332302dda4ded0c0cdc3784939a0000000000000000000000000000000000000000000000000de0b6b3a7640000000000000000000000000000000000000000000000000000000000053a3e3f4800000000000000000000000067297ee4eb097e072b4ab6f1620268061ae804640000000000000000000000002397d2fde31c5704b02ac1ec9b770f23d70d8ec4000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002a000000000000000000000000000000000000000000000000000000000000003200000000000000000000000000000000000000000000000000000000000000149000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000006352a56caadc4f1e25cd6c75970fa768a3304e6466c0aee289c4d332302dda4ded0c0cdc3784939a562e362876c8aee4744fc2c6aac8394c312d215d1f9840a85d5af5bf1d1762f925bdaddc4201f9840000000000000000000000000000000000000000000000000000000439689a920000000000000000000000000000000000000000000000000de0b6b3a7640000000000000000000000000000000000000000000000000000000000006596a37066c0aee289c4d332302dda4ded0c0cdc3784939a1dfa0ff0b2e64429acf334d64097b28000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000004109ffe4bb46d80a7da156ae6795558927a3613cc6073ddad94296335191660e673c7696803900ccd4b4ba1012a198259f0ce8c3873247ce209a326185458cede61c00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000a0490411a32000000000000000000000000a9c0cded336699547aac4f9de5a11ada979bc59a000000000000000000000000000000000000000000000000000000000000006000000000000000000000000000000000000000000000000000000000000001c00000000000000000000000001f9840a85d5af5bf1d1762f925bdaddc4201f984000000000000000000000000562e362876c8aee4744fc2c6aac8394c312d215d000000000000000000000000dafd66636e2561b0284edde37e42d192f2844d40000000000000000000000000ead050515e10fdb3540ccd6f8236c46790508a760000000000000000000000000000000000000000000000000de0b6b3a76400000000000000000000000000000000000000000000000000000000000439689a930000000000000000000000000000000000000000000000000000000547c2c13700000000000000000000000000000000000000000000000000000000000000020000000000000000000000008ba3c3f7334375f95c128bc6a9b8fc42e870f160000000000000000000000000000000000000000000000000000000000000014000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000008000000000000000000000000000000000000000000000000000000000000001a000000000000000000000000000000000000000000000000000000000000004a000000000000000000000000000000000000000000000000000000000000005c000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000800000000000000000000000000000000000000000000000000000000000000064cac460ee00000000000000003b6d0340dafd66636e2561b0284edde37e42d192f2844d400000000000000000000000001f9840a85d5af5bf1d1762f925bdaddc4201f984000000000000000000000000a9c0cded336699547aac4f9de5a11ada979bc59a00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000008000000000000000000000000000000000000000000000000000000000000002449f865422000000000000000000000000c02aaa39b223fe8d0a0e5c4f27ead9083c756cc200000000000000000000000000000001000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000080000000000000000000000000000000000000000000000000000000000000004400000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000800000000000000000000000000000000000000000000000000000000000000104e5b07cdb0000000000000000000000004e4abd1c111c08b3a05feed46556496e6a3fd89300000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001000000000000000000000000a9c0cded336699547aac4f9de5a11ada979bc59a00000000000000000000000000000000000000000000000000000000000000a0000000000000000000000000000000000000000000000000000000000000002ec02aaa39b223fe8d0a0e5c4f27ead9083c756cc2000bb8562e362876c8aee4744fc2c6aac8394c312d215d0000010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000008000000000000000000000000000000000000000000000000000000000000000648a6a1e85000000000000000000000000562e362876c8aee4744fc2c6aac8394c312d215d000000000000000000000000353c1f0bc78fbbc245b3c93ef77b1dcc5b77d2a00000000000000000000000000000000000000000000000000000000547c2c13700000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000008000000000000000000000000000000000000000000000000000000000000001a49f865422000000000000000000000000562e362876c8aee4744fc2c6aac8394c312d215d00000000000000000000000000000001000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000080000000000000000000000000000000000000000000000000000000000000004400000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000800000000000000000000000000000000000000000000000000000000000000064d1660f99000000000000000000000000562e362876c8aee4744fc2c6aac8394c312d215d000000000000000000000000ead050515e10fdb3540ccd6f8236c46790508a76000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-                ),
+            ),
             callGasLimit: 0x88b8,
             verificationGasLimit: 0x11170,
             preVerificationGas: 0x5208,
@@ -193,15 +194,15 @@ contract SimpleAccounPolygonTest is Test {
             paymasterAndData: bytes(hex""),
             signature: bytes(
                 hex"74199499de42614e0172afc5781179682f311ed1ec8b369d5a4d8bae4e68f3387e9cab11473b4fb65932e4a8812793f6b7e80a9700855fde454109ceeac02e911b"
-                )
+            )
         });
 
         userOp.nonce = simpleAccount.getNonce();
 
         // Generate the signature
-        userOp.signature = generateSignature(userOp, block.chainid);
+        userOp.signature = generateSignature(userOp, simpleAccount, block.chainid, ownerPrivateKey);
 
-        verifySignature(userOp);
+        verifySignature(userOp, simpleAccount);
     }
 
     function testValidate_UnsolvedIntentOp() public {
@@ -212,7 +213,7 @@ contract SimpleAccounPolygonTest is Test {
             initCode: bytes(hex""),
             callData: bytes(
                 '{"chainId":80001, "sender":"0x0A7199a96fdf0252E09F76545c1eF2be3692F46b","kind":"swap","hash":"","sellToken":"TokenA","buyToken":"TokenB","sellAmount":10,"buyAmount":5,"partiallyFillable":false,"status":"Received","createdAt":0,"expirationAt":0}'
-                ),
+            ),
             callGasLimit: 0x88b8,
             verificationGasLimit: 0x11170,
             preVerificationGas: 0x5208,
@@ -221,15 +222,15 @@ contract SimpleAccounPolygonTest is Test {
             paymasterAndData: bytes(hex""),
             signature: bytes(
                 hex"8a2e15b3a0b4964c99e8929d26b081c94b0b284f9a67052019450911a9ee1dd964c862655d9ffc0b97350f5987a6793085adc8cc2297dc97e4b21666539148171b"
-                )
+            )
         });
 
         userOp.nonce = simpleAccount.getNonce();
 
         // Generate the signature
-        userOp.signature = generateSignature(userOp, block.chainid);
+        userOp.signature = generateSignature(userOp, simpleAccount, block.chainid, ownerPrivateKey);
 
-        verifySignature(userOp);
+        verifySignature(userOp, simpleAccount);
     }
 
     function testValidate_UnsolvedIntent0GasOp() public {
@@ -240,7 +241,7 @@ contract SimpleAccounPolygonTest is Test {
             initCode: bytes(hex""),
             callData: bytes(
                 '{"chainId":80001, "sender":"0x0A7199a96fdf0252E09F76545c1eF2be3692F46b","kind":"swap","hash":"","sellToken":"TokenA","buyToken":"TokenB","sellAmount":10,"buyAmount":5,"partiallyFillable":false,"status":"Received","createdAt":0,"expirationAt":0}'
-                ),
+            ),
             callGasLimit: 0,
             verificationGasLimit: 0,
             preVerificationGas: 0,
@@ -249,15 +250,15 @@ contract SimpleAccounPolygonTest is Test {
             paymasterAndData: bytes(hex""),
             signature: bytes(
                 hex"1b2c01e59028d70e881fc913570014ca4d693e29725dbbb5cd56cdc8b8f5007e6188fd6afd3482d65703c3a884195712c901aebf3a0964de04367e8c827340db1b"
-                )
+            )
         });
 
         userOp.nonce = simpleAccount.getNonce();
 
         // Generate the signature
-        userOp.signature = generateSignature(userOp, block.chainid);
+        userOp.signature = generateSignature(userOp, simpleAccount, block.chainid, ownerPrivateKey);
 
-        verifySignature(userOp);
+        verifySignature(userOp, simpleAccount);
     }
 
     function testValidate_SolvedNilIntentOp() public {
@@ -275,15 +276,15 @@ contract SimpleAccounPolygonTest is Test {
             paymasterAndData: bytes(hex""),
             signature: bytes(
                 hex"1b81c8280ec9fbf3009c650a67eadac8ab53ab645f55bdb927a870b40649904f7d1a5e9bd75b7e362625f05874f53d9e071cdc27baa43fc5a89b1338f24a9c7b1b"
-                )
+            )
         });
 
         userOp.nonce = simpleAccount.getNonce();
 
         // Generate the signature
-        userOp.signature = generateSignature(userOp, block.chainid);
+        userOp.signature = generateSignature(userOp, simpleAccount, block.chainid, ownerPrivateKey);
 
-        verifySignature(userOp);
+        verifySignature(userOp, simpleAccount);
     }
 
     function testValidate_SolvedIntentOpNilSolution() public {
@@ -294,7 +295,7 @@ contract SimpleAccounPolygonTest is Test {
             initCode: bytes(hex""),
             callData: bytes(
                 '{"chainId":80001, "sender":"0x0A7199a96fdf0252E09F76545c1eF2be3692F46b","kind":"swap","hash":"","sellToken":"TokenA","buyToken":"TokenB","sellAmount":10,"buyAmount":5,"partiallyFillable":false,"status":"Received","createdAt":0,"expirationAt":0}<intent-end>0x'
-                ),
+            ),
             callGasLimit: 0,
             verificationGasLimit: 0,
             preVerificationGas: 0,
@@ -303,15 +304,15 @@ contract SimpleAccounPolygonTest is Test {
             paymasterAndData: bytes(hex""),
             signature: bytes(
                 hex"e14ea21c8d6478388bfc9e5f1bf9a0d45fe1359fbfeac193e8b504be2db9fc317f6c6b06bff42328af64f6be85a31e729d2cab6c6b83ebf3ef12bc4cc344e9c31c"
-                )
+            )
         });
 
         userOp.nonce = simpleAccount.getNonce();
 
         // Generate the signature
-        userOp.signature = generateSignature(userOp, block.chainid);
+        userOp.signature = generateSignature(userOp, simpleAccount, block.chainid, ownerPrivateKey);
 
-        verifySignature(userOp);
+        verifySignature(userOp, simpleAccount);
     }
 
     function testValidate_SolvedIntentOp() public {
@@ -322,7 +323,7 @@ contract SimpleAccounPolygonTest is Test {
             initCode: bytes(hex""),
             callData: bytes(
                 '{"chainId":80001, "sender":"0x0A7199a96fdf0252E09F76545c1eF2be3692F46b","kind":"swap","hash":"","sellToken":"TokenA","buyToken":"TokenB","sellAmount":10,"buyAmount":5,"partiallyFillable":false,"status":"Received","createdAt":0,"expirationAt":0}<intent-end>0xb61d27f60000000000000000000000009d34f236bddf1b9de014312599d9c9ec8af1bc48000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000600000000000000000000000000000000000000000000000000000000000000044a9059cbb000000000000000000000000d7b21a844f3a41c91a73d3f87b83fa93bb6cb518000000000000000000000000000000000000000000000000000000002faf080000000000000000000000000000000000000000000000000000000000'
-                ),
+            ),
             callGasLimit: 0,
             verificationGasLimit: 0,
             preVerificationGas: 0,
@@ -331,15 +332,15 @@ contract SimpleAccounPolygonTest is Test {
             paymasterAndData: bytes(hex""),
             signature: bytes(
                 hex"1b2c01e59028d70e881fc913570014ca4d693e29725dbbb5cd56cdc8b8f5007e6188fd6afd3482d65703c3a884195712c901aebf3a0964de04367e8c827340db1b"
-                )
+            )
         });
 
         userOp.nonce = simpleAccount.getNonce();
 
         // Generate the signature
-        userOp.signature = generateSignature(userOp, block.chainid);
+        userOp.signature = generateSignature(userOp, simpleAccount, block.chainid, ownerPrivateKey);
 
-        verifySignature(userOp);
+        verifySignature(userOp, simpleAccount);
     }
 
     function testExecute_EmptyOp() public {
@@ -361,7 +362,7 @@ contract SimpleAccounPolygonTest is Test {
         userOp.nonce = simpleAccount.getNonce();
 
         // Generate the signature
-        userOp.signature = generateSignature(userOp, block.chainid);
+        userOp.signature = generateSignature(userOp, simpleAccount, block.chainid, ownerPrivateKey);
 
         UserOperation[] memory userOps = new UserOperation[](1);
         userOps[0] = userOp;
@@ -386,7 +387,7 @@ contract SimpleAccounPolygonTest is Test {
             initCode: bytes(hex""),
             callData: bytes(
                 "0xb61d27f60000000000000000000000009d34f236bddf1b9de014312599d9c9ec8af1bc48000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000600000000000000000000000000000000000000000000000000000000000000044a9059cbb000000000000000000000000d7b21a844f3a41c91a73d3f87b83fa93bb6cb518000000000000000000000000000000000000000000000000000000002faf080000000000000000000000000000000000000000000000000000000000"
-                ),
+            ),
             callGasLimit: 0,
             verificationGasLimit: 300000,
             preVerificationGas: 300000,
@@ -399,7 +400,7 @@ contract SimpleAccounPolygonTest is Test {
         userOp.nonce = simpleAccount.getNonce();
 
         // Generate the signature
-        userOp.signature = generateSignature(userOp, block.chainid);
+        userOp.signature = generateSignature(userOp, simpleAccount, block.chainid, ownerPrivateKey);
 
         UserOperation[] memory userOps = new UserOperation[](1);
         userOps[0] = userOp;
@@ -417,7 +418,7 @@ contract SimpleAccounPolygonTest is Test {
             initCode: bytes(hex""),
             callData: bytes(
                 '{"chainId":80001, "sender":"0x0A7199a96fdf0252E09F76545c1eF2be3692F46b","kind":"swap","hash":"","sellToken":"TokenA","buyToken":"TokenB","sellAmount":10,"buyAmount":5,"partiallyFillable":false,"status":"Received","createdAt":0,"expirationAt":0}<intent-end>0xb61d27f60000000000000000000000009d34f236bddf1b9de014312599d9c9ec8af1bc48000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000600000000000000000000000000000000000000000000000000000000000000044a9059cbb000000000000000000000000d7b21a844f3a41c91a73d3f87b83fa93bb6cb518000000000000000000000000000000000000000000000000000000002faf080000000000000000000000000000000000000000000000000000000000'
-                ),
+            ),
             callGasLimit: 0,
             verificationGasLimit: 300000,
             preVerificationGas: 300000,
@@ -430,7 +431,7 @@ contract SimpleAccounPolygonTest is Test {
         userOp.nonce = simpleAccount.getNonce();
 
         // Generate the signature
-        userOp.signature = generateSignature(userOp, block.chainid);
+        userOp.signature = generateSignature(userOp, simpleAccount, block.chainid, ownerPrivateKey);
 
         vm.stopPrank();
         vm.prank(ENTRYPOINT_V06);
@@ -454,7 +455,7 @@ contract SimpleAccounPolygonTest is Test {
             initCode: bytes(hex""),
             callData: bytes(
                 "{\"chainId\":80001, \"sender\":\"0x18Dd70639de2ca9146C32f9c84B90A68bBDaAA96\",\"kind\":\"swap\",\"hash\":\"\",\"sellToken\":\"0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE\",\"buyToken\":\"0xc2132D05D31c914a87C6611C10748AEb04B58e8F\",\"sellAmount\":10,\"buyAmount\":5,\"partiallyFillable\":false,\"status\":\"Received\",\"createdAt\":0,\"expirationAt\":0}"
-                ),
+            ),
             callGasLimit: 300000,
             verificationGasLimit: 300000,
             preVerificationGas: 300000,
@@ -467,20 +468,15 @@ contract SimpleAccounPolygonTest is Test {
         userOp.nonce = simpleAccount.getNonce();
 
         // Generate the signature
-        userOp.signature = generateSignature(userOp, block.chainid);
+        userOp.signature = generateSignature(userOp, simpleAccount, block.chainid, ownerPrivateKey);
 
-        userOp.signature = bytes(
-            abi.encodePacked(
-                userOp.signature,
-                userOp.callData
-            )
-        );
+        userOp.signature = bytes(abi.encodePacked(userOp.signature, userOp.callData));
         // Solve Intent userOp
         userOp.callData = bytes(
             hex"b61d27f60000000000000000000000009d34f236bddf1b9de014312599d9c9ec8af1bc48000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000600000000000000000000000000000000000000000000000000000000000000044095ea7b3000000000000000000000000d7b21a844f3a41c91a73d3f87b83fa93bb6cb518000000000000000000000000000000000000000000000000000000000000037800000000000000000000000000000000000000000000000000000000"
         );
 
-        verifySignature(userOp);
+        verifySignature(userOp, simpleAccount);
 
         UserOperation[] memory userOps = new UserOperation[](1);
         userOps[0] = userOp;
@@ -497,7 +493,7 @@ contract SimpleAccounPolygonTest is Test {
             initCode: bytes(hex""),
             callData: bytes(
                 "{\"chainId\":80001, \"sender\":\"0x18Dd70639de2ca9146C32f9c84B90A68bBDaAA96\",\"kind\":\"swap\",\"hash\":\"\",\"sellToken\":\"0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE\",\"buyToken\":\"0xc2132D05D31c914a87C6611C10748AEb04B58e8F\",\"sellAmount\":10,\"buyAmount\":5,\"partiallyFillable\":false,\"status\":\"Received\",\"createdAt\":0,\"expirationAt\":0}"
-                ),
+            ),
             callGasLimit: 300000,
             verificationGasLimit: 300000,
             preVerificationGas: 300000,
@@ -511,7 +507,7 @@ contract SimpleAccounPolygonTest is Test {
         console2.log("nonce:", userOp.nonce);
 
         // 2. SDK signs the intent userOp
-        userOp.signature = generateSignature(userOp, block.chainid);
+        userOp.signature = generateSignature(userOp, simpleAccount, block.chainid, ownerPrivateKey);
         console2.log("signature:");
         console2.logBytes(userOp.signature);
 
@@ -519,21 +515,16 @@ contract SimpleAccounPolygonTest is Test {
         // 4. Bundler submits userOp to the Solver
 
         // 5. Solver solves Intent userOp
-        userOp.signature = bytes(
-            abi.encodePacked(
-                userOp.signature,
-                userOp.callData
-            )
-        );
+        userOp.signature = bytes(abi.encodePacked(userOp.signature, userOp.callData));
         userOp.callData = bytes(
             hex"b61d27f6000000000000000000000000ead050515e10fdb3540ccd6f8236c46790508a76000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000600000000000000000000000000000000000000000000000000000000000000364c7cd97480000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000012000000000000000000000000042d4e9ee3f725c84b7934e4fda64f2be0f8031300000000000000000000000000000000000000000000000000de0b6b3a76400000000000000000000000000000000000000000000000000000000000087cb219500000000000000000000000067297ee4eb097e072b4ab6f1620268061ae804640000000000000000000000002397d2fde31c5704b02ac1ec9b770f23d70d8ec4000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002a000000000000000000000000000000000000000000000000000000000000003200000000000000000000000000000000000000000000000000000000000000149000000000000000000000000000000000000000000000000000ab1f0e9908efdff8ba4d1fc3762f6154cc942ccf30049a2a0cec65b0711eee0c6366aa35a98b14fd8b4b4c6d1d04c42d4e9ee3f725c84b7934e4fda64f2be0f803130dac17f958d2ee523a2206206994597c13d831ec7c02aaa39b223fe8d0a0e5c4f27ead9083c756cc200000000000000000000000000000000000000000000000000000000892a46200000000000000000000000000000000000000000000000000de0b6b3a76400000000000000000000000000000000000000000000000000000000000065bfc91a42d4e9ee3f725c84b7934e4fda64f2be0f80313062d65d760e2c4c79a53434564574d2812dfabbb6d9e55b8ab403c6da20ea5c95df76cacc6b22c29c10a855f6c9758df816d33be31be64ce6e083c1e88733cdaca6713de609c626a5aec577750af90aca1b00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000041416896cf6aafa421b8c6bc438ed2147791e29741e78e8ac2fa69f1e8a7491a51069f14313f6aa9dfba696b05f1bd37170f5b8c4d2ec4830dedbec11961126b751c00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
         );
         console2.log("intent signature:");
         console2.logBytes(userOp.signature);
 
-        // 6. Bundler submits solved userOp on-chain 
+        // 6. Bundler submits solved userOp on-chain
 
-        verifySignature(userOp);
+        verifySignature(userOp, simpleAccount);
 
         UserOperation[] memory userOps = new UserOperation[](1);
         userOps[0] = userOp;
@@ -552,7 +543,7 @@ contract SimpleAccounPolygonTest is Test {
             initCode: bytes(hex""),
             callData: bytes(
                 "{\"chainId\":80001, \"sender\":\"0x18Dd70639de2ca9146C32f9c84B90A68bBDaAA96\",\"kind\":\"swap\",\"hash\":\"\",\"sellToken\":\"0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE\",\"buyToken\":\"0xc2132D05D31c914a87C6611C10748AEb04B58e8F\",\"sellAmount\":10,\"buyAmount\":5,\"partiallyFillable\":false,\"status\":\"Received\",\"createdAt\":0,\"expirationAt\":0}"
-                ),
+            ),
             callGasLimit: 300000,
             verificationGasLimit: 300000,
             preVerificationGas: 300000,
@@ -566,7 +557,7 @@ contract SimpleAccounPolygonTest is Test {
         console2.log("nonce:", userOp.nonce);
 
         // 2. SDK signs the intent userOp
-        userOp.signature = generateSignature(userOp, block.chainid);
+        userOp.signature = generateSignature(userOp, simpleAccount, block.chainid, ownerPrivateKey);
         console2.log("signature:");
         console2.logBytes(userOp.signature);
 
@@ -586,9 +577,9 @@ contract SimpleAccounPolygonTest is Test {
         console2.log("intent signature:");
         console2.logBytes(userOp.signature);
 
-        // 6. Bundler submits solved userOp on-chain 
+        // 6. Bundler submits solved userOp on-chain
 
-        verifySignature(userOp);
+        verifySignature(userOp, simpleAccount);
 
         UserOperation[] memory userOps = new UserOperation[](1);
         userOps[0] = userOp;
@@ -626,7 +617,7 @@ contract SimpleAccounPolygonTest is Test {
             initCode: bytes(hex""),
             callData: bytes(
                 '{"chainId":80001, "sender":"0x0A7199a96fdf0252E09F76545c1eF2be3692F46b","kind":"swap","hash":"","sellToken":"TokenA","buyToken":"TokenB","sellAmount":10,"buyAmount":5,"partiallyFillable":false,"status":"Received","createdAt":0,"expirationAt":0}'
-                ),
+            ),
             callGasLimit: 0x88b8,
             verificationGasLimit: 0x11170,
             preVerificationGas: 0x5208,
@@ -635,7 +626,7 @@ contract SimpleAccounPolygonTest is Test {
             paymasterAndData: bytes(hex""),
             signature: bytes(
                 hex"8a2e15b3a0b4964c99e8929d26b081c94b0b284f9a67052019450911a9ee1dd964c862655d9ffc0b97350f5987a6793085adc8cc2297dc97e4b21666539148171b"
-                )
+            )
         });
 
         bytes32 newUserOpHash = simpleAccount.getUserOpHash(userOp, block.chainid);
@@ -644,45 +635,12 @@ contract SimpleAccounPolygonTest is Test {
         assertEq(newUserOpHash, expectedHash, "Hash values should match for conventional userOps");
     }
 
-    function testSliceNormal() public {
-        bytes memory data = bytes("Intents Rock");
-        bytes memory result = simpleAccount.slice(data, 0, 7);
-        assertEq(string(result), "Intents", "Slicing did not return the correct result");
-    }
-
-    function testSliceOutOfBounds() public {
-        bytes memory data = bytes("Intents Are Nice.");
-        try simpleAccount.slice(data, 0, 50) {
-            fail("slice should have thrown for end out of bounds");
-        } catch (bytes memory) {
-            // expected
-        }
-    }
-
-    function testSliceStartOutOfBounds() public {
-        bytes memory data = bytes("Intents Are Nice.");
-        try simpleAccount.slice(data, 50, 60) {
-            fail("slice should have thrown for start out of bounds");
-        } catch (bytes memory) {
-            // expected
-        }
-    }
-
-    function testSliceEndLessThanStart() public {
-        bytes memory data = bytes("Intents Are In!");
-        try simpleAccount.slice(data, 5, 2) {
-            fail("slice should have thrown for end less than start");
-        } catch (bytes memory) {
-            // expected
-        }
-    }
-
     function testValidateNewSimpleAccountAddress() public {
         // Define a unique salt for each account
         uint256 saltValue = uint256(keccak256(abi.encodePacked("unique salt")));
 
         // Create an account using the factory
-        SimpleAccount simpleAccountSalted = factory.createAccount(ownerAddress, saltValue);
+        IntentSimpleAccount simpleAccountSalted = factory.createAccount(ownerAddress, saltValue);
 
         // Validate the account address
         console2.log("SimpleAccount address with salt:", address(simpleAccountSalted));
@@ -699,34 +657,6 @@ contract SimpleAccounPolygonTest is Test {
         assertEq(address(simpleAccountSalted), expectedAddress, "Account address does not match expected address");
     }
 
-    function logBytes32Value(string memory prompt, bytes32 value) public pure {
-        // Convert bytes32 to string
-        string memory valueAsString = toHexString(abi.encodePacked(value));
-
-        // Log the value
-        console2.log(prompt, valueAsString);
-    }
-
-    function toHexString(bytes memory b) internal pure returns (string memory) {
-        bytes memory hexString = new bytes(2 * b.length + 2);
-        hexString[0] = "0";
-        hexString[1] = "x";
-
-        for (uint256 i = 0; i < b.length; i++) {
-            uint256 value = uint8(b[i]);
-            uint256 hi = value / 16;
-            uint256 lo = value - (hi * 16);
-
-            bytes1 hiHexChar = bytes1(uint8(hi < 10 ? hi + 48 : hi + 87));
-            bytes1 loHexChar = bytes1(uint8(lo < 10 ? lo + 48 : lo + 87));
-
-            hexString[2 * i + 2] = hiHexChar;
-            hexString[2 * i + 3] = loHexChar;
-        }
-
-        return string(hexString);
-    }
-
     // Original function from the SimpleAccount contract
     function getUserOpHash(UserOperation calldata userOp, uint256 chainID) public pure returns (bytes32) {
         return keccak256(abi.encode(userOp.hash(), ENTRYPOINT_V06, chainID));
@@ -737,11 +667,17 @@ contract SimpleAccounPolygonTest is Test {
         return this.getUserOpHash(userOp, chainID);
     }
 
-    function generateSignature(UserOperation memory userOp, uint256 chainID) internal view returns (bytes memory) {
-        bytes32 userOpHash = simpleAccount.getUserOpHash(userOp, chainID);
+    function generateSignature(
+        UserOperation memory userOp,
+        IntentSimpleAccount s_account,
+        uint256 chainID,
+        uint256 privateKey
+    ) internal view returns (bytes memory) {
+        bytes32 userOpHash = s_account.getUserOpHash(userOp, chainID);
 
         // Sign the hash with the owner's private key
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(ownerPrivateKey, userOpHash.toEthSignedMessageHash());
+        bytes32 ethHash = userOpHash.toEthSignedMessageHash();
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, ethHash);
 
         // Combine (v, r, s) into a signature
         bytes memory signature = abi.encodePacked(r, s, v);
@@ -749,19 +685,11 @@ contract SimpleAccounPolygonTest is Test {
         return signature;
     }
 
-    function verifySignature(UserOperation memory userOp) internal returns (uint256) {
+    function verifySignature(UserOperation memory userOp, IntentSimpleAccount s_account) internal returns (uint256) {
         // not supplying the userOpHash as _validateSignature calls for the Intent version
-        uint256 result = simpleAccount.ValidateSignature(userOp, bytes32(0));
+        uint256 result = s_account.validateSignature(userOp, bytes32(0));
         assertEq(result, 0, "Signature is not valid for the userOp");
 
         return result;
-    }
-
-    function _weiToEther(uint256 weiAmount) private pure returns (uint256) {
-        return weiAmount / 1 ether;
-    }
-
-    function _weiToGwei(uint256 weiAmount) private pure returns (uint256) {
-        return weiAmount / 1 gwei;
     }
 }

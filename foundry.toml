@@ -15,7 +15,7 @@ src = "src"
 out = "out"
 libs = ["lib"]
 cbor_metadata = true
-evmVersion = "shanghai"
+evmVersion = "cancun"
 build_info = true
 extra_output = ["storageLayout"]
 
