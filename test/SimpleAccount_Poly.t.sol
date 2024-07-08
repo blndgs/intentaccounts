@@ -12,6 +12,7 @@ import "./TestSimpleAccountHelper.sol";
 
 contract SimpleAccounPolygonTest is Test {
     using Strings for bytes32;
+    using ECDSA for bytes32;
     using UserOperationLib for UserOperation;
     using TestSimpleAccountHelper for UserOperation;
 
@@ -19,8 +20,6 @@ contract SimpleAccounPolygonTest is Test {
     uint256 public constant MUMBAI_CHAIN_ID = 80001;
     uint256 public constant POLYGON_CHAIN_ID = 137;
     uint256 mumbaiFork;
-
-    using ECDSA for bytes32;
 
     IntentSimpleAccountFactory factory;
     IntentSimpleAccount simpleAccount;
@@ -142,7 +141,7 @@ contract SimpleAccounPolygonTest is Test {
         });
 
         // Generate the signature
-        bytes memory generatedSignature = generateSignature(userOp, block.chainid);
+        bytes memory generatedSignature = generateSignature(userOp, simpleAccount, block.chainid, ownerPrivateKey);
 
         // Update the user operation with the generated signature
         userOp.signature = generatedSignature;
@@ -173,9 +172,9 @@ contract SimpleAccounPolygonTest is Test {
         userOp.nonce = simpleAccount.getNonce();
 
         // Generate the signature
-        userOp.signature = generateSignature(userOp, block.chainid);
+        userOp.signature = generateSignature(userOp, simpleAccount, block.chainid, ownerPrivateKey);
 
-        verifySignature(userOp);
+        verifySignature(userOp, simpleAccount);
     }
 
     function testValidateMumbaiLongCallData() public {
@@ -201,9 +200,9 @@ contract SimpleAccounPolygonTest is Test {
         userOp.nonce = simpleAccount.getNonce();
 
         // Generate the signature
-        userOp.signature = generateSignature(userOp, block.chainid);
+        userOp.signature = generateSignature(userOp, simpleAccount, block.chainid, ownerPrivateKey);
 
-        verifySignature(userOp);
+        verifySignature(userOp, simpleAccount);
     }
 
     function testValidate_UnsolvedIntentOp() public {
@@ -229,9 +228,9 @@ contract SimpleAccounPolygonTest is Test {
         userOp.nonce = simpleAccount.getNonce();
 
         // Generate the signature
-        userOp.signature = generateSignature(userOp, block.chainid);
+        userOp.signature = generateSignature(userOp, simpleAccount, block.chainid, ownerPrivateKey);
 
-        verifySignature(userOp);
+        verifySignature(userOp, simpleAccount);
     }
 
     function testValidate_UnsolvedIntent0GasOp() public {
@@ -257,9 +256,9 @@ contract SimpleAccounPolygonTest is Test {
         userOp.nonce = simpleAccount.getNonce();
 
         // Generate the signature
-        userOp.signature = generateSignature(userOp, block.chainid);
+        userOp.signature = generateSignature(userOp, simpleAccount, block.chainid, ownerPrivateKey);
 
-        verifySignature(userOp);
+        verifySignature(userOp, simpleAccount);
     }
 
     function testValidate_SolvedNilIntentOp() public {
@@ -283,9 +282,9 @@ contract SimpleAccounPolygonTest is Test {
         userOp.nonce = simpleAccount.getNonce();
 
         // Generate the signature
-        userOp.signature = generateSignature(userOp, block.chainid);
+        userOp.signature = generateSignature(userOp, simpleAccount, block.chainid, ownerPrivateKey);
 
-        verifySignature(userOp);
+        verifySignature(userOp, simpleAccount);
     }
 
     function testValidate_SolvedIntentOpNilSolution() public {
@@ -311,9 +310,9 @@ contract SimpleAccounPolygonTest is Test {
         userOp.nonce = simpleAccount.getNonce();
 
         // Generate the signature
-        userOp.signature = generateSignature(userOp, block.chainid);
+        userOp.signature = generateSignature(userOp, simpleAccount, block.chainid, ownerPrivateKey);
 
-        verifySignature(userOp);
+        verifySignature(userOp, simpleAccount);
     }
 
     function testValidate_SolvedIntentOp() public {
@@ -339,9 +338,9 @@ contract SimpleAccounPolygonTest is Test {
         userOp.nonce = simpleAccount.getNonce();
 
         // Generate the signature
-        userOp.signature = generateSignature(userOp, block.chainid);
+        userOp.signature = generateSignature(userOp, simpleAccount, block.chainid, ownerPrivateKey);
 
-        verifySignature(userOp);
+        verifySignature(userOp, simpleAccount);
     }
 
     function testExecute_EmptyOp() public {
@@ -363,7 +362,7 @@ contract SimpleAccounPolygonTest is Test {
         userOp.nonce = simpleAccount.getNonce();
 
         // Generate the signature
-        userOp.signature = generateSignature(userOp, block.chainid);
+        userOp.signature = generateSignature(userOp, simpleAccount, block.chainid, ownerPrivateKey);
 
         UserOperation[] memory userOps = new UserOperation[](1);
         userOps[0] = userOp;
@@ -401,7 +400,7 @@ contract SimpleAccounPolygonTest is Test {
         userOp.nonce = simpleAccount.getNonce();
 
         // Generate the signature
-        userOp.signature = generateSignature(userOp, block.chainid);
+        userOp.signature = generateSignature(userOp, simpleAccount, block.chainid, ownerPrivateKey);
 
         UserOperation[] memory userOps = new UserOperation[](1);
         userOps[0] = userOp;
@@ -432,7 +431,7 @@ contract SimpleAccounPolygonTest is Test {
         userOp.nonce = simpleAccount.getNonce();
 
         // Generate the signature
-        userOp.signature = generateSignature(userOp, block.chainid);
+        userOp.signature = generateSignature(userOp, simpleAccount, block.chainid, ownerPrivateKey);
 
         vm.stopPrank();
         vm.prank(ENTRYPOINT_V06);
@@ -469,7 +468,7 @@ contract SimpleAccounPolygonTest is Test {
         userOp.nonce = simpleAccount.getNonce();
 
         // Generate the signature
-        userOp.signature = generateSignature(userOp, block.chainid);
+        userOp.signature = generateSignature(userOp, simpleAccount, block.chainid, ownerPrivateKey);
 
         userOp.signature = bytes(
             abi.encodePacked(
@@ -482,7 +481,7 @@ contract SimpleAccounPolygonTest is Test {
             hex"b61d27f60000000000000000000000009d34f236bddf1b9de014312599d9c9ec8af1bc48000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000600000000000000000000000000000000000000000000000000000000000000044095ea7b3000000000000000000000000d7b21a844f3a41c91a73d3f87b83fa93bb6cb518000000000000000000000000000000000000000000000000000000000000037800000000000000000000000000000000000000000000000000000000"
         );
 
-        verifySignature(userOp);
+        verifySignature(userOp, simpleAccount);
 
         UserOperation[] memory userOps = new UserOperation[](1);
         userOps[0] = userOp;
@@ -513,7 +512,7 @@ contract SimpleAccounPolygonTest is Test {
         console2.log("nonce:", userOp.nonce);
 
         // 2. SDK signs the intent userOp
-        userOp.signature = generateSignature(userOp, block.chainid);
+        userOp.signature = generateSignature(userOp, simpleAccount, block.chainid, ownerPrivateKey);
         console2.log("signature:");
         console2.logBytes(userOp.signature);
 
@@ -535,7 +534,7 @@ contract SimpleAccounPolygonTest is Test {
 
         // 6. Bundler submits solved userOp on-chain
 
-        verifySignature(userOp);
+        verifySignature(userOp, simpleAccount);
 
         UserOperation[] memory userOps = new UserOperation[](1);
         userOps[0] = userOp;
@@ -568,7 +567,7 @@ contract SimpleAccounPolygonTest is Test {
         console2.log("nonce:", userOp.nonce);
 
         // 2. SDK signs the intent userOp
-        userOp.signature = generateSignature(userOp, block.chainid);
+        userOp.signature = generateSignature(userOp, simpleAccount, block.chainid, ownerPrivateKey);
         console2.log("signature:");
         console2.logBytes(userOp.signature);
 
@@ -590,7 +589,7 @@ contract SimpleAccounPolygonTest is Test {
 
         // 6. Bundler submits solved userOp on-chain
 
-        verifySignature(userOp);
+        verifySignature(userOp, simpleAccount);
 
         UserOperation[] memory userOps = new UserOperation[](1);
         userOps[0] = userOp;
@@ -678,11 +677,12 @@ contract SimpleAccounPolygonTest is Test {
         return this.getUserOpHash(userOp, chainID);
     }
 
-    function generateSignature(UserOperation memory userOp, uint256 chainID) internal view returns (bytes memory) {
-        bytes32 userOpHash = simpleAccount.getUserOpHash(userOp, chainID);
+    function generateSignature(UserOperation memory userOp, IntentSimpleAccount s_account, uint256 chainID, uint256 privateKey) internal view returns (bytes memory) {
+        bytes32 userOpHash = s_account.getUserOpHash(userOp, chainID);
 
         // Sign the hash with the owner's private key
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(ownerPrivateKey, userOpHash.toEthSignedMessageHash());
+        bytes32 ethHash = userOpHash.toEthSignedMessageHash();
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, ethHash);
 
         // Combine (v, r, s) into a signature
         bytes memory signature = abi.encodePacked(r, s, v);
@@ -690,9 +690,9 @@ contract SimpleAccounPolygonTest is Test {
         return signature;
     }
 
-    function verifySignature(UserOperation memory userOp) internal returns (uint256) {
+    function verifySignature(UserOperation memory userOp, IntentSimpleAccount s_account) internal returns (uint256) {
         // not supplying the userOpHash as _validateSignature calls for the Intent version
-        uint256 result = simpleAccount.validateSignature(userOp, bytes32(0));
+        uint256 result = s_account.validateSignature(userOp, bytes32(0));
         assertEq(result, 0, "Signature is not valid for the userOp");
 
         return result;
