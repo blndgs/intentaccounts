@@ -7,7 +7,6 @@ import {ECDSA} from "solady/utils/ECDSA.sol";
 import {IKernelValidator} from "../lib/kernel/src/interfaces/IKernelValidator.sol";
 import {ValidationData} from "../lib/kernel/src/common/Types.sol";
 import {SIG_VALIDATION_FAILED} from "../lib/kernel/src/common/Constants.sol";
-import "forge-std/Console2.sol";
 
 address constant ENTRYPOINT_V06 = 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789;
 
