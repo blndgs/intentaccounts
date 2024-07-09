@@ -355,4 +355,221 @@ contract SimpleAccounEthereumTest is Test {
         assertEq(balanceBef, balanceAfter, "Account Balance should not have increased after execution");
         assertEq(depositAfter, 0, "Entrypoint account deposits should be zero");
     }
+
+/**
+ * Gas Cost Comparison Report
+ *
+ * This report compares the gas costs in the following 3 tests of three execution APIs:
+ * 1. execute
+ * 2. executeBatch
+ * 3. execValueBatch
+ *
+ * Assumptions:
+ * - Gas price: 30 gwei
+ * - ETH price: $3,051.34 (9-Jul-2024)
+ *
+ * Results:
+ * 1. execute:
+ *    - Gas used: 235,974
+ *    - Estimated Ethereum USD cost: $21.61
+ *
+ * 2. executeBatch:
+ *    - Gas used: 236,018
+ *    - Cost in USD: $21.62
+ *    - Difference from execute: +44 gas (+$0.01)
+ *    - Percentage increase: 0.019%
+ *
+ * 3. execValueBatch:
+ *    - Gas used: 239,214
+ *    - Cost in USD: $21.91
+ *    - Difference from execute: +3,240 gas (+$0.30)
+ *    - Percentage increase: 1.37%
+ *
+ * Analysis:
+ * - The most flexible API, execValueBatch, is the most expensive, using 3,240 more gas than execute.
+ * - The Ethereum USD estimated cost difference between execValueBatch and execute is approximately
+ * - $0.30 per transaction.
+ * - executeBatch is only marginally more expensive than execute (+$0.01).
+ *
+ * Recommendation:
+ * Given the minimal cost difference, using only execValueBatch in the Kernel wallet
+ * for all operations could be beneficial:
+ * 1. It simplifies the API, reducing complexity for users (separate execution API for Intents).
+ * 2. It provides maximum flexibility for all types of transactions.
+ * 3. The additional cost ($0.30 per transaction) is likely negligible for most use cases.
+ * 4. Removing execute and executeBatch could slightly reduce contract size and deployment costs.
+ *
+ * Unless the application is extremely gas-sensitive or processes an enormous volume of transactions,
+ * the benefits of a simplified and more flexible API likely outweigh the small increase in gas costs.
+ */
+    function testLidoDeposit_ExecValueBatch() public {
+        uint256 balanceEthBef = address(_simpleAccount).balance;
+
+        // 1. SDK setups the unsigned Intent UserOp
+        UserOperation memory userOp = UserOperation({
+            sender: address(_simpleAccount),
+            nonce: 0,
+            initCode: bytes(hex""),
+            callData: bytes(
+            "{\"from\":{\"type\":\"TOKEN\",\"address\":\"0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE\",\"amount\":\"0.8\",\"chainId\":\"1\"},\"to\":{\"type\":\"TOKEN\",\"address\":\"0xdac17f958d2ee523a2206206994597c13d831ec7\",\"chainId\":\"1\"}}"
+            ),
+            callGasLimit: 800000,
+            verificationGasLimit: 500000,
+            preVerificationGas: 500000,
+            maxFeePerGas: 0, // Sponsored by the Bundler
+            maxPriorityFeePerGas: 0,
+            paymasterAndData: bytes(hex""),
+            signature: bytes(hex"")
+        });
+
+        userOp.nonce = _simpleAccount.getNonce();
+
+        // 2. SDK signs the intent userOp
+        userOp.signature = generateSignature(userOp, block.chainid);
+
+        // 3. SDK submits to Bundler...
+        // 4. Bundler submits userOp to the Solver
+
+        // 5. Solver solves Intent userOp
+        userOp.signature = bytes(
+            abi.encodePacked(
+                userOp.signature, // 65 bytes or 130 hex characters. ECDSA signature
+                userOp.callData // Intent JSON
+            )
+        );
+        userOp.callData = bytes(
+            hex"d6f6b170000000000000000000000000000000000000000000000000000000000000006000000000000000000000000000000000000000000000000000000000000000a000000000000000000000000000000000000000000000000000000000000000e0000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000001000000000000000000000000ae7ab96520de3a18e5e111b5eaab095312d7fe84000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000024a1903eab000000000000000000000000ff6f893437e88040ffb70ce6aeff4ccbf8dc19a400000000000000000000000000000000000000000000000000000000"
+        );
+
+        // 6. Bundler submits solved userOp on-chain
+        verifySignature(userOp);
+
+        UserOperation[] memory userOps = new UserOperation[](1);
+        userOps[0] = userOp;
+
+        // entryPoint emits events
+        vm.expectEmit(false, true, true, false, 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789);
+        emit IEntryPoint.UserOperationEvent(
+            0, /* ignore userOp hash */ address(_simpleAccount), address(0), /* paymaster */ userOp.nonce, true, 0, 0
+        );
+        // 7. entryPoint executes the intent userOp
+        _entryPoint.handleOps(userOps, payable(_ownerAddress));
+
+        uint256 balanceEthAfter = address(_simpleAccount).balance;
+        assertEq(balanceEthAfter, balanceEthBef-1, "ETH Balance should have less the Lido deposited value");
+    }
+
+    function testLidoDeposit_PlainExecute() public {
+        uint256 balanceEthBef = address(_simpleAccount).balance;
+
+        // 1. SDK setups the unsigned Intent UserOp
+        UserOperation memory userOp = UserOperation({
+            sender: address(_simpleAccount),
+            nonce: 0,
+            initCode: bytes(hex""),
+            callData: bytes(
+            "{\"from\":{\"type\":\"TOKEN\",\"address\":\"0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE\",\"amount\":\"0.8\",\"chainId\":\"1\"},\"to\":{\"type\":\"TOKEN\",\"address\":\"0xdac17f958d2ee523a2206206994597c13d831ec7\",\"chainId\":\"1\"}}"
+            ),
+            callGasLimit: 800000,
+            verificationGasLimit: 500000,
+            preVerificationGas: 500000,
+            maxFeePerGas: 0, // Sponsored by the Bundler
+            maxPriorityFeePerGas: 0,
+            paymasterAndData: bytes(hex""),
+            signature: bytes(hex"")
+        });
+
+        userOp.nonce = _simpleAccount.getNonce();
+
+        // 2. SDK signs the intent userOp
+        userOp.signature = generateSignature(userOp, block.chainid);
+
+        // 3. SDK submits to Bundler...
+        // 4. Bundler submits userOp to the Solver
+
+        // 5. Solver solves Intent userOp
+        userOp.signature = bytes(
+            abi.encodePacked(
+                userOp.signature, // 65 bytes or 130 hex characters. ECDSA signature
+                userOp.callData // Intent JSON
+            )
+        );
+        userOp.callData = bytes(
+            hex"b61d27f6000000000000000000000000ae7ab96520de3a18e5e111b5eaab095312d7fe84000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000600000000000000000000000000000000000000000000000000000000000000024a1903eab000000000000000000000000ff6f893437e88040ffb70ce6aeff4ccbf8dc19a400000000000000000000000000000000000000000000000000000000"
+        );
+
+        // 6. Bundler submits solved userOp on-chain
+        verifySignature(userOp);
+
+        UserOperation[] memory userOps = new UserOperation[](1);
+        userOps[0] = userOp;
+
+        // entryPoint emits events
+        vm.expectEmit(false, true, true, false, 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789);
+        emit IEntryPoint.UserOperationEvent(
+            0, /* ignore userOp hash */ address(_simpleAccount), address(0), /* paymaster */ userOp.nonce, true, 0, 0
+        );
+        // 7. entryPoint executes the intent userOp
+        _entryPoint.handleOps(userOps, payable(_ownerAddress));
+
+        uint256 balanceEthAfter = address(_simpleAccount).balance;
+        assertEq(balanceEthAfter, balanceEthBef-1, "ETH Balance should have less the Lido deposited value");
+    }
+
+    function testLidoDeposit_ExecuteBatch() public {
+        uint256 balanceEthBef = address(_simpleAccount).balance;
+
+        // 1. SDK setups the unsigned Intent UserOp
+        UserOperation memory userOp = UserOperation({
+            sender: address(_simpleAccount),
+            nonce: 0,
+            initCode: bytes(hex""),
+            callData: bytes(
+            "{\"from\":{\"type\":\"TOKEN\",\"address\":\"0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE\",\"amount\":\"0.8\",\"chainId\":\"1\"},\"to\":{\"type\":\"TOKEN\",\"address\":\"0xdac17f958d2ee523a2206206994597c13d831ec7\",\"chainId\":\"1\"}}"
+            ),
+            callGasLimit: 800000,
+            verificationGasLimit: 500000,
+            preVerificationGas: 500000,
+            maxFeePerGas: 0, // Sponsored by the Bundler
+            maxPriorityFeePerGas: 0,
+            paymasterAndData: bytes(hex""),
+            signature: bytes(hex"")
+        });
+
+        userOp.nonce = _simpleAccount.getNonce();
+
+        // 2. SDK signs the intent userOp
+        userOp.signature = generateSignature(userOp, block.chainid);
+
+        // 3. SDK submits to Bundler...
+        // 4. Bundler submits userOp to the Solver
+
+        // 5. Solver solves Intent userOp
+        userOp.signature = bytes(
+            abi.encodePacked(
+                userOp.signature, // 65 bytes or 130 hex characters. ECDSA signature
+                userOp.callData // Intent JSON
+            )
+        );
+        userOp.callData = bytes(
+            hex"b61d27f6000000000000000000000000ae7ab96520de3a18e5e111b5eaab095312d7fe84000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000600000000000000000000000000000000000000000000000000000000000000024a1903eab000000000000000000000000ff6f893437e88040ffb70ce6aeff4ccbf8dc19a400000000000000000000000000000000000000000000000000000000"
+        );
+
+        // 6. Bundler submits solved userOp on-chain
+        verifySignature(userOp);
+
+        UserOperation[] memory userOps = new UserOperation[](1);
+        userOps[0] = userOp;
+
+        // entryPoint emits events
+        vm.expectEmit(false, true, true, false, 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789);
+        emit IEntryPoint.UserOperationEvent(
+            0, /* ignore userOp hash */ address(_simpleAccount), address(0), /* paymaster */ userOp.nonce, true, 0, 0
+        );
+        // 7. entryPoint executes the intent userOp
+        _entryPoint.handleOps(userOps, payable(_ownerAddress));
+
+        uint256 balanceEthAfter = address(_simpleAccount).balance;
+        assertEq(balanceEthAfter, balanceEthBef-1, "ETH Balance should have less the Lido deposited value");
+    }
 }
