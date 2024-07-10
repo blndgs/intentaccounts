@@ -140,24 +140,6 @@ contract KernelIntentPluginsTest is Test {
         );
 
         _account.setExecution(
-            KernelIntentExecutor.execute.selector,
-            executorAddress,
-            intentValidator,
-            ValidUntil.wrap(0),
-            ValidAfter.wrap(0),
-            enableData
-        );
-
-        _account.setExecution(
-            KernelIntentExecutor.executeBatch.selector,
-            executorAddress,
-            intentValidator,
-            ValidUntil.wrap(0),
-            ValidAfter.wrap(0),
-            enableData
-        );
-
-        _account.setExecution(
             KernelIntentExecutor.execValueBatch.selector,
             executorAddress,
             intentValidator,
@@ -205,12 +187,7 @@ contract KernelIntentPluginsTest is Test {
         vm.expectEmit(true, true, true, true);
         emit FooContract.DidSomething(0);
 
-        (success,) = address(_account).call(
-            abi.encodeWithSelector(KernelIntentExecutor.execute.selector, targetContractAddress, 0, data)
-        );
-        assertTrue(success, "execute failed");
-
-        // Test executeBatch
+        // Test execValueBatch
         address[] memory targets = new address[](2);
         targets[0] = targetContractAddress;
         targets[1] = targetContractAddress;
@@ -223,8 +200,8 @@ contract KernelIntentPluginsTest is Test {
         emit FooContract.DidSomethingElse(0);
 
         (success,) =
-            address(_account).call(abi.encodeWithSelector(KernelIntentExecutor.executeBatch.selector, targets, datas));
-        assertTrue(success, "executeBatch failed");
+            address(_account).call(abi.encodeWithSelector(KernelIntentExecutor.execValueBatch.selector, targets, datas));
+        assertTrue(success, "execValueBatch failed");
 
         // Test execValueBatch
         uint256[] memory values = new uint256[](2);
@@ -429,8 +406,8 @@ contract KernelIntentPluginsTest is Test {
         // create account with the default validator
         _createAccount();
 
-        // executeBatch is pointing to default validator and executor (no execution detail)
-        ExecutionDetail memory detail = IKernel(address(_account)).getExecution(intentExecutor.executeBatch.selector);
+        // execValueBatch is pointing to default validator and executor (no execution detail)
+        ExecutionDetail memory detail = IKernel(address(_account)).getExecution(intentExecutor.execValueBatch.selector);
         assertEq(detail.executor, address(0x0));
         assertEq(address(detail.validator), address(0x0));
 
@@ -440,7 +417,7 @@ contract KernelIntentPluginsTest is Test {
             address(_account),
             abi.encodeWithSelector(
                 selector,
-                KernelIntentExecutor.executeBatch.selector,
+                KernelIntentExecutor.execValueBatch.selector,
                 address(intentExecutor),
                 address(intentValidator),
                 ValidUntil.wrap(0),
@@ -461,8 +438,8 @@ contract KernelIntentPluginsTest is Test {
 
         executeUserOp(userOp, payable(_ownerAddress));
 
-        // // executeBatch is now pointing to Intent validator and executor
-        detail = IKernel(address(_account)).getExecution(intentExecutor.executeBatch.selector);
+        // execValueBatch is now pointing to Intent validator and executor
+        detail = IKernel(address(_account)).getExecution(intentExecutor.execValueBatch.selector);
         assertEq(detail.executor, address(intentExecutor));
         assertEq(address(detail.validator), address(intentValidator));
 
