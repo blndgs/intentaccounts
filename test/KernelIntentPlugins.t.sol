@@ -174,9 +174,6 @@ contract KernelIntentPluginsTest is Test {
         (bool success,) = address(_account).call(abi.encodeWithSelector(KernelIntentExecutor.doNothing.selector));
         assertTrue(success, "doNothing failed");
 
-        // Test execute()
-        bytes memory data = abi.encodeWithSignature("doSomething()");
-
         // Expect the DidSomething event to be emitted
         /*
          * true: event to be emitted.
@@ -188,38 +185,39 @@ contract KernelIntentPluginsTest is Test {
         emit FooContract.DidSomething(0);
 
         // Test execValueBatch
+        uint256[] memory values = new uint256[](2);
+        values[0] = 0 ether;
+        values[1] = 0 ether;
         address[] memory targets = new address[](2);
         targets[0] = targetContractAddress;
         targets[1] = targetContractAddress;
-        bytes[] memory datas = new bytes[](2);
-        datas[0] = abi.encodeWithSignature("doSomething()");
-        datas[1] = abi.encodeWithSignature("doSomethingElse()");
+        bytes[] memory functions = new bytes[](2);
+        functions[0] = abi.encodeWithSignature("doSomething()");
+        functions[1] = abi.encodeWithSignature("doSomethingElse()");
 
         // Expect the DidSomething and DidSomethingElse events to be emitted
-        emit FooContract.DidSomething(0);
-        emit FooContract.DidSomethingElse(0);
+        emit FooContract.DidSomething(values[0]);
+        emit FooContract.DidSomethingElse(values[0]);
 
         (success,) =
-            address(_account).call(abi.encodeWithSelector(KernelIntentExecutor.execValueBatch.selector, targets, datas));
+            address(_account).call(abi.encodeWithSelector(KernelIntentExecutor.execValueBatch.selector, values, targets, functions));
         assertTrue(success, "execValueBatch failed");
 
         // Test execValueBatch
-        uint256[] memory values = new uint256[](2);
         values[0] = 1 ether;
         values[1] = 2 ether;
         targets = new address[](2);
         targets[0] = targetContractAddress;
         targets[1] = targetContractAddress;
-        datas = new bytes[](2);
-        datas[0] = abi.encodeWithSignature("doSomething()");
-        datas[1] = abi.encodeWithSignature("doSomethingElse()");
+        functions[0] = abi.encodeWithSignature("doSomething()");
+        functions[1] = abi.encodeWithSignature("doSomethingElse()");
 
         // Expect the DidSomething and DidSomethingElse events to be emitted
         emit FooContract.DidSomething(values[0]);
         emit FooContract.DidSomethingElse(values[1]);
 
         (success,) = address(_account).call(
-            abi.encodeWithSelector(KernelIntentExecutor.execValueBatch.selector, values, targets, datas)
+            abi.encodeWithSelector(KernelIntentExecutor.execValueBatch.selector, values, targets, functions)
         );
         assertTrue(success, "execValueBatch failed");
     }
