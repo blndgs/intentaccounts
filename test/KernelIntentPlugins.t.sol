@@ -199,8 +199,9 @@ contract KernelIntentPluginsTest is Test {
         emit FooContract.DidSomething(values[0]);
         emit FooContract.DidSomethingElse(values[0]);
 
-        (success,) =
-            address(_account).call(abi.encodeWithSelector(KernelIntentExecutor.execValueBatch.selector, values, targets, functions));
+        (success,) = address(_account).call(
+            abi.encodeWithSelector(KernelIntentExecutor.execValueBatch.selector, values, targets, functions)
+        );
         assertTrue(success, "execValueBatch failed");
 
         // Test execValueBatch
@@ -400,11 +401,11 @@ contract KernelIntentPluginsTest is Test {
         executeUserOp(userOp, payable(_ownerAddress));
     }
 
-    function testExecIntentOpWithVanillaAccountChangeValidatorForExecBatch() public {
+    function testExecIntentOpVanillaAccountChangeValidatorForExecValueBatch() public {
         // create account with the default validator
         _createAccount();
 
-        // execValueBatch is pointing to default validator and executor (no execution detail)
+        // default validator is not aware of execValueBatch
         ExecutionDetail memory detail = IKernel(address(_account)).getExecution(intentExecutor.execValueBatch.selector);
         assertEq(detail.executor, address(0x0));
         assertEq(address(detail.validator), address(0x0));
@@ -434,28 +435,28 @@ contract KernelIntentPluginsTest is Test {
             _ownerPrivateKey
         );
 
-        executeUserOp(userOp, payable(_ownerAddress));
+        executeUserOp(userOp, payable(_ownerAddress), true);
 
         // execValueBatch is now pointing to Intent validator and executor
         detail = IKernel(address(_account)).getExecution(intentExecutor.execValueBatch.selector);
-        assertEq(detail.executor, address(intentExecutor));
-        assertEq(address(detail.validator), address(intentValidator));
+        assertEq(detail.executor, address(intentExecutor), "Executor should be intentExecutor");
+        assertEq(address(detail.validator), address(intentValidator), "Validator should be intentValidator");
 
         // 2nd Intent userOp with the changed validator set to Intent
         userOp = createUserOp(
             address(_account),
             bytes(
-                "{\"sender\":\"0xff6F893437e88040ffb70Ce6Aeff4CcbF8dc19A4\",\"from\":{\"type\":\"TOKEN\",\"address\":\"0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE\",\"amount\":\"0.8\",\"chainId\":\"1\"},\"to\":{\"type\":\"TOKEN\",\"address\":\"0xdac17f958d2ee523a2206206994597c13d831ec7\",\"chainId\":\"1\"}}"
+                "{\"from\":{\"type\":\"TOKEN\",\"address\":\"0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE\",\"amount\":\"0.8\",\"chainId\":\"1\"},\"to\":{\"type\":\"TOKEN\",\"address\":\"0xdac17f958d2ee523a2206206994597c13d831ec7\",\"chainId\":\"1\"}}"
             )
         );
 
-        // Set signature to plugin mode to call execBatch
+        // Set signature to plugin mode to call execValueBatch
         uint256 sigPrefix = VALIDATION_PLUGIN_1;
         setKernelSignature(userOp, _ownerPrivateKey, VALIDATION_PLUGIN_1);
 
         solveUserOp(
             userOp,
-            hex"18dfb3c7000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000000a00000000000000000000000000000000000000000000000000000000000000002000000000000000000000000a0b86991c6218b36c1d19d4a2e9eb0ce3606eb48000000000000000000000000def1c0ded9bec7f1a1670819833240f027b25eff0000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000000c00000000000000000000000000000000000000000000000000000000000000044095ea7b3000000000000000000000000def1c0ded9bec7f1a1670819833240f027b25eff00000000000000000000000000000000000000000000000000000000000f4240000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000128d9627aa4000000000000000000000000000000000000000000000000000000000000008000000000000000000000000000000000000000000000000000000000000f4240000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002000000000000000000000000a0b86991c6218b36c1d19d4a2e9eb0ce3606eb48000000000000000000000000dac17f958d2ee523a2206206994597c13d831ec7869584cd00000000000000000000000010000000000000000000000000000000000000110000000000000000000000000000000015b9ca29df2cd4b929d481fcb4ab9642000000000000000000000000000000000000000000000000"
+            hex"d6f6b170000000000000000000000000000000000000000000000000000000000000006000000000000000000000000000000000000000000000000000000000000000c000000000000000000000000000000000000000000000000000000000000001200000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002000000000000000000000000a0b86991c6218b36c1d19d4a2e9eb0ce3606eb48000000000000000000000000def1c0ded9bec7f1a1670819833240f027b25eff0000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000000c00000000000000000000000000000000000000000000000000000000000000044095ea7b3000000000000000000000000def1c0ded9bec7f1a1670819833240f027b25eff00000000000000000000000000000000000000000000000000000000000f4240000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000128d9627aa4000000000000000000000000000000000000000000000000000000000000008000000000000000000000000000000000000000000000000000000000000f4240000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002000000000000000000000000a0b86991c6218b36c1d19d4a2e9eb0ce3606eb48000000000000000000000000dac17f958d2ee523a2206206994597c13d831ec7869584cd00000000000000000000000010000000000000000000000000000000000000110000000000000000000000000000000015b9ca29df2cd4b929d481fcb4ab9642000000000000000000000000000000000000000000000000"
         );
 
         // simulate Kernel validation which removes the signature prefix
@@ -467,7 +468,7 @@ contract KernelIntentPluginsTest is Test {
         bytes memory prefixedSig = prefixSignature(userOp.signature, sigPrefix);
         userOp.signature = prefixedSig;
 
-        executeUserOp(userOp, payable(_ownerAddress));
+        executeUserOp(userOp, payable(_ownerAddress), true);
     }
 
     function testExecIntentOpWithVanillaAccountChangeDefaultValidator() public {
@@ -887,6 +888,23 @@ contract KernelIntentPluginsTest is Test {
     }
 
     function executeUserOp(UserOperation memory userOp, address payable beneficiary) public {
+        UserOperation[] memory userOps = new UserOperation[](1);
+        userOps[0] = userOp;
+
+        IEntryPoint(entryPoint).handleOps(userOps, beneficiary);
+    }
+
+    function executeUserOp(
+        UserOperation memory userOp,
+        address payable beneficiary,
+        bool expectedSuccess
+    ) public {
+        // Before executing the UserOp, set up the expectEmit
+        vm.expectEmit(false, true, true, false, 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789);
+        emit IEntryPoint.UserOperationEvent(
+            0, /* ignore userOp hash */ userOp.sender, address(0), /* paymaster */ userOp.nonce, expectedSuccess, 0, 0
+        );
+
         UserOperation[] memory userOps = new UserOperation[](1);
         userOps[0] = userOp;
 
