@@ -401,18 +401,68 @@ contract KernelIntentPluginsTest is Test {
         executeUserOp(userOp, payable(_ownerAddress));
     }
 
-    function testExecIntentOpVanillaAccountChangeValidatorForExecValueBatch() public {
-        // create account with the default validator
+    /**
+     * Comprehensive Kernel Account Validation and Execution Test
+     * This test demonstrates the advanced capabilities of the Kernel account,
+     *      showcasing its ability to support both traditional and intent-based transactions.
+     *
+     * The test illustrates the flexibility of the Kernel account in handling different
+     *         validation and execution modes, emphasizing the role of signature prefixes in
+     *         determining the transaction path.
+     *
+     * Key phases and aspects of the test:
+     *
+     * 1. Initial Setup and Configuration:
+     *    - Creates a Kernel account with the default validator.
+     *    - Configures the Intent validator and executor for the execValueBatch function.
+     *    - Verifies the successful setup of the new execution configuration.
+     *
+     * 2. Intent-based Transaction Execution:
+     *    - Creates and executes an intent-based UserOperation.
+     *    - Demonstrates successful execution using the Intent validator and executor.
+     *
+     * 3. Dual Validation Demonstration:
+     *    - Creates a conventional UserOperation from the intent-based one.
+     *    - Shows that the same operation fails with the default validator due to incompatible signatures.
+     *    - Highlights the importance of signature prefixes in routing operations to the correct validator.
+     *
+     * 4. Transformation and Conventional Execution:
+     *    - Transforms the intent UserOperation into a conventional one.
+     *    - Validates and executes the transformed operation using the default validator.
+     *    - Demonstrates the account's ability to handle both transaction types seamlessly.
+     *
+     * 5. Default Validator Change:
+     *    - Showcases the process of changing the default validator to the Intent validator.
+     *    - Executes an intent-based operation using the new default validator.
+     *
+     * 6. Execution Configuration Update:
+     *    - Demonstrates how to update the execution configuration for a specific function (doNothing).
+     *    - Verifies the successful update of the executor and validator for the function.
+     *
+     * The test uses various helper functions for UserOperation creation, signature generation,
+     *      and execution, providing a comprehensive workflow for Kernel account operations.
+     *
+     * This test emphasizes the following key points:
+     *         - The Kernel account's ability to support multiple validation schemes.
+     *         - The significance of signature prefixes in routing transactions.
+     *         - The flexibility to switch between traditional and intent-based transactions.
+     *         - The process of updating execution configurations and default validators.
+     *
+     * These capabilities allow for a highly adaptable account system that can evolve with
+     * new transaction types while maintaining compatibility with existing systems.
+     */
+    function testDualValidator() public {
+        // 1. create account with the default validator
         _createAccount();
 
-        // default validator is not aware of execValueBatch
+        // assert default validator is not aware of execValueBatch
         ExecutionDetail memory detail = IKernel(address(_account)).getExecution(intentExecutor.execValueBatch.selector);
         assertEq(detail.executor, address(0x0));
         assertEq(address(detail.validator), address(0x0));
 
         bytes4 selector = IKernel.setExecution.selector;
 
-        UserOperation memory userOp = createUserOp(
+        UserOperation memory intentUserOp = createUserOp(
             address(_account),
             abi.encodeWithSelector(
                 selector,
@@ -425,9 +475,12 @@ contract KernelIntentPluginsTest is Test {
             )
         );
 
-        userOp.signature = buildEnableSignature(
-            userOp,
-            selector, // selector must match the userOp calldata selector
+        // ********************************************************************************
+        // Create a signature that points to the Intent validator only for `execValueBatch`
+        // ********************************************************************************
+        intentUserOp.signature = buildEnableSignature(
+            intentUserOp,
+            selector, // selector must match the intentUserOp calldata selector
             0,
             0,
             intentValidator,
@@ -435,40 +488,88 @@ contract KernelIntentPluginsTest is Test {
             _ownerPrivateKey
         );
 
-        executeUserOp(userOp, payable(_ownerAddress), true);
+        executeUserOp(intentUserOp, payable(_ownerAddress), true);
 
-        // execValueBatch is now pointing to Intent validator and executor
+        // assert execValueBatch is now pointing to Intent validator and executor
         detail = IKernel(address(_account)).getExecution(intentExecutor.execValueBatch.selector);
         assertEq(detail.executor, address(intentExecutor), "Executor should be intentExecutor");
         assertEq(address(detail.validator), address(intentValidator), "Validator should be intentValidator");
 
-        // 2nd Intent userOp with the changed validator set to Intent
-        userOp = createUserOp(
-            address(_account),
-            bytes(
-                "{\"from\":{\"type\":\"TOKEN\",\"address\":\"0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE\",\"amount\":\"0.8\",\"chainId\":\"1\"},\"to\":{\"type\":\"TOKEN\",\"address\":\"0xdac17f958d2ee523a2206206994597c13d831ec7\",\"chainId\":\"1\"}}"
-            )
+        // **********************************************************
+        // Phase 2: Intent-based Transaction Execution
+        // **********************************************************
+        bytes memory intent = bytes(
+            "{\"from\":{\"type\":\"TOKEN\",\"address\":\"0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE\",\"amount\":\"0.8\",\"chainId\":\"1\"},\"to\":{\"type\":\"TOKEN\",\"address\":\"0xdac17f958d2ee523a2206206994597c13d831ec7\",\"chainId\":\"1\"}}"
         );
+        intentUserOp = createUserOp(address(_account), intent);
+
+        UserOperation memory conventionalUserOp = cloneUserOperation(intentUserOp);
 
         // Set signature to plugin mode to call execValueBatch
         uint256 sigPrefix = VALIDATION_PLUGIN_1;
-        setKernelSignature(userOp, _ownerPrivateKey, VALIDATION_PLUGIN_1);
+        setKernelSignature(intentUserOp, _ownerPrivateKey, sigPrefix);
 
-        solveUserOp(
-            userOp,
-            hex"d6f6b170000000000000000000000000000000000000000000000000000000000000006000000000000000000000000000000000000000000000000000000000000000c000000000000000000000000000000000000000000000000000000000000001200000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002000000000000000000000000a0b86991c6218b36c1d19d4a2e9eb0ce3606eb48000000000000000000000000def1c0ded9bec7f1a1670819833240f027b25eff0000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000000c00000000000000000000000000000000000000000000000000000000000000044095ea7b3000000000000000000000000def1c0ded9bec7f1a1670819833240f027b25eff00000000000000000000000000000000000000000000000000000000000f4240000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000128d9627aa4000000000000000000000000000000000000000000000000000000000000008000000000000000000000000000000000000000000000000000000000000f4240000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002000000000000000000000000a0b86991c6218b36c1d19d4a2e9eb0ce3606eb48000000000000000000000000dac17f958d2ee523a2206206994597c13d831ec7869584cd00000000000000000000000010000000000000000000000000000000000000110000000000000000000000000000000015b9ca29df2cd4b929d481fcb4ab9642000000000000000000000000000000000000000000000000"
-        );
+        bytes memory solution =
+            hex"d6f6b170000000000000000000000000000000000000000000000000000000000000006000000000000000000000000000000000000000000000000000000000000000c000000000000000000000000000000000000000000000000000000000000001200000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002000000000000000000000000a0b86991c6218b36c1d19d4a2e9eb0ce3606eb48000000000000000000000000def1c0ded9bec7f1a1670819833240f027b25eff0000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000000c00000000000000000000000000000000000000000000000000000000000000044095ea7b3000000000000000000000000def1c0ded9bec7f1a1670819833240f027b25eff00000000000000000000000000000000000000000000000000000000000f4240000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000128d9627aa4000000000000000000000000000000000000000000000000000000000000008000000000000000000000000000000000000000000000000000000000000f4240000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002000000000000000000000000a0b86991c6218b36c1d19d4a2e9eb0ce3606eb48000000000000000000000000dac17f958d2ee523a2206206994597c13d831ec7869584cd00000000000000000000000010000000000000000000000000000000000000110000000000000000000000000000000015b9ca29df2cd4b929d481fcb4ab9642000000000000000000000000000000000000000000000000";
+        solveUserOp(intentUserOp, solution);
 
         // simulate Kernel validation which removes the signature prefix
-        userOp.signature = removeSigPrefix(userOp.signature);
+        intentUserOp.signature = removeSigPrefix(intentUserOp.signature);
         bytes32 nullBytes;
-        intentValidator.validateUserOp(userOp, nullBytes, 0);
+        intentValidator.validateUserOp(intentUserOp, nullBytes, 0);
 
         // execute with the prefixed signature
-        bytes memory prefixedSig = prefixSignature(userOp.signature, sigPrefix);
-        userOp.signature = prefixedSig;
+        bytes memory prefixedSig = prefixSignature(intentUserOp.signature, sigPrefix);
+        intentUserOp.signature = prefixedSig;
 
-        executeUserOp(userOp, payable(_ownerAddress), true);
+        executeUserOp(intentUserOp, payable(_ownerAddress), true);
+
+        // increment nonce and resign for the next execution
+        conventionalUserOp.nonce = IKernel(conventionalUserOp.sender).getNonce();
+        setKernelSignature(conventionalUserOp, _ownerPrivateKey, VALIDATION_DEF_0);
+        solveUserOp(conventionalUserOp, solution);
+
+        // clone and try validation with both validators
+        verifySignature(conventionalUserOp);
+
+        // ***********************************************************************************************************
+        // Phase 3: Demonstrating Validation Differences
+        // attempt the yet intentUserOp to execute with the default validator and executor will fail
+        // ***********************************************************************************************************
+        (bool success, bytes memory result) = getExecUserOp(conventionalUserOp, payable(_ownerAddress));
+        assertFalse(success, "Expected the operation to fail");
+        // assert signature error because of the default validator not aware of Intent signatures
+        // The first 4 bytes are the error selector
+        bytes4 errorSelector = bytes4(result);
+        if (errorSelector == IEntryPoint.FailedOp.selector) {
+            // Decode the FailedOp error
+            (uint256 opIndex, string memory reason) = abi.decode(_slice(result, 4, result.length), (uint256, string));
+            console2.log("FailedOp reason:", reason);
+            assertEq(opIndex, 0, "Unexpected opIndex");
+            assertEq(reason, "AA23 reverted (or OOG)", "Unexpected error reason");
+        } else {
+            fail("Unexpected error selector");
+        }
+
+        // *******************************************************************************************************
+        // Phase 4: Transformation and Conventional Execution
+        // transform the intent userOp for the same account to a conventional userOp
+        // to execute with the default validator and executor
+        // *******************************************************************************************************
+        conventionalUserOp.callData = solution;
+        // generate conventional hash
+        bytes32 userOpHash = entryPoint.getUserOpHash(conventionalUserOp);
+        // generate signature
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(_ownerPrivateKey, ECDSA.toEthSignedMessageHash(userOpHash));
+        conventionalUserOp.signature = abi.encodePacked(r, s, v);
+
+        // validate with the default validator and it will succeed
+        ValidationData res = _defaultValidator.validateUserOp(conventionalUserOp, userOpHash, 0);
+        assertEq(ValidationData.unwrap(res), 0);
+
+        // prefix pointing to the default validator
+        conventionalUserOp.signature = prefixSignature(conventionalUserOp.signature, VALIDATION_DEF_0);
+        executeUserOp(conventionalUserOp, payable(_ownerAddress), true);
     }
 
     function testExecIntentOpWithVanillaAccountChangeDefaultValidator() public {
@@ -689,7 +790,7 @@ contract KernelIntentPluginsTest is Test {
 
     function solveUserOp(UserOperation memory userOp, bytes memory solution) internal pure {
         // Append the original callData (Intent JSON) to the signature
-        userOp.signature = bytes(abi.encodePacked(userOp.signature, userOp.callData));
+        userOp.signature = abi.encodePacked(userOp.signature, userOp.callData);
 
         // Assign the provided solution to userOp.callData
         userOp.callData = solution;
@@ -700,18 +801,25 @@ contract KernelIntentPluginsTest is Test {
         bytes memory newCalldata,
         bytes memory newSignature
     ) internal pure returns (UserOperation memory) {
+        UserOperation memory userOpCopy = cloneUserOperation(original);
+        userOpCopy.callData = newCalldata;
+        userOpCopy.signature = newSignature;
+        return userOpCopy;
+    }
+
+    function cloneUserOperation(UserOperation memory original) internal pure returns (UserOperation memory) {
         return UserOperation(
             original.sender,
             original.nonce,
             original.initCode,
-            newCalldata,
+            original.callData,
             original.callGasLimit,
             original.verificationGasLimit,
             original.preVerificationGas,
             original.maxFeePerGas,
             original.maxPriorityFeePerGas,
             original.paymasterAndData,
-            newSignature
+            original.signature
         );
     }
 
@@ -894,11 +1002,24 @@ contract KernelIntentPluginsTest is Test {
         IEntryPoint(entryPoint).handleOps(userOps, beneficiary);
     }
 
-    function executeUserOp(
-        UserOperation memory userOp,
-        address payable beneficiary,
-        bool expectedSuccess
-    ) public {
+    // external function so it can be called within a try-catch block
+    function getExecUserOp(UserOperation memory userOp, address payable beneficiary)
+        private
+        returns (bool success, bytes memory result)
+    {
+        UserOperation[] memory userOps = new UserOperation[](1);
+        userOps[0] = userOp;
+
+        try IEntryPoint(entryPoint).handleOps(userOps, beneficiary) {
+            return (true, "");
+        } catch Error(string memory reason) {
+            return (false, bytes(reason));
+        } catch (bytes memory lowLevelData) {
+            return (false, lowLevelData);
+        }
+    }
+
+    function executeUserOp(UserOperation memory userOp, address payable beneficiary, bool expectedSuccess) public {
         // Before executing the UserOp, set up the expectEmit
         vm.expectEmit(false, true, true, false, 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789);
         emit IEntryPoint.UserOperationEvent(
