@@ -212,6 +212,8 @@ contract SimpleAccounEthereumTest is Test {
         UserOperation[] memory userOps = new UserOperation[](1);
         userOps[0] = userOp;
 
+        TestSimpleAccountHelper.printUserOperation(userOp);
+
         // entryPoint emits events
         vm.expectEmit(false, true, true, false, 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789);
         emit IEntryPoint.UserOperationEvent(
