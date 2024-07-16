@@ -35,7 +35,8 @@ contract SimpleAccounEthereumTest is Test {
     address constant USDC_WHALE = 0x47ac0Fb4F2D84898e4D9E7b4DaB3C24507a6D503;
 
     function setUp() public {
-        string memory privateKeyEnv = string(abi.encodePacked(_network, "ETHEREUM_PRIVATE_KEY"));
+        _network = "ETHEREUM";
+        string memory privateKeyEnv = string(abi.encodePacked(_network, "_PRIVATE_KEY"));
         string memory privateKeyString = vm.envString(privateKeyEnv);
 
         // Derive the Ethereum address from the private key
@@ -44,7 +45,7 @@ contract SimpleAccounEthereumTest is Test {
         console2.log("Owner address:", _ownerAddress);
 
         // Create a VM instance for the ethereum fork
-        string memory urlEnv = string(abi.encodePacked(_network, "ETHEREUM_RPC_URL"));
+        string memory urlEnv = string(abi.encodePacked(_network, "_RPC_URL"));
         _ethereumFork = vm.createSelectFork(vm.envString(urlEnv));
         console2.log("ChainID:", block.chainid);
 
@@ -53,14 +54,18 @@ contract SimpleAccounEthereumTest is Test {
         console2.log("EntryPoint deployed at:", address(_entryPoint));
 
         // Create a unique _salt for the account creation
-        string memory _saltEnv = string(abi.encodePacked(_network, "ETHEREUM_SALT"));
+        string memory _saltEnv = string(abi.encodePacked(_network, "_SALT"));
         _salt = vm.envUint(_saltEnv);
         console2.log("Salt:", _salt);
 
         uint256 startGas = gasleft();
 
-        // Sync the _factory
-        _factory = new IntentSimpleAccountFactory(_entryPoint);
+        // Sync the _factory with the chain factory address
+        string memory factoryAddressEnv = string(abi.encodePacked(_network, "_SIMPLE_INTENT_FACTORY_ADDRESS"));
+        address factoryAddress = vm.envAddress(factoryAddressEnv);
+        console2.log("factory Address", factoryAddress);
+
+        _factory = IntentSimpleAccountFactory(factoryAddress);
         console2.log("IntentSimpleAccountFactory synced at:", address(_factory));
         uint256 endGas = gasleft();
         console2.log("Gas used for Factory sync: ", startGas - endGas);
