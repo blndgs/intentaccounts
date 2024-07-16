@@ -49,10 +49,6 @@ contract DeploySimpleAccountTenderly is Script {
 
         vm.startBroadcast(deployerPrivateKey);
 
-        // Deploy SimpleAccount implementation
-        IntentSimpleAccount simpleAccountImpl = new IntentSimpleAccount(IEntryPoint(entryPointAddress));
-        console2.log("IntentSimpleAccount implementation deployed at:", address(simpleAccountImpl));
-
         // Deploy IntentSimpleAccountFactory
         IntentSimpleAccountFactory factory = new IntentSimpleAccountFactory(IEntryPoint(entryPointAddress));
         console2.log("IntentSimpleAccountFactory deployed at:", address(factory));
