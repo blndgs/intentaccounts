@@ -8,15 +8,20 @@ import "forge-std/Script.sol";
 
 /**
  * @title DeploySimpleAccountTenderly
- * @dev This contract deploys a SimpleAccount and its factory on a blockchain network, specifically for use with Tenderly
+ * @dev This contract deploys a SimpleAccount and its factory
  * and verifies the contracts (proxy and implementation).
- * Make sure you have installed and logged-in to Tenderly CLI.
+ * Make sure you have installed and logged-in to Tenderly CLI if you are deploying at Tenderly.
  *
+ * Script arguments:
+ * NETWORK=ETHEREUM (.env)
+ * ETHEREUM_PRIVATE_KEY (.env)
+ *
+ * CLI arguments below:
  * export TENDERLY_VERIFIER_URL=https://virtual.mainnet.rpc.tenderly.co/c5ed9a3b-7ad5-4d6a-8e4b-76a4b00ba6ea/verify/etherscan
  * RPC_URL=https://virtual.mainnet.rpc.tenderly.co/c5ed9a3b-7ad5-4d6a-8e4b-76a4b00ba6ea
  * PRIVATE_KEY=
  * TENDERLY_ACCESS_TOKEN=
-
+ *
  * forge script script/deploy/IntentSimpleAccount_Tenderly.s.sol \
  *   --rpc-url $RPC_URL \
  *    --broadcast \
