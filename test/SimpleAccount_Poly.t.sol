@@ -17,9 +17,8 @@ contract SimpleAccounPolygonTest is Test {
     using TestSimpleAccountHelper for UserOperation;
 
     address constant ENTRYPOINT_V06 = 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789;
-    uint256 public constant MUMBAI_CHAIN_ID = 80001;
-    uint256 public constant POLYGON_CHAIN_ID = 137;
-    uint256 mumbaiFork;
+    uint256 public constant POLYGON_CUSTOM_CHAIN_ID = 8888;
+    uint256 polyFork;
 
     IntentSimpleAccountFactory factory;
     IntentSimpleAccount simpleAccount;
@@ -41,9 +40,9 @@ contract SimpleAccounPolygonTest is Test {
         assertEq(ownerAddress, 0xc9164f44661d83d01CbB69C0b0E471280f446099, "Owner address should match");
 
         // Create a VM instance for the MUMBAI fork
-        string memory urlEnv = string(abi.encodePacked(network, "POLYGON_RPC_URL"));
-        mumbaiFork = vm.createSelectFork(vm.envString(urlEnv));
-        assert(MUMBAI_CHAIN_ID == block.chainid || POLYGON_CHAIN_ID == block.chainid);
+        string memory urlEnv = "POLYGON_RPC_URL";
+        polyFork = vm.createSelectFork(vm.envString(urlEnv));
+        require(POLYGON_CUSTOM_CHAIN_ID ==block.chainid, "Chain ID should match");
 
         vm.startPrank(ownerAddress);
 
