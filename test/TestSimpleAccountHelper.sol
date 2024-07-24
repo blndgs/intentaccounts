@@ -46,4 +46,29 @@ library TestSimpleAccountHelper {
     {
         return abi.encodePacked(address(factory), abi.encodeWithSelector(factory.createAccount.selector, owner, salt));
     }
+
+    function printUserOperation(UserOperation memory userOp) internal pure {
+        console2.log("UserOperation:");
+        console2.log("  Sender:", userOp.sender);
+        console2.log("  Nonce:", userOp.nonce);
+        console2.log("  InitCode length:", userOp.initCode.length);
+        console2.log("  CallData length:", userOp.callData.length);
+        console2.log("  CallGasLimit:", userOp.callGasLimit);
+        console2.log("  VerificationGasLimit:", userOp.verificationGasLimit);
+        console2.log("  PreVerificationGas:", userOp.preVerificationGas);
+        console2.log("  MaxFeePerGas:", userOp.maxFeePerGas);
+        console2.log("  MaxPriorityFeePerGas:", userOp.maxPriorityFeePerGas);
+        console2.log("  PaymasterAndData length:", userOp.paymasterAndData.length);
+        console2.log("  Signature length:", userOp.signature.length);
+
+        // Print hexadecimal representation of initCode, callData, paymasterAndData, and signature
+        console2.log("  InitCode (hex):");
+        console2.logBytes(userOp.initCode);
+        console2.log("  CallData (hex):");
+        console2.logBytes(userOp.callData);
+        console2.log("  PaymasterAndData (hex):");
+        console2.logBytes(userOp.paymasterAndData);
+        console2.log("  Signature (hex):");
+        console2.logBytes(userOp.signature);
+    }
 }

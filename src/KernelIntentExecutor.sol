@@ -25,23 +25,6 @@ contract KernelIntentExecutor {
     }
 
     /**
-     * execute a transaction (called directly from owner, or by entryPoint)
-     */
-    function execute(address dest, uint256 value, bytes calldata func) external {
-        _call(dest, value, func);
-    }
-
-    /**
-     * execute a sequence of transactions
-     */
-    function executeBatch(address[] calldata dest, bytes[] calldata func) external {
-        require(dest.length == func.length, "wrong array lengths");
-        for (uint256 i = 0; i < dest.length; i++) {
-            _call(dest[i], 0, func[i]);
-        }
-    }
-
-    /**
      * execute a sequence of EVM calldata with Ether transfers.
      */
     function execValueBatch(uint256[] calldata values, address[] calldata dest, bytes[] calldata func) external {
