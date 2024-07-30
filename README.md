@@ -1,24 +1,26 @@
-[![Solidity Tests](https://github.com/blndgs/intentaccounts/actions/workflows/tests.yml/badge.svg)](https://github.com/blndgs/intentaccounts/actions/workflows/tests.yml)
-
 # Intent SimpleAccount ERC-4337 Wallet
+
+[![Solidity Tests](https://github.com/blndgs/intentaccounts/actions/workflows/tests.yml/badge.svg)](https://github.com/blndgs/intentaccounts/actions/workflows/tests.yml)
+[![codecov](https://codecov.io/gh/blndgs/intentaccounts/graph/badge.svg?token=VD1LK6PXWT)](https://codecov.io/gh/blndgs/intentaccounts)
 
 This project implements an enhanced version of the ERC-4337 compliant smart contract wallet called IntentSimpleAccount. It extends the functionality of the standard SimpleAccount by adding support for intent-based transactions, allowing for more flexible and powerful account abstraction.
 
 ## Table of Contents
 
-- [Project Description](#project-description)
-- [Key Components](#key-components)
-- [Installation](#installation)
-- [Usage](#usage)
-- [Building the Project](#building-the-project)
-- [Running Tests](#running-tests)
-- [Deployment](#deployment)
+- [Intent SimpleAccount ERC-4337 Wallet](#intent-simpleaccount-erc-4337-wallet)
+  - [Table of Contents](#table-of-contents)
+  - [Project Description](#project-description)
+  - [Key Components](#key-components)
+  - [Installation](#installation)
+  - [Usage](#usage)
+  - [Deployment](#deployment)
 
 ## Project Description
 
 The Intent SimpleAccount ERC-4337 Wallet project aims to provide an advanced implementation of an ERC-4337 compliant smart contract wallet with support for intent-based transactions. It builds upon the standard SimpleAccount implementation, adding features that allow for more complex transaction execution and validation.
 
 Key features include:
+
 - Support for intent-based transactions
 - Enhanced signature validation for intents
 - Batch execution of transactions
@@ -37,31 +39,40 @@ Key features include:
 To install and set up the project, follow these steps:
 
 1. Clone the repository:
+
    ```bash
    git clone https://github.com/blndgs/intentaccounts.git
    cd intentaccounts
    ```
+
 2. Install Foundry if you haven't already:
-   curl -L https://foundry.paradigm.xyz | bash
+   curl -L <https://foundry.paradigm.xyz> | bash
    foundryup
 3. Install dependencies:
+
    ```bash
    forge install
    ```
+
 ## Usage
+
 Detailed usage instructions will be provided as the project develops. The main interaction points will be through the IntentSimpleAccount contract and its factory.
 Building the Project
 To build the project using Forge, run the following command:
+
 ```bash
 forge build
 ```
+
 Running Tests
 To run the tests, use the following command:
+
 ```bash
 forge test
 ```
 
 ## Deployment
+
 Deployment scripts are provided in the script directory. To deploy the contracts, you'll need to set up the appropriate environment variables and run the deployment scripts using Forge. For example:
 
 forge script script/deploy/DeploySimpleAccountFactory.s.sol:DeploySimpleAccountFactory --rpc-url $RPC_URL --private-key $PRIVATE_KEY --broadcast

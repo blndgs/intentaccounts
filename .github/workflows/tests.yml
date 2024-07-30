@@ -107,7 +107,12 @@ jobs:
         with:
           app-id: ${{ vars.APP_ID }}
           private-key: ${{ secrets.PRIVATE_KEY }}
-
+      
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v4.0.1
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          
       - name: Check test results
         if: github.event_name == 'pull_request' && (github.event.pull_request.base.ref == 'testnet' || github.event.pull_request.base.ref == 'live')
         run: |
