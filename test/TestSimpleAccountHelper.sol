@@ -47,6 +47,59 @@ library TestSimpleAccountHelper {
         return abi.encodePacked(address(factory), abi.encodeWithSelector(factory.createAccount.selector, owner, salt));
     }
 
+//    struct PackedUserOp {
+//        address sender;
+//        uint256 nonce;
+//        uint256 callGasLimit;
+//        uint256 verificationGasLimit;
+//        uint256 preVerificationGas;
+//        uint256 maxFeePerGas;
+//        uint256 maxPriorityFeePerGas;
+//        bytes callData;
+//    }
+
+    function packUserOp(UserOperation memory userOp) internal pure returns (IntentSimpleAccount.PackedUserOp memory) {
+        return IntentSimpleAccount.PackedUserOp({
+            sender: userOp.sender,
+            nonce: userOp.nonce,
+            callGasLimit: userOp.callGasLimit,
+            verificationGasLimit: userOp.verificationGasLimit,
+            preVerificationGas: userOp.preVerificationGas,
+            maxFeePerGas: userOp.maxFeePerGas,
+            maxPriorityFeePerGas: userOp.maxPriorityFeePerGas,
+            callData: userOp.callData
+        });
+    }
+
+    function combineUserOps(UserOperation memory sourceOp, UserOperation memory destOp)
+    internal
+    pure
+    returns (UserOperation memory)
+    {
+        IntentSimpleAccount.PackedUserOp memory packedDestOp = packUserOp(destOp);
+        bytes memory encodedPackedDestOp = abi.encode(packedDestOp);
+
+        bytes memory combinedCallData = abi.encodePacked(
+            uint256(sourceOp.callData.length), // Store the length of source callData
+            sourceOp.callData,
+            encodedPackedDestOp
+        );
+
+        return UserOperation({
+            sender: sourceOp.sender,
+            nonce: sourceOp.nonce,
+            initCode: sourceOp.initCode,
+            callData: combinedCallData,
+            callGasLimit: sourceOp.callGasLimit,
+            verificationGasLimit: sourceOp.verificationGasLimit,
+            preVerificationGas: sourceOp.preVerificationGas,
+            maxFeePerGas: sourceOp.maxFeePerGas,
+            maxPriorityFeePerGas: sourceOp.maxPriorityFeePerGas,
+            paymasterAndData: sourceOp.paymasterAndData,
+            signature: sourceOp.signature
+        });
+    }
+
     function printUserOperation(UserOperation memory userOp) internal pure {
         console2.log("UserOperation:");
         console2.log("  Sender:", userOp.sender);

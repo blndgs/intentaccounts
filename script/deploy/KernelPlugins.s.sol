@@ -30,7 +30,7 @@ import "../../src/KernelIntentExecutor.sol";
  */
 contract DeployKernelPlugins is Script {
     string internal _network;
-    uint internal deployerPrivateKey;
+    uint256 internal deployerPrivateKey;
 
     function setUp() public {
         _network = vm.envString("NETWORK");

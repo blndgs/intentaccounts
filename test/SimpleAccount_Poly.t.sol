@@ -42,7 +42,7 @@ contract SimpleAccounPolygonTest is Test {
         // Create a VM instance for the MUMBAI fork
         string memory urlEnv = "POLYGON_RPC_URL";
         polyFork = vm.createSelectFork(vm.envString(urlEnv));
-        require(POLYGON_CUSTOM_CHAIN_ID ==block.chainid, "Chain ID should match");
+        require(POLYGON_CUSTOM_CHAIN_ID == block.chainid, "Chain ID should match");
 
         vm.startPrank(ownerAddress);
 
