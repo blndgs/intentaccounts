@@ -47,6 +47,8 @@ jobs:
           echo "ETH_4337_ACCOUNT=${{ vars[format('{0}_ETH_4337_ACCOUNT', env.PREFIX)] }}"
           echo "ETHEREUM_PRIVATE_KEY=${{ secrets[format('{0}_ETHEREUM_PRIVATE_KEY', env.PREFIX)] }}"
           echo "POLYGON_PRIVATE_KEY=${{ secrets[format('{0}_POLYGON_PRIVATE_KEY', env.PREFIX)] }}"
+          echo "ETHEREUM_KERNEL_FACTORY_OWNER_PRIVATE_KEY=${{ secrets[format('{0}_ETHEREUM_KERNEL_FACTORY_OWNER_PRIVATE_KEY', env.PREFIX)] }}"
+          echo "ETHEREUM_SIMPLE_INTENT_FACTORY_ADDRESS=${{ vars[format('{0}_ETHEREUM_SIMPLE_INTENT_FACTORY_ADDRESS', env.PREFIX)] }}"
 
           # set env variables
           echo "ETHEREUM_RPC_URL=${{ vars[format('{0}_ETHEREUM_RPC_URL', env.PREFIX)] }}" >> $GITHUB_ENV
@@ -57,6 +59,8 @@ jobs:
           echo "ETH_4337_ACCOUNT=${{ vars[format('{0}_ETH_4337_ACCOUNT', env.PREFIX)] }}" >> $GITHUB_ENV
           echo "ETHEREUM_PRIVATE_KEY=${{ secrets[format('{0}_ETHEREUM_PRIVATE_KEY', env.PREFIX)] }}" >> $GITHUB_ENV
           echo "POLYGON_PRIVATE_KEY=${{ secrets[format('{0}_POLYGON_PRIVATE_KEY', env.PREFIX)] }}" >> $GITHUB_ENV
+          echo "ETHEREUM_KERNEL_FACTORY_OWNER_PRIVATE_KEY=${{ secrets[format('{0}_ETHEREUM_KERNEL_FACTORY_OWNER_PRIVATE_KEY', env.PREFIX)] }}" >> $GITHUB_ENV
+          echo "ETHEREUM_SIMPLE_INTENT_FACTORY_ADDRESS=${{ vars[format('{0}_ETHEREUM_SIMPLE_INTENT_FACTORY_ADDRESS', env.PREFIX)] }}" >> $GITHUB_ENV
 
       - uses: actions/checkout@v4
         with:
