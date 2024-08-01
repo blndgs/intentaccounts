@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-//import "forge-std/Test.sol";
-import "../src/IntentSimpleAccount.sol";
+import "forge-std/Test.sol";
 import "@account-abstraction/interfaces/IEntryPoint.sol";
 import "@account-abstraction/core/EntryPoint.sol";
 import "../src/IntentSimpleAccountFactory.sol";
@@ -33,8 +32,6 @@ contract SimpleAccounEthereumTest is Test {
     IERC20 constant USDC = IERC20(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48);
     IERC20 constant USDT = IERC20(0xdAC17F958D2ee523a2206206994597C13D831ec7);
     address constant USDC_WHALE = 0x47ac0Fb4F2D84898e4D9E7b4DaB3C24507a6D503;
-
-    ExtractorHelper extractor;
 
     function setUp() public {
         _network = "ETHEREUM";
@@ -67,8 +64,10 @@ contract SimpleAccounEthereumTest is Test {
         address factoryAddress = vm.envAddress(factoryAddressEnv);
         console2.log("factory Address", factoryAddress);
 
-        _factory = IntentSimpleAccountFactory(factoryAddress);
-        console2.log("IntentSimpleAccountFactory synced at:", address(_factory));
+        _factory = new IntentSimpleAccountFactory(_entryPoint);
+        console2.log("IntentSimpleAccountFactory created at:", address(_factory));
+//        _factory = IntentSimpleAccountFactory(factoryAddress);
+//        console2.log("IntentSimpleAccountFactory synced at:", address(_factory));
         uint256 endGas = gasleft();
         console2.log("Gas used for Factory sync: ", startGas - endGas);
         startGas = endGas;
@@ -84,8 +83,6 @@ contract SimpleAccounEthereumTest is Test {
         USDC.transfer(address(_simpleAccount), amount);
 
         vm.startPrank(_ownerAddress);
-
-        extractor = new ExtractorHelper();
     }
 
     function testSimpleAccountAddress() public {
@@ -97,14 +94,14 @@ contract SimpleAccounEthereumTest is Test {
     }
 
     // Original function from the SimpleAccount contract
-    function getUserOpHash(UserOperation calldata userOp, uint256 chainID) public pure returns (bytes32) {
-        return keccak256(abi.encode(userOp.hash(), ENTRYPOINT_V06, chainID));
-    }
-
-    // Wrapper around the original function to create a call context
-    function getOrigUserOpHash(UserOperation memory userOp, uint256 chainID) internal view returns (bytes32) {
-        return this.getUserOpHash(userOp, chainID);
-    }
+//    function getUserOpHash(UserOperation calldata userOp, uint256 chainID) public pure returns (bytes32) {
+//        return keccak256(abi.encode(userOp.hash(), ENTRYPOINT_V06, chainID));
+//    }
+//
+//    // Wrapper around the original function to create a call context
+//    function getOrigUserOpHash(UserOperation memory userOp, uint256 chainID) internal view returns (bytes32) {
+//        return this.getUserOpHash(userOp, chainID);
+//    }
 
     function generateSignature(UserOperation memory userOp, uint256 chainID) internal view returns (bytes memory) {
         return generateSignature(userOp, chainID, _ownerPrivateKey);
@@ -281,20 +278,8 @@ contract SimpleAccounEthereumTest is Test {
 
         UserOperation memory combinedOp = sourceEthOp.combineUserOps(destPolygonOp);
 
-        // Simulate sending combinedOp to the destination chain
-        // Convert memory to calldata by making an external call
-        // Call the ExtractorHelper contract directly
-        bytes memory callData = abi.encodeWithSelector(
-            ExtractorHelper.extractDestUserOp.selector,
-            combinedOp
-        );
-
-        // Make the call
-        (bool success, bytes memory returnData) = address(extractor).staticcall(callData);
-        require(success, "Function call failed");
-
-        // Decode the result
-        UserOperation memory extractedDestOp = abi.decode(returnData, (UserOperation));
+        console2.log("before _simpleAccount::extractDestUserOp");
+        UserOperation memory extractedDestOp = _simpleAccount.extractDestUserOp(combinedOp);
 
         assertEq(extractedDestOp.sender, destPolygonOp.sender);
         assertEq(extractedDestOp.nonce, destPolygonOp.nonce);
@@ -697,92 +682,5 @@ contract SimpleAccounEthereumTest is Test {
         assertEq(balanceEthAfter, balanceEthBef - 1, "ETH Balance should have less the Lido deposited value");
     }
 }
-
-contract ExtractorHelper {
-//    function extractDestUserOp(UserOperation calldata combinedOp) external returns (UserOperation memory) {
-//        console2.log("Sender:", combinedOp.sender);
-//        IEntryPoint entryPoint = IEntryPoint(0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789);
-//        IntentSimpleAccount account = new IntentSimpleAccount(entryPoint);
-//        return account.extractDestUserOp(combinedOp);
-//    }
-
-    function extractDestUserOp(UserOperation calldata combinedOp) public returns (UserOperation memory) {
-        console2.log("IntentSimpleAccount: Entered extractDestUserOp");
-        console2.log("IntentSimpleAccount: combinedOp.callData length:", combinedOp.callData.length);
-
-        (uint256 sourceCallDataLength, bytes memory packedDestOpData) = extractPackedData(combinedOp.callData);
-        console2.log("sourceCallDataLength:", sourceCallDataLength);
-
-        console2.log("IntentSimpleAccount: Before decodePackedUserOp");
-        IntentSimpleAccount.PackedUserOp memory packedDestOp = decodePackedUserOp(packedDestOpData);
-        console2.log("IntentSimpleAccount: After decodePackedUserOp");
-
-        console2.log("IntentSimpleAccount: Before unpackUserOp");
-        UserOperation memory result = unpackUserOp(packedDestOp);
-        console2.log("IntentSimpleAccount: After unpackUserOp");
-
-        return result;
-    }
-
-    function extractPackedData(bytes calldata callData) internal pure returns (uint256, bytes memory) {
-        require(callData.length >= 32, "Invalid callData length");
-
-        uint256 sourceCallDataLength = uint256(bytes32(callData[:32]));
-        console2.log("sourceCallDataLength:", sourceCallDataLength);
-
-        require(callData.length > 32 + sourceCallDataLength, "Invalid callData format");
-
-        bytes memory packedDestOpData = callData[32 + sourceCallDataLength:];
-        console2.log("packedDestOpData length:", packedDestOpData.length);
-
-        require(packedDestOpData.length > 0, "No packed destination UserOp found");
-
-        console2.log("packedDestOpData:");
-        console2.logBytes(packedDestOpData);
-
-        return (sourceCallDataLength, packedDestOpData);
-    }
-
-    function decodePackedUserOp(bytes memory packedDestOpData) internal pure returns (IntentSimpleAccount.PackedUserOp memory) {
-        console2.log("Attempting to decode PackedUserOp");
-
-        IntentSimpleAccount.PackedUserOp memory packedDestOp = abi.decode(packedDestOpData, (IntentSimpleAccount.PackedUserOp));
-
-        console2.log("Decoding successful");
-        logPackedUserOp(packedDestOp);
-
-        return packedDestOp;
-    }
-
-    function logPackedUserOp(IntentSimpleAccount.PackedUserOp memory packedDestOp) internal pure {
-        console2.log("Decoded packedDestOp:");
-        console2.log("  sender:", packedDestOp.sender);
-        console2.log("  nonce:", packedDestOp.nonce);
-        console2.log("  callGasLimit:", packedDestOp.callGasLimit);
-        console2.log("  verificationGasLimit:", packedDestOp.verificationGasLimit);
-        console2.log("  preVerificationGas:", packedDestOp.preVerificationGas);
-        console2.log("  maxFeePerGas:", packedDestOp.maxFeePerGas);
-        console2.log("  maxPriorityFeePerGas:", packedDestOp.maxPriorityFeePerGas);
-        console2.log("  callData length:", packedDestOp.callData.length);
-    }
-
-    function unpackUserOp(IntentSimpleAccount.PackedUserOp memory packedOp) internal pure returns (UserOperation memory) {
-        console2.log("Unpacking UserOperation");
-        return UserOperation({
-            sender: packedOp.sender,
-            nonce: packedOp.nonce,
-            initCode: new bytes(0),
-            callData: packedOp.callData,
-            callGasLimit: packedOp.callGasLimit,
-            verificationGasLimit: packedOp.verificationGasLimit,
-            preVerificationGas: packedOp.preVerificationGas,
-            maxFeePerGas: packedOp.maxFeePerGas,
-            maxPriorityFeePerGas: packedOp.maxPriorityFeePerGas,
-            paymasterAndData: new bytes(0),
-            signature: new bytes(0)
-        });
-    }
-}
-
 
 

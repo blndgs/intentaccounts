@@ -9,7 +9,7 @@ import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@account-abstraction/samples/SimpleAccount.sol";
 import "./IntentUserOperation.sol";
 import "@account-abstraction/interfaces/IEntryPoint.sol";
-import "forge-std/Test.sol";
+import "./xchainlib.sol";
 
 /**
  * minimal account.
@@ -19,6 +19,7 @@ import "forge-std/Test.sol";
  */
 contract IntentSimpleAccount is SimpleAccount {
     using IntentUserOperationLib for UserOperation;
+    using XChainUserOpLib for UserOperation;
     using ECDSA for bytes32;
 
     uint256 private constant SIGNATURE_LENGTH = 65;
@@ -79,62 +80,8 @@ contract IntentSimpleAccount is SimpleAccount {
         return 0; // Ok
     }
 
-    struct PackedUserOp {
-        address sender;
-        uint256 nonce;
-        uint256 callGasLimit;
-        uint256 verificationGasLimit;
-        uint256 preVerificationGas;
-        uint256 maxFeePerGas;
-        uint256 maxPriorityFeePerGas;
-        bytes callData;
-    }
-
-    function extractDestUserOp(UserOperation calldata combinedOp) public returns (UserOperation memory) {
-        (uint256 sourceCallDataLength, bytes memory packedDestOpData) = extractPackedData(combinedOp.callData);
-
-        PackedUserOp memory packedDestOp = decodePackedUserOp(packedDestOpData);
-
-        UserOperation memory result = unpackUserOp(packedDestOp);
-
-        return result;
-    }
-
-    function extractPackedData(bytes calldata callData) internal pure returns (uint256, bytes memory) {
-        require(callData.length >= 32, "Invalid callData length");
-
-        uint256 sourceCallDataLength = uint256(bytes32(callData[:32]));
-
-        require(callData.length > 32 + sourceCallDataLength, "Invalid callData format");
-
-        bytes memory packedDestOpData = callData[32 + sourceCallDataLength:];
-
-        require(packedDestOpData.length > 0, "No packed destination UserOp found");
-
-        return (sourceCallDataLength, packedDestOpData);
-    }
-
-    function decodePackedUserOp(bytes memory packedDestOpData) internal pure returns (PackedUserOp memory) {
-        PackedUserOp memory packedDestOp = abi.decode(packedDestOpData, (PackedUserOp));
-
-        return packedDestOp;
-    }
-
-    function unpackUserOp(PackedUserOp memory packedOp) internal pure returns (UserOperation memory) {
-        console2.log("Unpacking UserOperation");
-        return UserOperation({
-            sender: packedOp.sender,
-            nonce: packedOp.nonce,
-            initCode: new bytes(0),
-            callData: packedOp.callData,
-            callGasLimit: packedOp.callGasLimit,
-            verificationGasLimit: packedOp.verificationGasLimit,
-            preVerificationGas: packedOp.preVerificationGas,
-            maxFeePerGas: packedOp.maxFeePerGas,
-            maxPriorityFeePerGas: packedOp.maxPriorityFeePerGas,
-            paymasterAndData: new bytes(0),
-            signature: new bytes(0)
-        });
+    function extractDestUserOp(UserOperation calldata combinedOp) external pure returns (UserOperation memory) {
+        return combinedOp.extractDestUserOp();
     }
 
     /**

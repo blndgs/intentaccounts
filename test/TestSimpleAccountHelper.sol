@@ -5,13 +5,16 @@ import "../src/IntentUserOperation.sol";
 import "./TestBytesHelper.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {IntentSimpleAccountFactory} from "../src/IntentSimpleAccountFactory.sol";
-import {IntentSimpleAccount} from "../src/IntentSimpleAccount.sol";
+//import {IntentSimpleAccount} from "../src/IntentSimpleAccount.sol";
+import "../src/xchainlib.sol";
 import "forge-std/Test.sol";
 import "forge-std/Vm.sol";
 
 library TestSimpleAccountHelper {
     address constant ENTRYPOINT_V06 = 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789;
     uint256 private constant SIGNATURE_LENGTH = 65;
+
+//    using XChainUserOpLib for UserOperation;
 
     /**
      * @notice Generates the initCode for creating a new account using a wallet factory
@@ -47,20 +50,8 @@ library TestSimpleAccountHelper {
         return abi.encodePacked(address(factory), abi.encodeWithSelector(factory.createAccount.selector, owner, salt));
     }
 
-//    struct PackedUserOp {
-//        address sender;
-//        uint256 nonce;
-//        uint256 callGasLimit;
-//        uint256 verificationGasLimit;
-//        uint256 preVerificationGas;
-//        uint256 maxFeePerGas;
-//        uint256 maxPriorityFeePerGas;
-//        bytes callData;
-//    }
-
-    function packUserOp(UserOperation memory userOp) internal pure returns (IntentSimpleAccount.PackedUserOp memory) {
-        return IntentSimpleAccount.PackedUserOp({
-            sender: userOp.sender,
+    function packUserOp(UserOperation memory userOp) internal pure returns (XChainUserOpLib.PackedUserOp memory) {
+        return XChainUserOpLib.PackedUserOp({
             nonce: userOp.nonce,
             callGasLimit: userOp.callGasLimit,
             verificationGasLimit: userOp.verificationGasLimit,
@@ -71,18 +62,22 @@ library TestSimpleAccountHelper {
         });
     }
 
-    function combineUserOps(UserOperation memory sourceOp, UserOperation memory destOp)
-    internal
-    pure
-    returns (UserOperation memory)
-    {
-        IntentSimpleAccount.PackedUserOp memory packedDestOp = packUserOp(destOp);
-        bytes memory encodedPackedDestOp = abi.encode(packedDestOp);
+    function combineUserOps(UserOperation memory sourceOp, UserOperation memory destOp) internal pure returns (UserOperation memory) {
+        XChainUserOpLib.PackedUserOp memory packedDestOp = XChainUserOpLib.PackedUserOp({
+            nonce: destOp.nonce,
+            callGasLimit: destOp.callGasLimit,
+            verificationGasLimit: destOp.verificationGasLimit,
+            preVerificationGas: destOp.preVerificationGas,
+            maxFeePerGas: destOp.maxFeePerGas,
+            maxPriorityFeePerGas: destOp.maxPriorityFeePerGas,
+            callData: destOp.callData
+        });
 
+        bytes memory packedDestOpData = abi.encode(packedDestOp);
         bytes memory combinedCallData = abi.encodePacked(
-            uint256(sourceOp.callData.length), // Store the length of source callData
+            uint16(sourceOp.callData.length),
             sourceOp.callData,
-            encodedPackedDestOp
+            packedDestOpData
         );
 
         return UserOperation({
