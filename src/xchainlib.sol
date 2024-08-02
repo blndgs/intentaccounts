@@ -28,7 +28,7 @@ library XChainUserOpLib {
 
     /**
      * @dev Checks if a UserOperation's callData belongs to a cross-chain operation
-     * @param userOp The UserOperation to check
+     * @param callData The UserOperation callData value to check
      * @return bool True if it's a cross-chain operation, false otherwise
      */
     function isCrossChainUserOp(bytes calldata callData) internal pure returns (bool) {
@@ -52,7 +52,7 @@ library XChainUserOpLib {
      * @return The extracted destination UserOperation
      */
     function extractDestUserOp(UserOperation calldata combinedOp) internal pure returns (UserOperation memory) {
-        require(isCrossChainUserOp(combinedOp), "Not a cross-chain UserOp");
+        require(isCrossChainUserOp(combinedOp.callData), "Not a cross-chain UserOp");
         bytes memory packedDestOpData = extractPackedData(combinedOp.callData);
         PackedUserOp memory packedDestOp = decodePackedUserOp(packedDestOpData);
         return unpackUserOp(packedDestOp, combinedOp.sender);
