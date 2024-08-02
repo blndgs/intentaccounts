@@ -267,7 +267,7 @@ contract SimpleAccounEthereumTest is Test {
         });
 
         UserOperation memory combinedOp = sourceEthOp.combineUserOps(destPolygonOp);
-        require(_simpleAccount.isCrossChainUserOp(combinedOp), "Combined UserOp is not cross-chain");
+        require(_simpleAccount.isCrossChainUserOp(combinedOp.callData), "Combined UserOp is not cross-chain");
 
         console2.log("before _simpleAccount::extractDestUserOp");
         UserOperation memory extractedDestOp = _simpleAccount.extractDestUserOp(combinedOp);
