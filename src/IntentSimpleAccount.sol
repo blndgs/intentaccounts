@@ -84,6 +84,10 @@ contract IntentSimpleAccount is SimpleAccount {
         return combinedOp.extractDestUserOp();
     }
 
+    function isCrossChainUserOp(bytes calldata callData) external pure returns (bool) {
+        return XChainUserOpLib.isCrossChainUserOp(callData);
+    }
+
     /**
      * execute a sequence of EVM calldata with Ether transfers.
      */

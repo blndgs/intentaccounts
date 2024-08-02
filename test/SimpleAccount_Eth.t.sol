@@ -93,16 +93,6 @@ contract SimpleAccounEthereumTest is Test {
         assertEq(address(_simpleAccount), generatedAddress, "Account address does not match expected address");
     }
 
-    // Original function from the SimpleAccount contract
-//    function getUserOpHash(UserOperation calldata userOp, uint256 chainID) public pure returns (bytes32) {
-//        return keccak256(abi.encode(userOp.hash(), ENTRYPOINT_V06, chainID));
-//    }
-//
-//    // Wrapper around the original function to create a call context
-//    function getOrigUserOpHash(UserOperation memory userOp, uint256 chainID) internal view returns (bytes32) {
-//        return this.getUserOpHash(userOp, chainID);
-//    }
-
     function generateSignature(UserOperation memory userOp, uint256 chainID) internal view returns (bytes memory) {
         return generateSignature(userOp, chainID, _ownerPrivateKey);
     }
@@ -277,6 +267,7 @@ contract SimpleAccounEthereumTest is Test {
         });
 
         UserOperation memory combinedOp = sourceEthOp.combineUserOps(destPolygonOp);
+        require(_simpleAccount.isCrossChainUserOp(combinedOp), "Combined UserOp is not cross-chain");
 
         console2.log("before _simpleAccount::extractDestUserOp");
         UserOperation memory extractedDestOp = _simpleAccount.extractDestUserOp(combinedOp);
