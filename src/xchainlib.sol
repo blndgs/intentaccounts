@@ -37,7 +37,7 @@ library XChainUserOpLib {
      * @param callData The UserOperation callData value to check
      * @return bool True if it's a cross-chain operation, false otherwise
      */
-    function isCrossChainUserOp(bytes calldata callData) internal pure returns (bool) {
+    function isXChainCallData(bytes calldata callData) internal pure returns (bool) {
         if (callData.length <= 2) return false;
         uint16 length = uint16(bytes2(callData[:2]));
         return length > 0 && length < callData.length && length <= MAX_OP_LENGTH;

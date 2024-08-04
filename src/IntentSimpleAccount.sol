@@ -80,16 +80,14 @@ contract IntentSimpleAccount is SimpleAccount {
         return 0; // Ok
     }
 
+    // Expose for testing to convert UserOperation storage from memory to calldata
     function extractDestUserOp(UserOperation calldata combinedOp) external pure returns (UserOperation memory) {
         return combinedOp.extractDestUserOp();
     }
 
+    // Expose for testing to convert teh callData value storage from memory to calldata
     function isCrossChainUserOp(bytes calldata callData) external pure returns (bool) {
         return XChainUserOpLib.isCrossChainUserOp(callData);
-    }
-
-    function getXNonce(IEntryPoint entryPoint, XChainUserOpLib.NonceType nonceType) external view returns (uint256) {
-        return XChainUserOpLib.getXNonce(entryPoint, nonceType);
     }
 
     /**

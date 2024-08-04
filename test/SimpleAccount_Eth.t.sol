@@ -237,7 +237,7 @@ contract SimpleAccounEthereumTest is Test {
     }
 
     function testUnichainUserOp() public {
-        uint256 nonce = _simpleAccount.getXNonce(_entryPoint, XChainUserOpLib.NonceType.Unichain);
+        uint256 nonce = XChainUserOpLib.getXNonce(_entryPoint, XChainUserOpLib.NonceType.Unichain);
         uint256 epNonce = _entryPoint.getNonce(address(_simpleAccount), 0);
         assertEq(nonce, epNonce, "Current nonce should match the Entrypoint nonce");
 
@@ -256,7 +256,7 @@ contract SimpleAccounEthereumTest is Test {
     }
 
     function testXChainSourceUserOp() public {
-        uint256 nonce = _simpleAccount.getXNonce(_entryPoint, XChainUserOpLib.NonceType.SourceChain);
+        uint256 nonce = XChainUserOpLib.getXNonce(_entryPoint, XChainUserOpLib.NonceType.SourceChain);
         uint256 epNonce = _entryPoint.getNonce(address(_simpleAccount), uint192(block.chainid));
         UserOperation memory tNonceUserOp = UserOperation(
             address(_simpleAccount), nonce, new bytes(0), hex"", 0, 0, 0, 0, 0, new bytes(0), new bytes(0)
@@ -277,7 +277,7 @@ contract SimpleAccounEthereumTest is Test {
     function testXChainDestUserOp() public {
         vm.chainId(137);  // Set the chain ID to 137 (Polygon)
         uint256 destChainId = 137;
-        uint256 nonce = _simpleAccount.getXNonce(_entryPoint, XChainUserOpLib.NonceType.DestinationChain);
+        uint256 nonce = XChainUserOpLib.getXNonce(_entryPoint, XChainUserOpLib.NonceType.DestinationChain);
         uint256 epNonce = _entryPoint.getNonce(address(_simpleAccount), uint192(destChainId) | uint192(XChainUserOpLib.DESTINATION_FLAG));
 
         console2.log("nonce:", nonce);
@@ -332,9 +332,8 @@ contract SimpleAccounEthereumTest is Test {
         });
 
         UserOperation memory combinedOp = sourceEthOp.combineUserOps(destPolygonOp);
-        require(_simpleAccount.isCrossChainUserOp(combinedOp.callData), "Combined UserOp is not cross-chain");
+        require(_simpleAccount.isXChainCallData(combinedOp.callData), "Combined UserOp is not cross-chain");
 
-        console2.log("before _simpleAccount::extractDestUserOp");
         UserOperation memory extractedDestOp = _simpleAccount.extractDestUserOp(combinedOp);
 
         assertEq(extractedDestOp.sender, destPolygonOp.sender);
