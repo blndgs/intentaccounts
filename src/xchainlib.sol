@@ -16,6 +16,7 @@ library XChainUserOpLib {
     uint256 constant DESTINATION_FLAG = 1 << 191;
     uint256 constant KEY_MASK = (1 << 192) - 1;
     uint256 constant SEQUENCE_MASK = (1 << 64) - 1;
+    enum NonceType { Unichain, SourceChain, DestinationChain }
 
     /**
      * @dev Packed structure for efficient UserOperation storage and transfer
@@ -97,29 +98,32 @@ library XChainUserOpLib {
         });
     }
 
-    function getNonce(IEntryPoint entryPoint, bool isDestination, uint256 otherChainId) public view returns (uint256) {
+    function getXNonce(IEntryPoint entryPoint, NonceType nonceType) internal view returns (uint256) {
         uint192 key;
-        if (isDestination) {
-            key = uint192(otherChainId) | uint192(DESTINATION_FLAG);
-        } else if (otherChainId != 0) {
-            key = uint192(otherChainId);
+        if (nonceType != NonceType.Unichain) {
+            key = uint192(block.chainid);
+            if (nonceType == NonceType.DestinationChain) {
+                key |= uint192(DESTINATION_FLAG);
+            }
         }
         return entryPoint.getNonce(address(this), key);
     }
 
-    function isDestinationUserOp(UserOperation calldata userOp) public pure returns (bool) {
+    function isDestUserOp(UserOperation calldata userOp) external pure returns (bool) {
         return (userOp.nonce & (DESTINATION_FLAG << 64)) != 0;
     }
 
-    function getSequence(uint256 nonce) public pure returns (uint64) {
+    function getSequence(uint256 nonce) internal pure returns (uint64) {
         return uint64(nonce & SEQUENCE_MASK);
     }
 
-    function getKey(uint256 nonce) public pure returns (uint192) {
+    function getNonceKey(uint256 nonce) internal pure returns (uint192) {
         return uint192((nonce >> 64) & KEY_MASK);
     }
 
     function getXChainId(uint256 nonce) public pure returns (uint256) {
-        return uint256(getKey(nonce) & ~uint192(DESTINATION_FLAG));
+        uint192 key = getNonceKey(nonce);
+        if (key == 0) return 0; // Unichain UserOp
+        return uint256(key & ~uint192(DESTINATION_FLAG));
     }
 }

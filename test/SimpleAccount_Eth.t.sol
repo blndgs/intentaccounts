@@ -9,11 +9,13 @@ import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "../src/IntentUserOperation.sol";
 import "./TestSimpleAccountHelper.sol";
+import "../src/xchainlib.sol";
 
 contract SimpleAccounEthereumTest is Test {
     using Strings for bytes32;
     using UserOperationLib for UserOperation;
     using TestSimpleAccountHelper for UserOperation;
+    using XChainUserOpLib for UserOperation;
 
     address public constant ENTRYPOINT_V06 = 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789;
     uint256 _ethereumFork;
@@ -232,6 +234,39 @@ contract SimpleAccounEthereumTest is Test {
         assertLt(usdcBalanceAfter, usdcBalanceBefore, "USDC balance should decrease");
         assertGt(usdtBalanceAfter, usdtBalanceBefore, "USDT balance should increase");
         assertEq(usdcBalanceBefore - usdcBalanceAfter, 1 * 1e6, "Should have spent 1000 USDC");
+    }
+
+    function testUnichainUserOp() public {
+        uint256 nonce = _simpleAccount.getXNonce(_entryPoint, XChainUserOpLib.NonceType.Unichain);
+        uint256 epNonce = _entryPoint.getNonce(address(_simpleAccount), 0);
+        console2.log("nonce:", nonce);
+        console2.log("epNonce:", epNonce);
+        assertEq(nonce, epNonce, "Current nonce should match the Entrypoint nonce");
+
+        assertEq(XChainUserOpLib.getSequence(nonce), 0, "Initial sequence should be 0");
+        assertEq(XChainUserOpLib.getNonceKey(nonce), 0, "Key should be 0 for unichain");
+        assertEq(XChainUserOpLib.getXChainId(nonce), 0, "ChainId should be 0 for unichain");
+        UserOperation memory tNonceUserOp = UserOperation(
+            address(_simpleAccount),
+            nonce,
+            new bytes(0),
+            hex"",
+            0,
+            0,
+            0,
+            0,
+            0,
+            new bytes(0),
+            new bytes(0)
+        );
+        assertFalse(tNonceUserOp.isDestUserOp(), "Should not be a destination UserOp");
+        console2.log("sequence for nonce:", XChainUserOpLib.getSequence(nonce));
+        console2.log("sequence for epNonce:", XChainUserOpLib.getSequence(epNonce));
+        assertEq(XChainUserOpLib.getSequence(epNonce), 0, "Initial sequence should be 0");
+        assertEq(XChainUserOpLib.getNonceKey(epNonce), 0, "Key should remain 0 for unichain");
+        assertEq(XChainUserOpLib.getXChainId(epNonce), 0, "ChainId should remain 0 for unichain");
+        tNonceUserOp.nonce = epNonce;
+        assertFalse(tNonceUserOp.isDestUserOp(), "Next should not be a destination UserOp");
     }
 
     function testCrossChainUserOp() public {

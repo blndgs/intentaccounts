@@ -88,6 +88,10 @@ contract IntentSimpleAccount is SimpleAccount {
         return XChainUserOpLib.isCrossChainUserOp(callData);
     }
 
+    function getXNonce(IEntryPoint entryPoint, XChainUserOpLib.NonceType nonceType) external view returns (uint256) {
+        return XChainUserOpLib.getXNonce(entryPoint, nonceType);
+    }
+
     /**
      * execute a sequence of EVM calldata with Ether transfers.
      */
