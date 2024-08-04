@@ -16,6 +16,7 @@ library XChainUserOpLib {
     uint256 constant DESTINATION_FLAG = 1 << 191;
     uint256 constant KEY_MASK = (1 << 192) - 1;
     uint256 constant SEQUENCE_MASK = (1 << 64) - 1;
+    uint256 constant CHAINID_MASK = ((1 << 191) - 1);
     enum NonceType { Unichain, SourceChain, DestinationChain }
 
     /**
@@ -110,7 +111,7 @@ library XChainUserOpLib {
     }
 
     function isDestUserOp(UserOperation calldata userOp) external pure returns (bool) {
-        return (userOp.nonce & (DESTINATION_FLAG << 64)) != 0;
+        return (userOp.nonce >> 255) == 1;
     }
 
     function getSequence(uint256 nonce) internal pure returns (uint64) {
@@ -124,6 +125,6 @@ library XChainUserOpLib {
     function getXChainId(uint256 nonce) public pure returns (uint256) {
         uint192 key = getNonceKey(nonce);
         if (key == 0) return 0; // Unichain UserOp
-        return uint256(key & ~uint192(DESTINATION_FLAG));
+        return uint256(key & CHAINID_MASK);
     }
 }
