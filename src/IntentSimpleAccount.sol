@@ -77,17 +77,22 @@ contract IntentSimpleAccount is SimpleAccount {
             return SIG_VALIDATION_FAILED;
         }
 
+        if ( !XChainUserOpLib.isXChainCallData(userOp.callData) ) {
+            return 0; // Ok
+        }
+
+        require(userOp.callData.length <= XChainUserOpLib.MAX_COMBINED_CALLDATA_LENGTH, "Calldata exceeds maximum length");
         return 0; // Ok
     }
 
-    // Expose for testing to convert UserOperation storage from memory to calldata
-    function extractDestUserOp(UserOperation calldata combinedOp) external pure returns (UserOperation memory) {
-        return combinedOp.extractDestUserOp();
+    // Expose for testing to convert CallData value storage from memory to calldata
+    function extractXChainCallData(XChainUserOpLib.ChainState state, bytes calldata combinedCallData) external pure returns (bytes memory) {
+        return XChainUserOpLib.extractXChainCallData(state, combinedCallData);
     }
 
     // Expose for testing to convert teh callData value storage from memory to calldata
-    function isCrossChainUserOp(bytes calldata callData) external pure returns (bool) {
-        return XChainUserOpLib.isCrossChainUserOp(callData);
+    function isXChainCallData(bytes calldata callData) external pure returns (bool) {
+        return XChainUserOpLib.isXChainCallData(callData);
     }
 
     /**
@@ -99,5 +104,29 @@ contract IntentSimpleAccount is SimpleAccount {
         for (uint256 i = 0; i < dest.length; i++) {
             _call(dest[i], values[i], func[i]);
         }
+    }
+
+    /**
+     * execute a sequence of EVM calldata with Ether transfers.
+     */
+    function xChainValueBatch(XChainUserOpLib.ChainState[] calldata states, uint256[] calldata values, address[] calldata dest, bytes[] calldata funcs) external {
+        _requireFromEntryPointOrOwner();
+        require(dest.length == funcs.length, "wrong array lengths");
+        for (uint256 i = 0; i < dest.length; i++) {
+            if (states[i] == XChainUserOpLib.ChainState.SAME_CHAIN) {
+                _call(dest[i], values[i], funcs[i]);
+            } else {
+                bytes memory func = XChainUserOpLib.extractXChainCallData(states[i], funcs[i]);
+                _call(dest[i], values[i], func);
+            }
+        }
+    }
+
+    /**
+     * execute a sequence of EVM calldata with Ether transfers.
+     */
+    function xChainCall(XChainUserOpLib.ChainState state, uint256 value, address dest, bytes calldata xCallData) external {
+        bytes memory func = XChainUserOpLib.extractXChainCallData(state, xCallData);
+        _call(dest, value, func);
     }
 }

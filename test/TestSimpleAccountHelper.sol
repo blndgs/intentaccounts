@@ -49,49 +49,18 @@ library TestSimpleAccountHelper {
         return abi.encodePacked(address(factory), abi.encodeWithSelector(factory.createAccount.selector, owner, salt));
     }
 
-    function packUserOp(UserOperation memory userOp) internal pure returns (XChainUserOpLib.PackedUserOp memory) {
-        return XChainUserOpLib.PackedUserOp({
-            nonce: userOp.nonce,
-            callGasLimit: userOp.callGasLimit,
-            verificationGasLimit: userOp.verificationGasLimit,
-            preVerificationGas: userOp.preVerificationGas,
-            maxFeePerGas: userOp.maxFeePerGas,
-            maxPriorityFeePerGas: userOp.maxPriorityFeePerGas,
-            callData: userOp.callData
-        });
-    }
+    function encodeXChainCallData(bytes memory sourceCallData, bytes memory destCallData) internal pure returns (bytes memory) {
+        if (sourceCallData.length > XChainUserOpLib.MAX_CALLDATA_LENGTH) {
+            revert XChainUserOpLib.SourceCallDataTooLong(sourceCallData.length);
+        }
+        if (destCallData.length > XChainUserOpLib.MAX_CALLDATA_LENGTH) {
+            revert XChainUserOpLib.DestinationCallDataTooLong(destCallData.length);
+        }
+        if (sourceCallData.length + destCallData.length + 2 > XChainUserOpLib.MAX_COMBINED_CALLDATA_LENGTH) {
+            revert XChainUserOpLib.CombinedCallDataTooLong(sourceCallData.length + destCallData.length + 2);
+        }
 
-    function combineUserOps(UserOperation memory sourceOp, UserOperation memory destOp) internal pure returns (UserOperation memory) {
-        XChainUserOpLib.PackedUserOp memory packedDestOp = XChainUserOpLib.PackedUserOp({
-            nonce: destOp.nonce,
-            callGasLimit: destOp.callGasLimit,
-            verificationGasLimit: destOp.verificationGasLimit,
-            preVerificationGas: destOp.preVerificationGas,
-            maxFeePerGas: destOp.maxFeePerGas,
-            maxPriorityFeePerGas: destOp.maxPriorityFeePerGas,
-            callData: destOp.callData
-        });
-
-        bytes memory packedDestOpData = abi.encode(packedDestOp);
-        bytes memory combinedCallData = abi.encodePacked(
-            uint16(sourceOp.callData.length),
-            sourceOp.callData,
-            packedDestOpData
-        );
-
-        return UserOperation({
-            sender: sourceOp.sender,
-            nonce: sourceOp.nonce,
-            initCode: sourceOp.initCode,
-            callData: combinedCallData,
-            callGasLimit: sourceOp.callGasLimit,
-            verificationGasLimit: sourceOp.verificationGasLimit,
-            preVerificationGas: sourceOp.preVerificationGas,
-            maxFeePerGas: sourceOp.maxFeePerGas,
-            maxPriorityFeePerGas: sourceOp.maxPriorityFeePerGas,
-            paymasterAndData: sourceOp.paymasterAndData,
-            signature: sourceOp.signature
-        });
+        return abi.encodePacked(uint16(sourceCallData.length), sourceCallData, destCallData);
     }
 
     function printUserOperation(UserOperation memory userOp) internal pure {

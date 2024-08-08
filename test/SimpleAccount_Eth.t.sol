@@ -180,7 +180,7 @@ contract SimpleAccounEthereumTest is Test {
         });
 
         userOp.nonce = _simpleAccount.getNonce();
-        console2.log("nonce:", userOp.nonce);
+        console2.log("current nonce:", userOp.nonce);
 
         // 2. SDK signs the intent userOp
         userOp.signature = generateSignature(userOp, block.chainid);
@@ -236,67 +236,22 @@ contract SimpleAccounEthereumTest is Test {
         assertEq(usdcBalanceBefore - usdcBalanceAfter, 1 * 1e6, "Should have spent 1000 USDC");
     }
 
-    function testUnichainUserOp() public {
-        uint256 nonce = XChainUserOpLib.getXNonce(_entryPoint, XChainUserOpLib.NonceType.Unichain);
-        uint256 epNonce = _entryPoint.getNonce(address(_simpleAccount), 0);
-        assertEq(nonce, epNonce, "Current nonce should match the Entrypoint nonce");
-
-        assertEq(XChainUserOpLib.getSequence(nonce), 0, "Initial sequence should be 0");
-        assertEq(XChainUserOpLib.getNonceKey(nonce), 0, "Key should be 0 for unichain");
-        assertEq(XChainUserOpLib.getXChainId(nonce), 0, "ChainId should be 0 for unichain");
-        UserOperation memory tNonceUserOp = UserOperation(
-            address(_simpleAccount), nonce, new bytes(0), hex"", 0, 0, 0, 0, 0, new bytes(0), new bytes(0)
-        );
-        assertFalse(tNonceUserOp.isDestUserOp(), "Should not be a destination UserOp");
-        assertEq(XChainUserOpLib.getSequence(epNonce), 0, "Initial sequence should be 0");
-        assertEq(XChainUserOpLib.getNonceKey(epNonce), 0, "Key should remain 0 for unichain");
-        assertEq(XChainUserOpLib.getXChainId(epNonce), 0, "ChainId should remain 0 for unichain");
-        tNonceUserOp.nonce = epNonce;
-        assertFalse(tNonceUserOp.isDestUserOp(), "Next should not be a destination UserOp");
-    }
-
     function testXChainSourceUserOp() public {
-        uint256 nonce = XChainUserOpLib.getXNonce(_entryPoint, XChainUserOpLib.NonceType.SourceChain);
-        uint256 epNonce = _entryPoint.getNonce(address(_simpleAccount), uint192(block.chainid));
+        uint256 nonce = _entryPoint.getNonce(address(_simpleAccount), uint192(block.chainid));
         UserOperation memory tNonceUserOp = UserOperation(
             address(_simpleAccount), nonce, new bytes(0), hex"", 0, 0, 0, 0, 0, new bytes(0), new bytes(0)
         );
-
-        assertEq(XChainUserOpLib.getSequence(nonce), 0, "Initial sequence should be 0");
-        assertEq(XChainUserOpLib.getNonceKey(nonce), block.chainid, "Key should match the source chain ID");
-        assertEq(XChainUserOpLib.getXChainId(nonce), block.chainid, "ChainId should be the source chain ID");
-        assertFalse(tNonceUserOp.isDestUserOp(), "Should not be a destination UserOp");
-
-        assertEq(XChainUserOpLib.getSequence(epNonce), 0, "Initial sequence should be 0");
-        assertEq(XChainUserOpLib.getNonceKey(epNonce), block.chainid, "Key should remain the source chain ID");
-        assertEq(XChainUserOpLib.getXChainId(epNonce), block.chainid, "ChainId should remain the source chain ID");
-        tNonceUserOp.nonce = epNonce;
-        assertFalse(tNonceUserOp.isDestUserOp(), "Next should not be a destination UserOp");
     }
 
     function testXChainDestUserOp() public {
         vm.chainId(137);  // Set the chain ID to 137 (Polygon)
         uint256 destChainId = 137;
-        uint256 nonce = XChainUserOpLib.getXNonce(_entryPoint, XChainUserOpLib.NonceType.DestinationChain);
-        uint256 epNonce = _entryPoint.getNonce(address(_simpleAccount), uint192(destChainId) | uint192(XChainUserOpLib.DESTINATION_FLAG));
-
+        uint256 nonce = _entryPoint.getNonce(address(_simpleAccount), 0);
         console2.log("nonce:", nonce);
-        console2.log("epNonce:", epNonce);
-        console2.log("XChainUserOpLib.getNonceKey(nonce):", XChainUserOpLib.getNonceKey(nonce));
-        console2.log("XChainUserOpLib.getXChainId(nonce):", XChainUserOpLib.getXChainId(nonce));
 
         UserOperation memory tNonceUserOp = UserOperation(
-        address(_simpleAccount), nonce, new bytes(0), hex"", 0, 0, 0, 0, 0, new bytes(0), new bytes(0)
+            address(_simpleAccount), nonce, new bytes(0), hex"", 0, 0, 0, 0, 0, new bytes(0), new bytes(0)
         );
-
-        assertEq(XChainUserOpLib.getSequence(nonce), 0, "Initial sequence should be 0");
-        assertEq(XChainUserOpLib.getXChainId(nonce), destChainId, "ChainId should be the destination chain ID");
-        assertTrue(tNonceUserOp.isDestUserOp(), "Should be a destination UserOp");
-
-        assertEq(XChainUserOpLib.getSequence(epNonce), 0, "Initial sequence should be 0");
-        assertEq(XChainUserOpLib.getXChainId(epNonce), destChainId, "ChainId should remain the destination chain ID");
-        tNonceUserOp.nonce = epNonce;
-        assertTrue(tNonceUserOp.isDestUserOp(), "Next should be a destination UserOp");
     }
 
     function testCrossChainUserOp() public {
@@ -331,29 +286,28 @@ contract SimpleAccounEthereumTest is Test {
             signature: hex"fe050651afae2c8d5b87a4f2995bbc77c6efba4eb0a801bca371bfccd7dc551009f829eb0c17836968f49210a3e3a5cc955f40e3b66f512d956302d9a963bb081b7b2266726f6d223a7b2274797065223a22544f4b454e222c2261646472657373223a22307845656565654565656545654565654565456545656545454565656565456565656565656545456545222c22616d6f756e74223a22302e38222c22636861696e4964223a2231227d2c22746f223a7b2274797065223a22544f4b454e222c2261646472657373223a22307864616331376639353864326565353233613232303632303639393435393763313364383331656337222c22636861696e4964223a2231227d7d"
         });
 
-        UserOperation memory combinedOp = sourceEthOp.combineUserOps(destPolygonOp);
-        require(_simpleAccount.isXChainCallData(combinedOp.callData), "Combined UserOp is not cross-chain");
+        sourceEthOp.callData =  TestSimpleAccountHelper.encodeXChainCallData(sourceEthOp.callData, destPolygonOp.callData);
+        require(_simpleAccount.isXChainCallData(sourceEthOp.callData), "Combined UserOp is not cross-chain");
 
-        UserOperation memory extractedDestOp = _simpleAccount.extractDestUserOp(combinedOp);
-
-        assertEq(extractedDestOp.sender, destPolygonOp.sender);
-        assertEq(extractedDestOp.nonce, destPolygonOp.nonce);
-        assertEq(extractedDestOp.callGasLimit, destPolygonOp.callGasLimit);
-        assertEq(extractedDestOp.verificationGasLimit, destPolygonOp.verificationGasLimit);
-        assertEq(extractedDestOp.preVerificationGas, destPolygonOp.preVerificationGas);
-        assertEq(extractedDestOp.maxFeePerGas, destPolygonOp.maxFeePerGas);
-        assertEq(extractedDestOp.maxPriorityFeePerGas, destPolygonOp.maxPriorityFeePerGas);
-
-        // Optional: Log the extracted UserOperation for debugging
-        console2.log("Extracted UserOperation:");
-        console2.log("  sender:", extractedDestOp.sender);
-        console2.log("  nonce:", extractedDestOp.nonce);
-        console2.log("  callGasLimit:", extractedDestOp.callGasLimit);
-        console2.log("  verificationGasLimit:", extractedDestOp.verificationGasLimit);
-        console2.log("  preVerificationGas:", extractedDestOp.preVerificationGas);
-        console2.log("  maxFeePerGas:", extractedDestOp.maxFeePerGas);
-        console2.log("  maxPriorityFeePerGas:", extractedDestOp.maxPriorityFeePerGas);
-        console2.log("  callData length:", extractedDestOp.callData.length);
+//
+//        assertEq(extractedDestOp.sender, destPolygonOp.sender);
+//        assertEq(extractedDestOp.nonce, destPolygonOp.nonce);
+//        assertEq(extractedDestOp.callGasLimit, destPolygonOp.callGasLimit);
+//        assertEq(extractedDestOp.verificationGasLimit, destPolygonOp.verificationGasLimit);
+//        assertEq(extractedDestOp.preVerificationGas, destPolygonOp.preVerificationGas);
+//        assertEq(extractedDestOp.maxFeePerGas, destPolygonOp.maxFeePerGas);
+//        assertEq(extractedDestOp.maxPriorityFeePerGas, destPolygonOp.maxPriorityFeePerGas);
+//
+//        // Optional: Log the extracted UserOperation for debugging
+//        console2.log("Extracted UserOperation:");
+//        console2.log("  sender:", extractedDestOp.sender);
+//        console2.log("  nonce:", extractedDestOp.nonce);
+//        console2.log("  callGasLimit:", extractedDestOp.callGasLimit);
+//        console2.log("  verificationGasLimit:", extractedDestOp.verificationGasLimit);
+//        console2.log("  preVerificationGas:", extractedDestOp.preVerificationGas);
+//        console2.log("  maxFeePerGas:", extractedDestOp.maxFeePerGas);
+//        console2.log("  maxPriorityFeePerGas:", extractedDestOp.maxPriorityFeePerGas);
+//        console2.log("  callData length:", extractedDestOp.callData.length);
     }
 
     //    function testValidateExecute_Squid() public {
