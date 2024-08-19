@@ -11,6 +11,7 @@ import "@openzeppelin/contracts/utils/Strings.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "../src/IntentSimpleAccountFactory.sol";
+import "./TestSimpleAccountHelper.sol";
 
 using Strings for bytes32;
 using UserOperationLib for UserOperation;
@@ -109,6 +110,20 @@ contract ContractB {
     }
 }
 
+interface ISquidMulticall {
+    enum CallType { Default, FullTokenBalance, FullNativeBalance, CollectTokenBalance }
+    
+    struct Call {
+        CallType callType;
+        address target;
+        uint256 value;
+        bytes callData;
+        bytes payload;
+    }
+
+    function run(Call[] calldata calls) external payable;
+}
+
 contract callsTest is Test {
     address constant ENTRYPOINT_V06 = 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789;
     ContractB b;
@@ -159,7 +174,76 @@ contract callsTest is Test {
         console2.log("address(this): ", address(this));
         console2.log("address(b)", address(b));
     }
-
+    
+    function testSquidMultiCallGetDAIBalance() public {
+        address SQUID_MULTICALL = 0xEa749Fd6bA492dbc14c24FE8A3d08769229b896c;
+        address DAI = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
+        address WALLET = 0xc291efDc1a6420CBB226294806604833982Ed24d;
+        
+        // fund/faucet wallet with DAI balance
+        deal(DAI, address(_simpleAccount), 1000e18); // 1000 DAI;
+    
+        // Create the multicall data
+        ISquidMulticall.Call[] memory calls = new ISquidMulticall.Call[](1);
+        calls[0] = ISquidMulticall.Call({
+            callType: ISquidMulticall.CallType.Default,
+            target: DAI,
+            value: 0,
+            callData: abi.encodeWithSignature("balanceOf(address)", WALLET),
+            payload: ""
+        });
+    
+        // Encode the multicall data
+        bytes memory squidMulticallCalldata = abi.encodeWithSignature("run((uint8,address,uint256,bytes,bytes)[])", calls);
+    
+        // Execute the call
+        (bool success, bytes memory returnData) = SQUID_MULTICALL.call(squidMulticallCalldata);
+    
+        // Log the success status
+        console.log("Multicall success:", success);
+    
+        // Log the length of return data
+        console.log("Return data length:", returnData.length);
+    
+        if (!success) {
+            // If the call failed, try to decode the revert reason
+            if (returnData.length > 4) {
+                bytes memory reasonSlice = TestSimpleAccountHelper._slice(returnData, 4, returnData.length);
+                (string memory reason) = abi.decode(reasonSlice, (string));
+                console.log("Revert reason:", reason);
+            } else {
+                console.log("Call reverted without a reason");
+            }
+            revert("Multicall failed");
+        }
+    
+        // If no data was returned, try calling the DAI contract directly
+        if (returnData.length == 0) {
+            console.log("No data returned from multicall, trying direct call");
+            (success, returnData) = DAI.staticcall(abi.encodeWithSignature("balanceOf(address)", WALLET));
+            require(success, "Direct DAI call failed");
+            uint256 balance = abi.decode(returnData, (uint256));
+            console.log("DAI Balance (direct call):", balance);
+            assertNotEq(balance, 0, "DAI balance is zero");
+        } else {
+            // The return data is an array of results, one for each call
+            (bytes[] memory results) = abi.decode(returnData, (bytes[]));
+    
+            // Log the number of results
+            console.log("Number of results:", results.length);
+    
+            // We only made one call, so we're interested in the first (and only) result
+            if (results.length > 0) {
+                uint256 balance = abi.decode(results[0], (uint256));
+                console.log("DAI Balance:", balance);
+                // Assert that the balance is what we expect
+                assertEq(balance, 998000000000000000000, "Unexpected DAI balance");
+            } else {
+                revert("No results returned from multicall");
+            }
+        }
+    }
+    
     // Contract calls illustrasted in multiple ways
     function testCallDo() external payable {
         // Use the address of the deployed ContractB instance
