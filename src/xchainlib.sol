@@ -10,9 +10,9 @@ import {IEntryPoint} from "@account-abstraction/interfaces/IEntryPoint.sol";
  * @dev Library for handling cross-chain UserOperations in ERC-4337 compatible wallets with packed calldata
  */
 library XChainUserOpLib {
-    // Maximum allowed calldata length for a UserOperation (4KB)
-    uint256 internal constant MAX_COMBINED_CALLDATA_LENGTH = 4098; // 2 bytes (length) + 4096 bytes for 2x userOp callData
-    uint256 internal constant MAX_CALLDATA_LENGTH = 2048;
+    // Maximum allowed calldata length for a UserOperation (14KB)
+    uint256 internal constant MAX_COMBINED_CALLDATA_LENGTH = 14438; // 2 bytes (length) + 14436 bytes for 2x userOp callData
+    uint256 internal constant MAX_CALLDATA_LENGTH = 7168;
 
     enum ChainState {
         SAME_CHAIN,
@@ -37,7 +37,7 @@ library XChainUserOpLib {
         uint256 combinedLength = callData.length;
         if (combinedLength <= 2 || combinedLength > MAX_COMBINED_CALLDATA_LENGTH) return false;
         uint16 sourceLength = uint16(bytes2(callData[:2]));
-        return sourceLength <= MAX_CALLDATA_LENGTH && combinedLength - 2 <= MAX_CALLDATA_LENGTH * 2;
+        return sourceLength <= MAX_CALLDATA_LENGTH && combinedLength - 2 <= MAX_COMBINED_CALLDATA_LENGTH;
     }
 
     /**
