@@ -76,13 +76,6 @@ contract IntentSimpleAccount is SimpleAccount {
         if (owner != ethHash.recover(signature65)) {
             return SIG_VALIDATION_FAILED;
         }
-
-        if ( !XChainUserOpLib.isXChainCallData(userOp.callData) ) {
-            return 0; // Ok
-        }
-
-        require(userOp.callData.length <= XChainUserOpLib.MAX_COMBINED_CALLDATA_LENGTH, "Calldata exceeds maximum length");
-        return 0; // Ok
     }
 
     // Expose for testing to convert CallData value storage from memory to calldata
