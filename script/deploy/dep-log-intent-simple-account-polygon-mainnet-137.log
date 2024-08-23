@@ -1,0 +1,204 @@
+forge script script/deploy/IntentSimpleAccount_Tenderly.s.sol \
+    --rpc-url $RPC_URL \
+    --broadcast \
+    --slow \
+    --private-key $PRIVATE_KEY \
+    --etherscan-api-key $ETHEREUMSCAN_API_KEY \
+    --verify \
+    --verifier-url https://api.polygonscan.com/api \
+    --ffi
+[⠆] Compiling...
+[⠃] Compiling 4 files with Solc 0.8.25
+[⠒] Solc 0.8.25 finished in 1.61s
+Compiler run successful!
+Script ran successfully.
+
+== Logs ==
+  Deployer address: 0x43B32D92d8A6b67104D621E9a9C3831A01A8c50c
+  IntentSimpleAccountFactory deployed at: 0xB16C1CE2EFEe29d6B314163293743d2c6306dEB6
+  Salt: 0
+  IntentSimpleAccount proxy deployed at: 0x1af5Dc71CE5F2e3aE90bf2b3ECD0a3498f981ab3
+
+## Setting up 1 EVM.
+
+==========================
+
+Chain 137
+
+Estimated gas price: 30.005891558 gwei
+
+Estimated total gas used for script: 3740611
+
+Estimated amount required: 0.112240368026661938 ETH
+
+==========================
+
+##### polygon
+✅  [Success]Hash: 0x602c39a8b91b23fed61f0680a589732527d5570cfa2fe7494262fa64a79d8eb4
+Contract Address: 0xB16C1CE2EFEe29d6B314163293743d2c6306dEB6
+Block: 60491735
+Paid: 0.081340205218014843 ETH (2711091 gas * 30.002757273 gwei)
+
+
+##### polygon
+✅  [Success]Hash: 0xa6f61f44ad1c155b084eb462581509ddd8355e8c5f078d8b9aac9282a86bd16f
+Block: 60491739
+Paid: 0.004435125188571675 ETH (147825 gas * 30.002538059 gwei)
+
+✅ Sequence #1 on polygon | Total Paid: 0.085775330406586518 ETH (2858916 gas * avg 30.002647666 gwei)
+
+
+==========================
+
+ONCHAIN EXECUTION COMPLETE & SUCCESSFUL.
+##
+Start verification for (3) contracts
+Start verifying contract `0xB16C1CE2EFEe29d6B314163293743d2c6306dEB6` deployed on polygon
+
+Submitting verification for [src/IntentSimpleAccountFactory.sol:IntentSimpleAccountFactory] 0xB16C1CE2EFEe29d6B314163293743d2c6306dEB6.
+Submitted contract for verification:
+        Response: `OK`
+        GUID: `ftlvq8trtxuyie4euv25hxadm1vjk4n3cglgyafcvlqypm8qnq`
+        URL: https://polygonscan.com/address/0xb16c1ce2efee29d6b314163293743d2c6306deb6
+Contract verification status:
+Response: `NOTOK`
+Details: `Pending in queue`
+Contract verification status:
+Response: `OK`
+Details: `Pass - Verified`
+Contract successfully verified
+Start verifying contract `0x12682405859905FF65566007C0f0b23bE3E8228f` deployed on polygon
+
+Submitting verification for [src/IntentSimpleAccount.sol:IntentSimpleAccount] 0x12682405859905FF65566007C0f0b23bE3E8228f.
+Submitted contract for verification:
+        Response: `OK`
+        GUID: `21kdgjty8pcjvpirl3ungjfpzxgcq1t7vw2nhz13nz3ramftfp`
+        URL: https://polygonscan.com/address/0x12682405859905ff65566007c0f0b23be3e8228f
+Contract verification status:
+Response: `NOTOK`
+Details: `Pending in queue`
+Contract verification status:
+Response: `OK`
+Details: `Pass - Verified`
+Contract successfully verified
+Start verifying contract `0x1af5Dc71CE5F2e3aE90bf2b3ECD0a3498f981ab3` deployed on polygon
+
+Submitting verification for [lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy] 0x1af5Dc71CE5F2e3aE90bf2b3ECD0a3498f981ab3.
+Submitted contract for verification:
+        Response: `OK`
+        GUID: `15ws9ikw4a3h97vvn1mv9d3rahgpelgem11nbwmj3mvq1xqwv5`
+        URL: https://polygonscan.com/address/0x1af5dc71ce5f2e3ae90bf2b3ecd0a3498f981ab3
+Contract verification status:
+Response: `NOTOK`
+Details: `Pending in queue`
+Contract verification status:
+Response: `NOTOK`
+Details: `Already Verified`
+Contract source code already verified
+All (3) contracts were verified!
+
+Transactions saved to: /Users/mar/go/src/github.com/blndgs/intentaccounts/broadcast/IntentSimpleAccount_Tenderly.s.sol/137/run-latest.json
+
+Sensitive values saved to: /Users/mar/go/src/github.com/blndgs/intentaccounts/cache/IntentSimpleAccount_Tenderly.s.sol/137/run-latest.json
+----------------------------------------------
+
+forge script script/deploy/IntentSimpleAccount_Tenderly.s.sol \
+    --rpc-url $RPC_URL \
+    --broadcast \
+    --slow \
+    --private-key $PRIVATE_KEY \
+    --etherscan-api-key $ETHEREUMSCAN_API_KEY \
+    --verify \
+    --verifier-url https://api.polygonscan.com/api \
+    --ffi
+[⠆] Compiling...
+No files changed, compilation skipped
+Script ran successfully.
+
+== Logs ==
+  Deployer address: 0x43B32D92d8A6b67104D621E9a9C3831A01A8c50c
+  IntentSimpleAccountFactory deployed at: 0x734c09fE2fEc2dDd0b5C143145A166549795F8F8
+  Salt: 0
+  IntentSimpleAccount proxy deployed at: 0x2F2B4Ef08336c22B18e77E959485E243b5Fe3b96
+
+## Setting up 1 EVM.
+
+==========================
+
+Chain 137
+
+Estimated gas price: 36.841134809 gwei
+
+Estimated total gas used for script: 3740611
+
+Estimated amount required: 0.137808354119028299 ETH
+
+==========================
+
+##### polygon
+✅  [Success]Hash: 0x11bd7b9fcbb1de170ae67f10c56aeccdd1ac41004543a4d4a928a38d7245c3d2
+Contract Address: 0x734c09fE2fEc2dDd0b5C143145A166549795F8F8
+Block: 60382203
+Paid: 0.09707741622275721 ETH (2711091 gas * 35.80750931 gwei)
+
+
+##### polygon
+✅  [Success]Hash: 0x6d31d348dd0b65f1e853c6f2cb4f8f2dda09341cb6593765ea6fb989b2f4c04e
+Block: 60382209
+Paid: 0.0052994555908326 ETH (147825 gas * 35.849522008 gwei)
+
+✅ Sequence #1 on polygon | Total Paid: 0.10237687181358981 ETH (2858916 gas * avg 35.828515659 gwei)
+
+
+==========================
+
+ONCHAIN EXECUTION COMPLETE & SUCCESSFUL.
+##
+Start verification for (3) contracts
+Start verifying contract `0x734c09fE2fEc2dDd0b5C143145A166549795F8F8` deployed on polygon
+
+Submitting verification for [src/IntentSimpleAccountFactory.sol:IntentSimpleAccountFactory] 0x734c09fE2fEc2dDd0b5C143145A166549795F8F8.
+Submitted contract for verification:
+        Response: `OK`
+        GUID: `15e4rnajei1marxkz38mzh4e53smik8grrexvbpszfrxdqquu3`
+        URL: https://polygonscan.com/address/0x734c09fe2fec2ddd0b5c143145a166549795f8f8
+Contract verification status:
+Response: `NOTOK`
+Details: `Pending in queue`
+Contract verification status:
+Response: `OK`
+Details: `Pass - Verified`
+Contract successfully verified
+Start verifying contract `0x54D82B3B5866fE80B7f2C13ddAFA339f72384c69` deployed on polygon
+
+Submitting verification for [src/IntentSimpleAccount.sol:IntentSimpleAccount] 0x54D82B3B5866fE80B7f2C13ddAFA339f72384c69.
+Submitted contract for verification:
+        Response: `OK`
+        GUID: `mxmdvj1rzpvpbtakvjd1qpegdjg7bfdxsgyaudwjvvbrxbeymt`
+        URL: https://polygonscan.com/address/0x54d82b3b5866fe80b7f2c13ddafa339f72384c69
+Contract verification status:
+Response: `NOTOK`
+Details: `Pending in queue`
+Contract verification status:
+Response: `OK`
+Details: `Pass - Verified`
+Contract successfully verified
+Start verifying contract `0x2F2B4Ef08336c22B18e77E959485E243b5Fe3b96` deployed on polygon
+
+Submitting verification for [lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy] 0x2F2B4Ef08336c22B18e77E959485E243b5Fe3b96.
+Submitted contract for verification:
+        Response: `OK`
+        GUID: `tvhueqigzb4upkapvvvzrsptwtcna3fijiliqy3ztddkgbhrg8`
+        URL: https://polygonscan.com/address/0x2f2b4ef08336c22b18e77e959485e243b5fe3b96
+Contract verification status:
+Response: `NOTOK`
+Details: `Pending in queue`
+Contract verification status:
+Response: `NOTOK`
+Details: `Already Verified`
+Contract source code already verified
+All (3) contracts were verified!
+
+Transactions saved to: /Users/mar/go/src/github.com/blndgs/intentaccounts/broadcast/IntentSimpleAccount_Tenderly.s.sol/137/run-latest.json
+
+Sensitive values saved to: /Users/mar/go/src/github.com/blndgs/intentaccounts/cache/IntentSimpleAccount_Tenderly.s.sol/137/run-latest.json

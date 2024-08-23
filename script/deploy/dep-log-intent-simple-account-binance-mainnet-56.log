@@ -1,0 +1,104 @@
+forge script script/deploy/IntentSimpleAccount_Tenderly.s.sol \
+    --rpc-url https://bsc-mainnet.nodereal.io/v1/12445b762b994082bb3b7b7c8788b085 \
+    --broadcast \
+    --slow \
+    --private-key \
+    --etherscan-api-key \
+    --verify \
+    --verifier-url https://api.bscscan.com/api \
+    --ffi
+[⠔] Compiling...
+No files changed, compilation skipped
+EIP-3855 is not supported in one or more of the RPCs used.
+Unsupported Chain IDs: 56.
+Contracts deployed with a Solidity version equal or higher than 0.8.20 might not work properly.
+For more information, please see https://eips.ethereum.org/EIPS/eip-3855
+Script ran successfully.
+
+== Logs ==
+  Deployer address: 0x43B32D92d8A6b67104D621E9a9C3831A01A8c50c
+  IntentSimpleAccountFactory deployed at: 0x61e218301932a2550AE8E4Cd1EcfCA7bE64E57DC
+  Salt: 0
+  IntentSimpleAccount proxy deployed at: 0xc291efDc1a6420CBB226294806604833982Ed24d
+
+## Setting up 1 EVM.
+
+==========================
+
+Chain 56
+
+Estimated gas price: 1 gwei
+
+Estimated total gas used for script: 3702891
+
+Estimated amount required: 0.003702891 ETH
+
+==========================
+
+##### bsc
+✅  [Success]Hash: 0xe2ddc3514eafd9208f240c152da4401049aec0341086d345aef75e0759b1cf49
+Contract Address: 0x61e218301932a2550AE8E4Cd1EcfCA7bE64E57DC
+Block: 41613446
+Paid: 0.002682076 ETH (2682076 gas * 1 gwei)
+
+
+##### bsc
+✅  [Success]Hash: 0x80a234cac39c97750b4b61902fbac21be7edb436a2512960f1c0f9a167a013ed
+Block: 41613449
+Paid: 0.000147825 ETH (147825 gas * 1 gwei)
+
+✅ Sequence #1 on bsc | Total Paid: 0.002829901 ETH (2829901 gas * avg 1 gwei)
+
+
+==========================
+
+ONCHAIN EXECUTION COMPLETE & SUCCESSFUL.
+##
+Start verification for (3) contracts
+Start verifying contract `0x61e218301932a2550AE8E4Cd1EcfCA7bE64E57DC` deployed on bsc
+
+Submitting verification for [src/IntentSimpleAccountFactory.sol:IntentSimpleAccountFactory] 0x61e218301932a2550AE8E4Cd1EcfCA7bE64E57DC.
+Submitted contract for verification:
+        Response: `OK`
+        GUID: `edhdijzxuzgsge4spnutwbas4bdbyvqr4ptuze5ui7sj9bkfsr`
+        URL: https://bscscan.com/address/0x61e218301932a2550ae8e4cd1ecfca7be64e57dc
+Contract verification status:
+Response: `NOTOK`
+Details: `Pending in queue`
+Contract verification status:
+Response: `OK`
+Details: `Pass - Verified`
+Contract successfully verified
+Start verifying contract `0xE238276410168C3576b11FE6E236C8F6035A7f7C` deployed on bsc
+
+Submitting verification for [src/IntentSimpleAccount.sol:IntentSimpleAccount] 0xE238276410168C3576b11FE6E236C8F6035A7f7C.
+Submitted contract for verification:
+        Response: `OK`
+        GUID: `ump6ks6aargtkjxgfbtm416juymwmum2mqdm7asiu3yrygqz8k`
+        URL: https://bscscan.com/address/0xe238276410168c3576b11fe6e236c8f6035a7f7c
+Contract verification status:
+Response: `NOTOK`
+Details: `Pending in queue`
+Contract verification status:
+Response: `OK`
+Details: `Pass - Verified`
+Contract successfully verified
+Start verifying contract `0xc291efDc1a6420CBB226294806604833982Ed24d` deployed on bsc
+
+Submitting verification for [lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy] 0xc291efDc1a6420CBB226294806604833982Ed24d.
+Submitted contract for verification:
+        Response: `OK`
+        GUID: `befvcmsmxqbkqpwvsi5ztwimzd7babszdkm5ibeczwxeqedqdb`
+        URL: https://bscscan.com/address/0xc291efdc1a6420cbb226294806604833982ed24d
+Contract verification status:
+Response: `NOTOK`
+Details: `Pending in queue`
+Contract verification status:
+Response: `OK`
+Details: `Pass - Verified`
+Contract successfully verified
+All (3) contracts were verified!
+
+Transactions saved to: /Users/mar/go/src/github.com/blndgs/intentaccounts/broadcast/IntentSimpleAccount_Tenderly.s.sol/56/run-latest.json
+
+Sensitive values saved to: /Users/mar/go/src/github.com/blndgs/intentaccounts/cache/IntentSimpleAccount_Tenderly.s.sol/56/run-latest.json
