@@ -111,8 +111,13 @@ contract ContractB {
 }
 
 interface ISquidMulticall {
-    enum CallType { Default, FullTokenBalance, FullNativeBalance, CollectTokenBalance }
-    
+    enum CallType {
+        Default,
+        FullTokenBalance,
+        FullNativeBalance,
+        CollectTokenBalance
+    }
+
     struct Call {
         CallType callType;
         address target;
@@ -174,15 +179,15 @@ contract callsTest is Test {
         console2.log("address(this): ", address(this));
         console2.log("address(b)", address(b));
     }
-    
+
     function testSquidMultiCallGetDAIBalance() public {
         address SQUID_MULTICALL = 0xEa749Fd6bA492dbc14c24FE8A3d08769229b896c;
         address DAI = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
         address WALLET = 0xc291efDc1a6420CBB226294806604833982Ed24d;
-        
+
         // fund/faucet wallet with DAI balance
         deal(DAI, address(_simpleAccount), 1000e18); // 1000 DAI;
-    
+
         // Create the multicall data
         ISquidMulticall.Call[] memory calls = new ISquidMulticall.Call[](1);
         calls[0] = ISquidMulticall.Call({
@@ -192,19 +197,20 @@ contract callsTest is Test {
             callData: abi.encodeWithSignature("balanceOf(address)", WALLET),
             payload: ""
         });
-    
+
         // Encode the multicall data
-        bytes memory squidMulticallCalldata = abi.encodeWithSignature("run((uint8,address,uint256,bytes,bytes)[])", calls);
-    
+        bytes memory squidMulticallCalldata =
+            abi.encodeWithSignature("run((uint8,address,uint256,bytes,bytes)[])", calls);
+
         // Execute the call
         (bool success, bytes memory returnData) = SQUID_MULTICALL.call(squidMulticallCalldata);
-    
+
         // Log the success status
         console.log("Multicall success:", success);
-    
+
         // Log the length of return data
         console.log("Return data length:", returnData.length);
-    
+
         if (!success) {
             // If the call failed, try to decode the revert reason
             if (returnData.length > 4) {
@@ -216,7 +222,7 @@ contract callsTest is Test {
             }
             revert("Multicall failed");
         }
-    
+
         // If no data was returned, try calling the DAI contract directly
         if (returnData.length == 0) {
             console.log("No data returned from multicall, trying direct call");
@@ -228,10 +234,10 @@ contract callsTest is Test {
         } else {
             // The return data is an array of results, one for each call
             (bytes[] memory results) = abi.decode(returnData, (bytes[]));
-    
+
             // Log the number of results
             console.log("Number of results:", results.length);
-    
+
             // We only made one call, so we're interested in the first (and only) result
             if (results.length > 0) {
                 uint256 balance = abi.decode(results[0], (uint256));
@@ -243,7 +249,7 @@ contract callsTest is Test {
             }
         }
     }
-    
+
     // Contract calls illustrasted in multiple ways
     function testCallDo() external payable {
         // Use the address of the deployed ContractB instance

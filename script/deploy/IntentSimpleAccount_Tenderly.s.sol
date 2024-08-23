@@ -71,8 +71,3 @@ contract DeploySimpleAccountTenderly is Script {
         vm.stopBroadcast();
     }
 }
-
-
-
-
-

@@ -271,24 +271,24 @@ contract SimpleAccounEthereumTest is Test {
         sourceEthOp.callData =  TestSimpleAccountHelper.encodeXChainCallData(sourceEthOp.callData, destPolygonOp.callData);
         require(_simpleAccount.isXChainCallData(sourceEthOp.callData), "Combined UserOp is not cross-chain");
 
-//        assertEq(extractedDestOp.sender, destPolygonOp.sender);
-//        assertEq(extractedDestOp.nonce, destPolygonOp.nonce);
-//        assertEq(extractedDestOp.callGasLimit, destPolygonOp.callGasLimit);
-//        assertEq(extractedDestOp.verificationGasLimit, destPolygonOp.verificationGasLimit);
-//        assertEq(extractedDestOp.preVerificationGas, destPolygonOp.preVerificationGas);
-//        assertEq(extractedDestOp.maxFeePerGas, destPolygonOp.maxFeePerGas);
-//        assertEq(extractedDestOp.maxPriorityFeePerGas, destPolygonOp.maxPriorityFeePerGas);
-//
-//        // Optional: Log the extracted UserOperation for debugging
-//        console2.log("Extracted UserOperation:");
-//        console2.log("  sender:", extractedDestOp.sender);
-//        console2.log("  nonce:", extractedDestOp.nonce);
-//        console2.log("  callGasLimit:", extractedDestOp.callGasLimit);
-//        console2.log("  verificationGasLimit:", extractedDestOp.verificationGasLimit);
-//        console2.log("  preVerificationGas:", extractedDestOp.preVerificationGas);
-//        console2.log("  maxFeePerGas:", extractedDestOp.maxFeePerGas);
-//        console2.log("  maxPriorityFeePerGas:", extractedDestOp.maxPriorityFeePerGas);
-//        console2.log("  callData length:", extractedDestOp.callData.length);
+        //        assertEq(extractedDestOp.sender, destPolygonOp.sender);
+        //        assertEq(extractedDestOp.nonce, destPolygonOp.nonce);
+        //        assertEq(extractedDestOp.callGasLimit, destPolygonOp.callGasLimit);
+        //        assertEq(extractedDestOp.verificationGasLimit, destPolygonOp.verificationGasLimit);
+        //        assertEq(extractedDestOp.preVerificationGas, destPolygonOp.preVerificationGas);
+        //        assertEq(extractedDestOp.maxFeePerGas, destPolygonOp.maxFeePerGas);
+        //        assertEq(extractedDestOp.maxPriorityFeePerGas, destPolygonOp.maxPriorityFeePerGas);
+        //
+        //        // Optional: Log the extracted UserOperation for debugging
+        //        console2.log("Extracted UserOperation:");
+        //        console2.log("  sender:", extractedDestOp.sender);
+        //        console2.log("  nonce:", extractedDestOp.nonce);
+        //        console2.log("  callGasLimit:", extractedDestOp.callGasLimit);
+        //        console2.log("  verificationGasLimit:", extractedDestOp.verificationGasLimit);
+        //        console2.log("  preVerificationGas:", extractedDestOp.preVerificationGas);
+        //        console2.log("  maxFeePerGas:", extractedDestOp.maxFeePerGas);
+        //        console2.log("  maxPriorityFeePerGas:", extractedDestOp.maxPriorityFeePerGas);
+        //        console2.log("  callData length:", extractedDestOp.callData.length);
     }
 
     /**

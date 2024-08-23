@@ -93,7 +93,7 @@ library TestSimpleAccountHelper {
         console2.log("  Signature (hex):");
         console2.logBytes(userOp.signature);
     }
-    
+
     /**
      * @dev Slices a bytes array to return a portion specified by the start and end indices.
      * @param data The bytes array to be sliced.
