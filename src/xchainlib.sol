@@ -42,7 +42,7 @@ library XChainUserOpLib {
 
     /**
      * @dev Extracts the relevant calldata based on the chain state
-     * @param state The current chain state (SAME_CHAIN, SOURCE_CHAIN, or DESTINATION_CHAIN)
+                let currentPos := add(callData.offset, 1) // Start position after numOps byte
      * @param callData The combined calldata
      * @return bytes The extracted calldata relevant to the current chain state
      * @notice When ChainState is SOURCE_CHAIN, the destination calldata can be empty or not set
@@ -73,35 +73,36 @@ library XChainUserOpLib {
         if (state == ChainState.SOURCE_CHAIN) {
             if (sourceCallDataLength == 0) {
                 revert EmptySourceCallData();
-            }
-            return callData[2:2 + sourceCallDataLength];
-        } else { // DESTINATION_CHAIN
-            if (combinedLength <= 2 + sourceCallDataLength) {
-                revert EmptyDestinationCallData();
-            }
-            return callData[2 + sourceCallDataLength:];
+    function isXChainCallData2(bytes calldata callData) public pure returns (bool) {
+        if (callData.length < 5) {
+            return false;
         }
+
+        uint8 numOps = uint8(callData[0]);
+        if (numOps == 0 || numOps > MAX_CALLDATA_COUNT) {
+            return false;
+        }
+
+        uint256 currentPos = 1;
+        for (uint8 i = 0; i < numOps; i++) {
+            if (currentPos + 4 > callData.length) {
+                return false;
+            }
+
+            uint16 chainId = uint16(bytes2(callData[currentPos:currentPos + 2]));
+            if (chainId == 0) {
+                return false;
+            }
+
+            uint16 dataLength = uint16(bytes2(callData[currentPos + 2:currentPos + 4]));
+            if (dataLength == 0 || currentPos + 4 + dataLength > callData.length) {
+                return false;
+            }
+
+            currentPos += 4 + dataLength;
+        }
+
+        return currentPos == callData.length;
     }
-
-    /**
-     * @dev Encodes cross-chain calldata by combining source and destination calldata
-     * @param sourceCallData The calldata for the source chain operation
-     * @param destCallData The calldata for the destination chain operation
-     * @return bytes The combined cross-chain calldata
-     * @notice sourceCallData can be empty when encoding for DESTINATION_CHAIN state
-     * @notice destCallData can be empty when encoding for SOURCE_CHAIN state
-     */
-    function encodeXChainCallData(bytes memory sourceCallData, bytes memory destCallData) internal pure returns (bytes memory) {
-        if (sourceCallData.length > MAX_CALLDATA_LENGTH) {
-            revert SourceCallDataTooLong(sourceCallData.length);
-        }
-        if (destCallData.length > MAX_CALLDATA_LENGTH) {
-            revert DestinationCallDataTooLong(destCallData.length);
-        }
-        if (sourceCallData.length + destCallData.length + 2 > MAX_COMBINED_CALLDATA_LENGTH) {
-            revert CombinedCallDataTooLong(sourceCallData.length + destCallData.length + 2);
-        }
-
-        return abi.encodePacked(uint16(sourceCallData.length), sourceCallData, destCallData);
     }
 }
