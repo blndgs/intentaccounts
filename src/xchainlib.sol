@@ -1,39 +1,31 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.25;
 
-import "./IntentUserOperation.sol";
-import {console2} from "forge-std/console2.sol";
-import {IEntryPoint} from "@account-abstraction/interfaces/IEntryPoint.sol";
-
 /**
- * @title CrossChainUserOpLib
- * @dev Library for handling cross-chain UserOperations in ERC-4337 compatible wallets with packed calldata
+ * @title xCallDataLib
+ * @dev Library for handling cross-chain UserOperations in ERC-4337 compatible wallets with packed callData
  */
-library XChainUserOpLib {
-    // Maximum allowed calldata length for a UserOperation (14KB)
-    uint256 internal constant MAX_COMBINED_CALLDATA_LENGTH = 14438; // 2 bytes (length) + 14436 bytes for 2x userOp callData
+library XChainLib {
+    // Maximum allowed callData length for a UserOperation (14KB)
+    uint256 internal constant MAX_COMBINED_CALLDATA_LENGTH = 14336; // MAX_CALLDATA_LENGTH * 2
     uint256 internal constant MAX_CALLDATA_LENGTH = 7168;
-
-    enum ChainState {
-        SAME_CHAIN,
-        SOURCE_CHAIN,
-        DESTINATION_CHAIN
-    }
+    uint256 internal constant MAX_CALLDATA_COUNT = 4;
 
     // Custom errors
     error CombinedCallDataTooLong(uint256 length);
     error InvalidCallDataLength(uint256 length);
-    error SourceCallDataTooLong(uint256 length);
-    error DestinationCallDataTooLong(uint256 length);
-    error EmptySourceCallData();
-    error EmptyDestinationCallData();
+    error CallDataTooLong(uint256 length);
+    error InvalidEncodedData();
+    error InvalidNumberOfCallData(uint256 count);
+    error ChainDataTooShort();
+
 
     /**
-     * @dev Checks if a UserOperation's callData belongs to a cross-chain operation
-     * @param callData The UserOperation callData to check
-     * @return bool True if it's a cross-chain operation, false otherwise
+     * @notice Efficiently detects if the calldata is for multi-chain operations
+     * @param callData The calldata to check
+     * @return bool True if the calldata appears to be for multi-chain operations, false otherwise
      */
-    function isXChainCallData(bytes calldata callData) internal pure returns (bool) {
+    function isXChainCallData(bytes calldata callData) public pure returns (bool) {
         uint256 combinedLength = callData.length;
         if (combinedLength <= 2 || combinedLength > MAX_COMBINED_CALLDATA_LENGTH) return false;
         uint16 sourceLength = uint16(bytes2(callData[:2]));
