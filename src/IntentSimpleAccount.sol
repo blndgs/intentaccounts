@@ -19,7 +19,6 @@ import "./xchainlib.sol";
  */
 contract IntentSimpleAccount is SimpleAccount {
     using IntentUserOperationLib for UserOperation;
-    using XChainUserOpLib for UserOperation;
     using ECDSA for bytes32;
 
     uint256 private constant SIGNATURE_LENGTH = 65;
@@ -80,12 +79,12 @@ contract IntentSimpleAccount is SimpleAccount {
 
     // Expose for testing to convert CallData value storage from memory to calldata
     function extractXChainCallData(XChainUserOpLib.ChainState state, bytes calldata combinedCallData) external pure returns (bytes memory) {
-        return XChainUserOpLib.extractXChainCallData(state, combinedCallData);
+        external
     }
 
     // Expose for testing to convert teh callData value storage from memory to calldata
     function isXChainCallData(bytes calldata callData) external pure returns (bool) {
-        return XChainUserOpLib.isXChainCallData(callData);
+        return XChainLib.isXChainCallData(callData);
     }
 
     /**
@@ -118,8 +117,8 @@ contract IntentSimpleAccount is SimpleAccount {
     /**
      * execute a sequence of EVM calldata with Ether transfers.
      */
-    function xChainCall(XChainUserOpLib.ChainState state, uint256 value, address dest, bytes calldata xCallData) external {
-        bytes memory func = XChainUserOpLib.extractXChainCallData(state, xCallData);
+    function xChainCall(uint256 value, address dest, bytes calldata xCallData) external {
+        bytes memory func;
         _call(dest, value, func);
     }
 }
