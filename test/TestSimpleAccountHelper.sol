@@ -7,7 +7,6 @@ import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {IntentSimpleAccountFactory} from "../src/IntentSimpleAccountFactory.sol";
 import "../src/xchainlib.sol";
 import "forge-std/Test.sol";
-import "forge-std/Vm.sol";
 
 library TestSimpleAccountHelper {
     address constant ENTRYPOINT_V06 = 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789;
@@ -17,9 +16,6 @@ library TestSimpleAccountHelper {
     error EndLessThanStart();
     error EndOutOfBounds(uint256 dataLength, uint256 end);
     error StartOutOfBounds(uint256 dataLength, uint256 start);
-    
-
-    using XChainUserOpLib for UserOperation;
 
     /**
      * @notice Generates the initCode for creating a new account using a wallet factory

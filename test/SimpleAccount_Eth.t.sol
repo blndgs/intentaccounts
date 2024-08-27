@@ -15,7 +15,6 @@ contract SimpleAccounEthereumTest is Test {
     using Strings for bytes32;
     using UserOperationLib for UserOperation;
     using TestSimpleAccountHelper for UserOperation;
-    using XChainUserOpLib for UserOperation;
 
     address public constant ENTRYPOINT_V06 = 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789;
     uint256 _ethereumFork;
