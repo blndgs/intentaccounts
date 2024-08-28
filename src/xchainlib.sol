@@ -101,5 +101,126 @@ library XChainLib {
 
         return currentPos == callData.length;
     }
+    */
+    
+    /**
+     * @notice Efficiently finds and returns the calldata for a specific chain ID (up to 4 chains)
+     * @dev Encoding structure:
+     * +-------------------+-------------------+-------------------+
+     * |    Number of Ops  |       UserOp 1    |      UserOp 2     |
+     * |      (1 byte)     |                   |                   |
+     * +-------------------+-------------------+-------------------+
+     * |        0x02       |     Chain 1 Data  |    Chain 2 Data   |
+     * +-------------------+-------------------+-------------------+
+     *                     |                   |
+     *                     v                   v
+     *             +---------------+   +---------------+
+     *             | Chain ID (2B) |   | Chain ID (2B) |
+     *             +---------------+   +---------------+
+     *             | Length  (2B)  |   | Length  (2B)  |
+     *             +---------------+   +---------------+
+     *             | Calldata      |   | Calldata      |
+     *             | (Variable)    |   | (Variable)    |
+     *             +---------------+   +---------------+
+     * @param encodedData The encoded multi-chain UserOp data
+     * @param targetChainId The chain ID to find the calldata for (range: 1 to 65535)
+     * @return calldataContent The calldata for the specified chain ID, or an empty bytes array if not found
+     */
+    function extractXChainCallData(bytes calldata encodedData, uint16 targetChainId)
+        external
+        pure
+        returns (bytes memory)
+    {
+        if (encodedData.length < 1) revert InvalidEncodedData();
+
+        uint8 numOps = uint8(encodedData[0]);
+        if (numOps == 0 || numOps > 4) revert InvalidNumberOfCallData(numOps);
+
+        uint256 offset = 1;
+        uint16 chainId;
+
+        // Check first chain
+        (chainId, offset) = readChainId(encodedData, offset);
+        if (chainId == targetChainId) {
+            return readCalldata(encodedData, offset);
+        }
+        offset = skipCalldata(encodedData, offset);
+
+        // If only one operation, return empty
+        if (numOps == 1) return new bytes(0);
+
+        // Check second chain
+        (chainId, offset) = readChainId(encodedData, offset);
+        if (chainId == targetChainId) {
+            return readCalldata(encodedData, offset);
+        }
+        offset = skipCalldata(encodedData, offset);
+
+        // If only two operations, return empty
+        if (numOps == 2) return new bytes(0);
+
+        // Check third chain
+        (chainId, offset) = readChainId(encodedData, offset);
+        if (chainId == targetChainId) {
+            return readCalldata(encodedData, offset);
+        }
+        offset = skipCalldata(encodedData, offset);
+
+        // If only three operations, return empty
+        if (numOps == 3) return new bytes(0);
+
+        // Check fourth chain
+        (chainId, offset) = readChainId(encodedData, offset);
+        if (chainId == targetChainId) {
+            return readCalldata(encodedData, offset);
+        }
+
+        // If not found, return empty
+        return new bytes(0);
+    }
+
+    /**
+     * @notice Helper function to read chain ID from encoded data
+     * @param encodedData The encoded multi-chain UserOp data
+     * @param offset The current offset in the encoded data
+     * @return chainId The chain ID (range: 1 to 65535)
+     * @return newOffset The new offset after reading the chain ID
+     */
+    function readChainId(bytes calldata encodedData, uint256 offset)
+        private
+        pure
+        returns (uint16 chainId, uint256 newOffset)
+    {
+        if (encodedData.length < offset + 2) revert ChainDataTooShort();
+        chainId = uint16(bytes2(encodedData[offset:offset + 2]));
+        newOffset = offset + 2;
+    }
+
+    /**
+     * @notice Helper function to read calldata from encoded data
+     * @param encodedData The encoded multi-chain UserOp data
+     * @param offset The current offset in the encoded data
+     * @return calldataContent The calldata
+     */
+    function readCalldata(bytes calldata encodedData, uint256 offset) private pure returns (bytes memory) {
+        if (encodedData.length < offset + 2) revert ChainDataTooShort();
+        uint16 calldataLength = uint16(bytes2(encodedData[offset:offset + 2]));
+        offset += 2;
+        if (encodedData.length < offset + calldataLength) {
+            revert ChainDataTooShort();
+        }
+        return encodedData[offset:offset + calldataLength];
+    }
+
+    /**
+     * @notice Helper function to skip calldata in encoded data
+     * @param encodedData The encoded multi-chain UserOp data
+     * @param offset The current offset in the encoded data
+     * @return newOffset The new offset after skipping the calldata
+     */
+    function skipCalldata(bytes calldata encodedData, uint256 offset) private pure returns (uint256) {
+        if (encodedData.length < offset + 2) revert ChainDataTooShort();
+        uint16 calldataLength = uint16(bytes2(encodedData[offset:offset + 2]));
+        return offset + 2 + calldataLength;
     }
 }
