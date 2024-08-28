@@ -235,7 +235,7 @@ contract SimpleAccounEthereumTest is Test {
         assertEq(usdcBalanceBefore - usdcBalanceAfter, 1 * 1e6, "Should have spent 1000 USDC");
     }
 
-    function testCrossChainUserOp() view public {
+    function testCrossChainUserOp() public view {
         UserOperation memory sourceEthOp = UserOperation({
             sender: address(payable(_simpleAccount)),
             nonce: 161,
@@ -267,7 +267,11 @@ contract SimpleAccounEthereumTest is Test {
             signature: hex"fe050651afae2c8d5b87a4f2995bbc77c6efba4eb0a801bca371bfccd7dc551009f829eb0c17836968f49210a3e3a5cc955f40e3b66f512d956302d9a963bb081b7b2266726f6d223a7b2274797065223a22544f4b454e222c2261646472657373223a22307845656565654565656545654565654565456545656545454565656565456565656565656545456545222c22616d6f756e74223a22302e38222c22636861696e4964223a2231227d2c22746f223a7b2274797065223a22544f4b454e222c2261646472657373223a22307864616331376639353864326565353233613232303632303639393435393763313364383331656337222c22636861696e4964223a2231227d7d"
         });
 
-        sourceEthOp.callData =  TestSimpleAccountHelper.encodeXChainCallData(sourceEthOp.callData, destPolygonOp.callData);
+        XChainLib.xCallData[] memory chainUserOps = new XChainLib.xCallData[](2);
+        chainUserOps[0] = XChainLib.xCallData({chainId: uint16(1), callData: sourceEthOp.callData});
+        chainUserOps[1] = XChainLib.xCallData({chainId: 137, callData: destPolygonOp.callData});
+
+        sourceEthOp.callData = TestSimpleAccountHelper.encodeXChainCallData(chainUserOps);
         require(_simpleAccount.isXChainCallData(sourceEthOp.callData), "Combined UserOp is not cross-chain");
 
         //        assertEq(extractedDestOp.sender, destPolygonOp.sender);

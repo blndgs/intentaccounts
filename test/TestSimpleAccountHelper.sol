@@ -51,18 +51,42 @@ library TestSimpleAccountHelper {
         return abi.encodePacked(address(factory), abi.encodeWithSelector(factory.createAccount.selector, owner, salt));
     }
 
-    function encodeXChainCallData(bytes memory sourceCallData, bytes memory destCallData) internal pure returns (bytes memory) {
-        if (sourceCallData.length > XChainUserOpLib.MAX_CALLDATA_LENGTH) {
-            revert XChainUserOpLib.SourceCallDataTooLong(sourceCallData.length);
-        }
-        if (destCallData.length > XChainUserOpLib.MAX_CALLDATA_LENGTH) {
-            revert XChainUserOpLib.DestinationCallDataTooLong(destCallData.length);
-        }
-        if (sourceCallData.length + destCallData.length + 2 > XChainUserOpLib.MAX_COMBINED_CALLDATA_LENGTH) {
-            revert XChainUserOpLib.CombinedCallDataTooLong(sourceCallData.length + destCallData.length + 2);
+    /**
+     * @notice Encodes multiple chain-specific UserOps into a single byte array
+     * @param chainUserOps Array of xCallData structs to encode
+     * @return bytes The encoded multi-chain UserOp data
+     */
+    function encodeXChainCallData(XChainLib.xCallData[] memory chainUserOps) internal pure returns (bytes memory) {
+        if (chainUserOps.length == 0 || chainUserOps.length > XChainLib.MAX_CALLDATA_COUNT) {
+            revert XChainLib.InvalidNumberOfCallData(chainUserOps.length);
         }
 
-        return abi.encodePacked(uint16(sourceCallData.length), sourceCallData, destCallData);
+        bytes memory encoded = abi.encodePacked(uint8(chainUserOps.length)); // First byte: number of ops
+
+        uint256 callDataLengthTotal = 0;
+        for (uint256 i = 0; i < chainUserOps.length; i++) {
+            callDataLengthTotal += chainUserOps[i].callData.length;
+            console2.log("callDataLengthTotal:", callDataLengthTotal);
+
+            if (chainUserOps[i].callData.length > XChainLib.MAX_CALLDATA_LENGTH) {
+                console2.log("revert XChainLib.CallDataTooLong:", chainUserOps[i].callData.length);
+                revert XChainLib.CallDataTooLong(chainUserOps[i].callData.length);
+            }
+
+            if (callDataLengthTotal > XChainLib.MAX_COMBINED_CALLDATA_LENGTH) {
+                console2.log("revert XChainLib.CombinedCallDataTooLong:", callDataLengthTotal);
+                revert XChainLib.CombinedCallDataTooLong(callDataLengthTotal);
+            }
+
+            encoded = abi.encodePacked(
+                encoded,
+                chainUserOps[i].chainId, // 2 bytes: chain ID (range: 1 to 65535)
+                uint16(chainUserOps[i].callData.length), // 2 bytes: callData length
+                chainUserOps[i].callData // Variable length: callData
+            );
+        }
+
+        return encoded;
     }
 
     function printUserOperation(UserOperation memory userOp) internal pure {

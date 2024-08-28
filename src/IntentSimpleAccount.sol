@@ -78,8 +78,12 @@ contract IntentSimpleAccount is SimpleAccount {
     }
 
     // Expose for testing to convert CallData value storage from memory to calldata
-    function extractXChainCallData(XChainUserOpLib.ChainState state, bytes calldata combinedCallData) external pure returns (bytes memory) {
+    function extractXChainCallData(bytes calldata combinedCallData, uint16 chainID)
         external
+        pure
+        returns (bytes memory)
+    {
+        return XChainLib.extractXChainCallData(combinedCallData, chainID);
     }
 
     // Expose for testing to convert teh callData value storage from memory to calldata
@@ -101,15 +105,16 @@ contract IntentSimpleAccount is SimpleAccount {
     /**
      * execute a sequence of EVM calldata with Ether transfers.
      */
-    function xChainValueBatch(XChainUserOpLib.ChainState[] calldata states, uint256[] calldata values, address[] calldata dest, bytes[] calldata funcs) external {
+    function xChainValueBatch(uint256[] calldata values, address[] calldata dest, bytes[] calldata funcs) external {
         _requireFromEntryPointOrOwner();
         require(dest.length == funcs.length, "wrong array lengths");
+        uint16 chainID = uint16(block.chainid);
         for (uint256 i = 0; i < dest.length; i++) {
-            if (states[i] == XChainUserOpLib.ChainState.SAME_CHAIN) {
-                _call(dest[i], values[i], funcs[i]);
-            } else {
-                bytes memory func = XChainUserOpLib.extractXChainCallData(states[i], funcs[i]);
+            if (XChainLib.isXChainCallData(funcs[i])) {
+                bytes memory func = XChainLib.extractXChainCallData(funcs[i], chainID);
                 _call(dest[i], values[i], func);
+            } else {
+                _call(dest[i], values[i], funcs[i]);
             }
         }
     }
@@ -119,6 +124,12 @@ contract IntentSimpleAccount is SimpleAccount {
      */
     function xChainCall(uint256 value, address dest, bytes calldata xCallData) external {
         bytes memory func;
-        _call(dest, value, func);
+        if (XChainLib.isXChainCallData(xCallData)) {
+            func = XChainLib.extractXChainCallData(xCallData, uint16(block.chainid));
+            _call(dest, value, func);
+        } else {
+            func = xCallData;
+            _call(dest, value, func);
+        }
     }
 }
