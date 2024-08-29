@@ -1,144 +1,172 @@
 /*
-Encode a single piece of calldata or combine two pieces, prepending the length of the source
-calldata as a 2-byte prefix to the encoded result.
+Encode and concatenate multiple chain-specific Calldata into a single userOp calldata value.
 
 Usage:
-	go run ethereum_calldata_encoder.go <source_calldata> [destination_calldata]
+    go run concat.go <chain1_id>:<chain1_calldata> [<chain2_id>:<chain2_calldata>] [<chain3_id>:<chain3_calldata>] [<chain4_id>:<chain4_calldata>]
 
 Arguments:
-
-	<source_calldata>      Required. The source chain calldata to encode. Must be a 0x-prefixed.
-	[destination_calldata] Optional. The destination chain calldata to append. Must be a 0x-prefixed.
+    <chainX_id>         Required. The chain ID for the UserOp. Must be a decimal number between 1 and 65535.
+    <chainX_calldata>   Required. The calldata for the UserOp. Must be a hexadecimal string, optionally 0x-prefixed.
 
 Examples:
+    Encode single UserOp:
+      go run main.go 1:0x1234567890abcdef
 
-	Encode single calldata:
-	  go run concat.go 0x1234567890abcdef
+    Encode two UserOps:
+      go run main.go 1:0x1234567890abcdef 2:0xfedcba9876543210
 
-	Encode and combine two pieces of calldata:
-	  go run concat.go 0x1234567890abcdef 0xfedcba9876543210
+    Encode four UserOps:
+      go run main.go 1:0x1234 2:0x5678 3:0x9abc 4:0xdef0
 */
 package main
 
 import (
+	"encoding/binary"
+	"encoding/hex"
+	"errors"
 	"fmt"
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"os"
-	"regexp"
+	"strings"
 )
 
-// validateHex checks if the input is a valid hexadecimal string
-func validateHex(input string) error {
-	match, _ := regexp.MatchString("^0x[0-9a-fA-F]+$", input)
-	if !match {
-		return fmt.Errorf("invalid hexadecimal input '%s'. Must start with '0x' followed by hexadecimal digits", input)
-	}
-	return nil
+const (
+	MAX_COMBINED_CALLDATA_LENGTH = 14336
+	MAX_CALLDATA_LENGTH          = 7168
+	MAX_CALLDATA_COUNT           = 4
+)
+
+var (
+	ErrCombinedCallDataTooLong   = errors.New("combined calldata too long")
+	ErrInvalidCallDataLength     = errors.New("invalid calldata length")
+	ErrCallDataTooLong           = errors.New("calldata too long")
+	ErrInvalidEncodedData        = errors.New("invalid encoded data")
+	ErrInvalidNumberOfCallData   = errors.New("invalid number of calldata")
+	ErrChainDataTooShort         = errors.New("chain data too short")
+	ErrInvalidHexString          = errors.New("invalid hex string")
+	ErrInvalidChainID            = errors.New("invalid chain ID")
+)
+
+// XCallData represents a single chain-specific UserOp
+type XCallData struct {
+	ChainID  uint16
+	CallData []byte
 }
 
-// encodeCalldata encodes the calldata with a length prefix and optional destination calldata.
-// It asserts that the decoding process reproduces the original calldata.
-func encodeCalldata(sourceCalldata string, destCalldata string) (string, error) {
-	// Validate inputs
-	if err := validateHex(sourceCalldata); err != nil {
-		return "", err
+// encodeXChainCallData encodes multiple chain-specific UserOps into a single byte array
+// It implements the same logic and validations as the Solidity encodeXChainCallData function
+func encodeXChainCallData(chainUserOps []XCallData) ([]byte, error) {
+	// Validate number of UserOps
+	if len(chainUserOps) == 0 || len(chainUserOps) > MAX_CALLDATA_COUNT {
+		return nil, fmt.Errorf("%w: %d", ErrInvalidNumberOfCallData, len(chainUserOps))
 	}
-	if destCalldata != "" {
-		if err := validateHex(destCalldata); err != nil {
-			return "", err
+
+	// Initialize encoded result with number of UserOps
+	encoded := make([]byte, 1)
+	encoded[0] = byte(len(chainUserOps))
+
+	callDataLengthTotal := 0
+	for _, op := range chainUserOps {
+		callDataLengthTotal += len(op.CallData)
+
+		// Validate individual calldata length
+		if len(op.CallData) > MAX_CALLDATA_LENGTH {
+			return nil, fmt.Errorf("%w: %d", ErrCallDataTooLong, len(op.CallData))
 		}
+
+		// Validate combined calldata length
+		if callDataLengthTotal > MAX_COMBINED_CALLDATA_LENGTH {
+			return nil, fmt.Errorf("%w: %d", ErrCombinedCallDataTooLong, callDataLengthTotal)
+		}
+
+		// Encode chain ID (2 bytes, big-endian)
+		chainIDBytes := make([]byte, 2)
+		binary.BigEndian.PutUint16(chainIDBytes, op.ChainID)
+
+		// Encode calldata length (2 bytes, big-endian)
+		callDataLengthBytes := make([]byte, 2)
+		binary.BigEndian.PutUint16(callDataLengthBytes, uint16(len(op.CallData)))
+
+		// Append chain ID, calldata length, and calldata to the result
+		encoded = append(encoded, chainIDBytes...)
+		encoded = append(encoded, callDataLengthBytes...)
+		encoded = append(encoded, op.CallData...)
 	}
 
-	// Calculate source calldata length (in bytes)
-	sourceLengthHeur := (len(sourceCalldata) - 2) / 2 // Subtract 2 to account for '0x' prefix
-	sourceBytes, err := hexToBytes(sourceCalldata)
-	if err != nil {
-		panic(fmt.Errorf("error converting source calldata to bytes: %v", err))
-	}
-	sourceLength := len(sourceBytes)
-
-	// Assert that the heuristic length matches the actual length
-	if sourceLength != sourceLengthHeur {
-		panic(fmt.Errorf("calldata length mismatch. Expected %d bytes, got %d", sourceLength, sourceLengthHeur))
-	}
-
-	// Encode the length as a 2-byte hex string
-	encodedLength := fmt.Sprintf("%04x", sourceLength)
-
-	// Concatenate the encoded length with the source calldata
-	result := "0x" + encodedLength + sourceCalldata[2:]
-
-	// If destination calldata is provided, append it
-	if destCalldata != "" {
-		result += destCalldata[2:]
-	}
-
-	// Assert that the decoding reproduces the original
-	decSource, decDest := decodeCalldata(result)
-	if decSource != sourceCalldata {
-		panic(fmt.Errorf("source calldata mismatch. Expected %s, got %s", sourceCalldata, decSource))
-	}
-	if decDest != destCalldata {
-		panic(fmt.Errorf("destination calldata mismatch. Expected %s, got %s", destCalldata, decDest))
-	}
-
-	return result, nil
+	return encoded, nil
 }
 
-func decodeCalldata(encodedCalldata string) (string, string) {
-	// Validate input
-	if err := validateHex(encodedCalldata); err != nil {
-		panic(err)
+// parseChainID converts a string to a uint16 chain ID and validates it
+func parseChainID(s string) (uint16, error) {
+	var chainID uint16
+	_, err := fmt.Sscanf(s, "%d", &chainID)
+	if err != nil {
+		return 0, err
+	}
+	if chainID == 0 {
+		return 0, ErrInvalidChainID
+	}
+	return chainID, nil
+}
+
+// parseSingleCalldata parses a single calldata argument in the format "chain_id:calldata"
+func parseSingleCalldata(arg string) (XCallData, error) {
+	parts := strings.SplitN(arg, ":", 2)
+	if len(parts) != 2 {
+		return XCallData{}, fmt.Errorf("invalid argument format: %s", arg)
 	}
 
-	// Extract the length prefix
-	lengthPrefix := encodedCalldata[2:6]
-	length := hexutil.MustDecodeUint64("0x" + lengthPrefix)
-
-	// Extract the source calldata
-	sourceCalldata := "0x" + encodedCalldata[6:6+length*2]
-
-	// Extract the destination calldata if it exists
-	var destCalldata string
-	if len(encodedCalldata) > 6+int(length)*2 {
-		destCalldata = "0x" + encodedCalldata[6+length*2:]
+	chainID, err := parseChainID(parts[0])
+	if err != nil {
+		return XCallData{}, fmt.Errorf("invalid chain ID: %w", err)
 	}
 
-	return sourceCalldata, destCalldata
+	callData, err := hex.DecodeString(strings.TrimPrefix(parts[1], "0x"))
+	if err != nil {
+		return XCallData{}, fmt.Errorf("invalid calldata: %w", err)
+	}
+
+	return XCallData{
+		ChainID:  chainID,
+		CallData: callData,
+	}, nil
+}
+
+// parseCalldata parses all calldata arguments provided to the program
+func parseCalldata(args []string) ([]XCallData, error) {
+	var chainUserOps []XCallData
+
+	for _, arg := range args {
+		userOp, err := parseSingleCalldata(arg)
+		if err != nil {
+			return nil, err
+		}
+		chainUserOps = append(chainUserOps, userOp)
+	}
+
+	return chainUserOps, nil
 }
 
 func main() {
-	args := os.Args[1:]
-
-	if len(args) == 1 {
-		// Only source calldata provided
-		result, err := encodeCalldata(args[0], "")
-		if err != nil {
-			fmt.Println("Error:", err)
-			os.Exit(1)
-		}
-		fmt.Printf("Encoded result (source only):\n%s", result)
-	} else if len(args) == 2 {
-		// Both source and destination calldata provided
-		result, err := encodeCalldata(args[0], args[1])
-		if err != nil {
-			fmt.Println("Error:", err)
-			os.Exit(1)
-		}
-		fmt.Printf("Encoded result (source and destination):\n%s", result)
-	} else {
-		// Unknown
-		fmt.Println("Usage:", os.Args[0], "<source_calldata> [destination_calldata]")
-		fmt.Println("Example (source only):", os.Args[0], "0x1234567890abcdef")
-		fmt.Println("Example (source and destination):", os.Args[0], "0x1234567890abcdef 0xfedcba9876543210")
+	// Validate command-line arguments
+	if len(os.Args) < 2 {
+		fmt.Println("Usage: go run concat.go <chain1_id>:<chain1_calldata> [<chain2_id>:<chain2_calldata>] [<chain3_id>:<chain3_calldata>] [<chain4_id>:<chain4_calldata>]")
 		os.Exit(1)
 	}
-}
 
-func hexToBytes(hex string) ([]byte, error) {
-	return hexutil.Decode(hex)
-}
+	// Parse UserOps from command-line arguments
+	chainUserOps, err := parseCalldata(os.Args[1:])
+	if err != nil {
+		fmt.Printf("Error parsing arguments: %s\n", err)
+		os.Exit(1)
+	}
 
-func bytesToHex(b []byte) string {
-	return hexutil.Encode(b)
+	// Encode UserOps
+	encoded, err := encodeXChainCallData(chainUserOps)
+	if err != nil {
+		fmt.Printf("Error encoding calldata: %s\n", err)
+		os.Exit(1)
+	}
+
+	// Output the encoded result
+	fmt.Printf("0x%s\n", hex.EncodeToString(encoded))
 }
