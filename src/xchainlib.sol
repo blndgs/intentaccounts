@@ -45,25 +45,26 @@ library XChainLib {
                         isValid := 0
                         break
                     }
-                    
+
                     // Read chainId (2 bytes)
                     let chainId := shr(240, calldataload(currentPos))
                     // Read dataLength (2 bytes after chainId)
                     let dataLength := shr(240, calldataload(add(currentPos, 2)))
-    
+
                     // Check for valid chainId and dataLength
-                    if or(eq(chainId, 0), or(eq(dataLength, 0), gt(add(currentPos, add(4, dataLength)), add(callData.offset, length)))) {
+                    if or(
+                        eq(chainId, 0),
+                        or(eq(dataLength, 0), gt(add(currentPos, add(4, dataLength)), add(callData.offset, length)))
+                    ) {
                         isValid := 0
                         break
                     }
-    
+
                     // Update position to the next operation
                     currentPos := add(currentPos, add(4, dataLength))
                 }
-    
-                if isValid {
-                    isValid := eq(currentPos, add(callData.offset, length)) // Ensure all calldata is processed
-                }
+
+                if isValid { isValid := eq(currentPos, add(callData.offset, length)) } // Ensure all calldata is processed
             }
         }
         return isValid;
@@ -102,7 +103,7 @@ library XChainLib {
         return currentPos == callData.length;
     }
     */
-    
+
     /**
      * @notice Efficiently finds and returns the calldata for a specific chain ID (up to 4 chains)
      * @dev Encoding structure:
@@ -222,5 +223,143 @@ library XChainLib {
         if (encodedData.length < offset + 2) revert ChainDataTooShort();
         uint16 calldataLength = uint16(bytes2(encodedData[offset:offset + 2]));
         return offset + 2 + calldataLength;
+    }
+
+    /**
+     * @notice Concatenates chain IDs from encoded cross-chain call data into a single uint256 value.
+     * @dev This function extracts and combines chain IDs from the encoded data structure,
+     *      preserving their original order. The concatIds is a packed uint256 where:
+     *      - The most significant 16 bits contain the first operation's chain ID.
+     *      - Each subsequent 16-bit segment contains the next operation's chain ID.
+     *      - Up to 4 chain IDs can be packed, utilizing at most the upper 64 bits.
+     *
+     * For example, given chain IDs [0x0001, 0x0005, 0x0064, 0x03E8], the output would be:
+     * 0x0001000500640388
+     * Which breaks down as:
+     * - 0x0001 (Most significant 16 bits, representing chain ID 1)
+     * - 0x0005 (Next 16 bits, representing chain ID 5)
+     * - 0x0064 (Next 16 bits, representing chain ID 100)
+     * - 0x03E8 (Least significant 16 bits of the used bits, representing chain ID 1000)
+     *
+     * Visualized in 16-bit segments: 0x0001 | 0x0005 | 0x0064 | 0x03E8
+     *
+     * @param encodedData The encoded cross-chain call data containing chain IDs and their associated call data.
+     * @param defChainId The default chain ID to return in case of invalid input.
+     * @return concatIds A uint256 value with concatenated chain IDs, ordered from most to least significant bits.
+     */
+    function concatChainIds(bytes calldata encodedData, uint256 defChainId) public pure returns (uint256 concatIds) {
+        if (encodedData.length < 5) return defChainId; // Not enough data for even a single operation
+
+        uint8 numOps = uint8(encodedData[0]);
+        if (numOps == 0 || numOps > 4) return defChainId; // Invalid number of operations
+
+        uint256 offset = 1;
+
+        for (uint8 i = 0; i < numOps; i++) {
+            if (offset + 4 > encodedData.length) return defChainId; // Not enough data for this operation
+
+            uint16 chainId = uint16(bytes2(encodedData[offset:offset + 2]));
+            concatIds = (concatIds << 16) | chainId;
+
+            uint16 calldataLength = uint16(bytes2(encodedData[offset + 2:offset + 4]));
+            offset += 4 + calldataLength;
+
+            if (offset > encodedData.length) return defChainId; // Calldata length exceeds available data
+        }
+
+        if (offset != encodedData.length) return defChainId; // Extra data at the end
+
+        return concatIds;
+    }
+
+    /**
+     * @notice Yul version that concatenates chain IDs from encoded cross-chain call data
+     * into a single uint256 value.
+     * @dev This function extracts and combines chain IDs from the encoded data structure,
+     *      preserving their original order. The concatIds is a packed uint256 where:
+     *      - The most significant 16 bits contain the first operation's chain ID.
+     *      - Each subsequent 16-bit segment contains the next operation's chain ID.
+     *      - Up to 4 chain IDs can be packed, utilizing at most the upper 64 bits.
+     *
+     * For example, given chain IDs [0x0001, 0x0005, 0x0064, 0x03E8], the output would be:
+     * 0x0001000500640388
+     * Which breaks down as:
+     * - 0x0001 (Most significant 16 bits, representing chain ID 1)
+     * - 0x0005 (Next 16 bits, representing chain ID 5)
+     * - 0x0064 (Next 16 bits, representing chain ID 100)
+     * - 0x03E8 (Least significant 16 bits of the used bits, representing chain ID 1000)
+     *
+     * Visualized in 16-bit segments: 0x0001 | 0x0005 | 0x0064 | 0x03E8
+     *
+     * @param encodedData The encoded cross-chain call data containing chain IDs and their associated call data.
+     * @param defChainId The default chain ID to return in case of invalid input.
+     * @return concatIds A uint256 value with concatenated chain IDs, ordered from most to least significant bits.
+     */
+    function concatChainIdsYul(bytes calldata encodedData, uint256 defChainId)
+        public
+        pure
+        returns (uint256 concatIds)
+    {
+        assembly {
+            // input data is long enough to contain 1 operation
+            if lt(calldatasize(), add(encodedData.offset, 5)) {
+                mstore(0, defChainId)
+                return(0, 32)
+            }
+
+            // Extract the operations count from the first byte
+            let numOps := shr(248, calldataload(encodedData.offset))
+
+            // number of operations is valid (between 1 and 4)
+            if or(iszero(numOps), gt(numOps, 4)) {
+                mstore(0, defChainId)
+                return(0, 32)
+            }
+
+            // Calculate the start and end offsets of the encoded data
+            let offset := add(encodedData.offset, 1)
+            let endOffset := add(encodedData.offset, encodedData.length)
+
+            // Reset concatIds to 0 before concatenation
+            concatIds := 0
+
+            for { let i := 0 } lt(i, numOps) { i := add(i, 1) } {
+                // Check if there's enough data for the current operation
+                if gt(add(offset, 4), endOffset) {
+                    // Return defChainId if data is insufficient
+                    mstore(0, defChainId)
+                    return(0, 32)
+                }
+
+                // Extract the chain ID (2 bytes)
+                let chainId := and(shr(240, calldataload(offset)), 0xFFFF)
+
+                concatIds := or(shl(16, concatIds), chainId)
+
+                // Extract the calldata length (next 2 bytes after the chain ID)
+                let calldataLength := and(shr(240, calldataload(add(offset, 2))), 0xFFFF)
+                // Move the offset to the next operation
+                offset := add(offset, add(calldataLength, 4))
+
+                // Check if we've exceeded the available data
+                if gt(offset, endOffset) {
+                    // Return defChainId if we've exceeded available data
+                    mstore(0, defChainId)
+                    return(0, 32)
+                }
+            }
+
+            // Check if we've consumed exactly all the input data
+            if iszero(eq(offset, endOffset)) {
+                // Return defChainId if there's extra data
+                mstore(0, defChainId)
+                return(0, 32)
+            }
+
+            // If we've reached here, it means the concatenation was successful
+            // Store the concatenated chain IDs
+            mstore(0, concatIds)
+            return(0, 32)
+        }
     }
 }

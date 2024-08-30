@@ -164,6 +164,135 @@ contract XChainLibTest is Test {
         TestSimpleAccountHelper.encodeXChainCallData(ops);
     }
 
+    function testConcatChainIds() public {
+        // Test with 1 chain ID
+        {
+            bytes memory encoded = hex"0100010004deadbeef";
+            uint256 result = XChainLib.concatChainIds(encoded, block.chainid);
+            assertEq(result, 0x0001, "Single chain ID should be 0x0001");
+        }
+
+        // Test with 2 chain IDs
+        {
+            bytes memory encoded = hex"0200010004deadbeef00020004cafebabe";
+            uint256 result = XChainLib.concatChainIds(encoded, block.chainid);
+            assertEq(result, 0x00010002, "Concatenated chain IDs should be 0x00010002");
+        }
+
+        // Test with 4 chain IDs
+        {
+            bytes memory encoded = hex"0400010001aa00050001bb00640001cc03e80001dd";
+            uint256 result = XChainLib.concatChainIds(encoded, block.chainid);
+            assertEq(result, 0x00010005006403e8, "Concatenated chain IDs should be 0x0001000500640388");
+        }
+
+        // Test with invalid data
+        assertEq(
+            XChainLib.concatChainIds(hex"", block.chainid), block.chainid, "Empty data should return the block.chainid"
+        );
+
+        assertEq(
+            XChainLib.concatChainIds(hex"deadbeef", block.chainid),
+            block.chainid,
+            "Invalid data should return the block.chainid"
+        );
+
+        assertEq(
+            XChainLib.concatChainIds(hex"00", block.chainid),
+            block.chainid,
+            "Invalid number of ops should return the block.chainid"
+        );
+
+        assertEq(
+            XChainLib.concatChainIds(hex"05", block.chainid),
+            block.chainid,
+            "Too many ops should return the block.chainid"
+        );
+
+        // Test with conventional unprefixed calldata
+        assertEq(
+            XChainLib.concatChainIds(hex"a9059cbb000000000000000000000000", block.chainid),
+            block.chainid,
+            "Conventional calldata should return the block.chainid"
+        );
+    }
+
+    function testYulConcatChainIds() public {
+        uint256 expectedChainId = block.chainid;
+
+        // Test with 1 chain ID
+        {
+            bytes memory encoded = hex"0100010004deadbeef";
+            uint256 result = XChainLib.concatChainIdsYul(encoded, block.chainid);
+            assertEq(result, 0x0001, "Single chain ID should be 0x0001");
+        }
+
+        // Test with 2 chain IDs
+        {
+            bytes memory encoded = hex"0200010004deadbeef00020004cafebabe";
+            uint256 result = XChainLib.concatChainIdsYul(encoded, block.chainid);
+            assertEq(result, 0x00010002, "Concatenated chain IDs should be 0x00010002");
+        }
+
+        // Test with 4 chain IDs
+        {
+            bytes memory encoded = hex"0400010001aa00050001bb00640001cc03e80001dd";
+            uint256 result = XChainLib.concatChainIdsYul(encoded, block.chainid);
+            assertEq(result, 0x00010005006403e8, "Concatenated chain IDs should be 0x00010005006403e8");
+        }
+
+        // Test with invalid data
+        assertEq(
+            XChainLib.concatChainIdsYul(hex"", block.chainid),
+            expectedChainId,
+            "Empty data should return the expectedChainId"
+        );
+        assertEq(
+            XChainLib.concatChainIdsYul(hex"deadbeef", block.chainid),
+            expectedChainId,
+            "Invalid data should return the expectedChainId"
+        );
+        assertEq(
+            XChainLib.concatChainIdsYul(hex"00", block.chainid),
+            expectedChainId,
+            "Invalid number of ops should return the expectedChainId"
+        );
+        assertEq(
+            XChainLib.concatChainIdsYul(hex"05", block.chainid),
+            expectedChainId,
+            "Too many ops should return the expectedChainId"
+        );
+
+        // Test with conventional unprefixed calldata
+        assertEq(
+            XChainLib.concatChainIdsYul(hex"a9059cbb000000000000000000000000", block.chainid),
+            expectedChainId,
+            "Conventional calldata should return the testChainId"
+        );
+    }
+
+    function testGasConcatChainIdsComparison() public {
+        bytes memory encoded =
+            hex"0400010064000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002c8000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000012c0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000400640000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000";
+
+        // Test Solidity version
+        uint256 gasStartSolidity = gasleft();
+        uint256 resultSolidity = XChainLib.concatChainIds(encoded, block.chainid);
+        uint256 gasUsedSolidity = gasStartSolidity - gasleft();
+
+        // Test Assembly version
+        uint256 gasStartAssembly = gasleft();
+        uint256 resultAssembly = XChainLib.concatChainIdsYul(encoded, block.chainid);
+        uint256 gasUsedAssembly = gasStartAssembly - gasleft();
+
+        console2.log("Gas used (Solidity):", gasUsedSolidity);
+        console2.log("Gas used (Assembly):", gasUsedAssembly);
+        console2.log("Gas saved:", gasUsedSolidity - gasUsedAssembly);
+
+        assertEq(resultSolidity, resultAssembly, "Results should be the same for both implementations");
+        assertTrue(gasUsedAssembly < gasUsedSolidity, "Assembly version should use less gas");
+    }
+
     function testCombinedCallDataTooLong() public {
         XChainLib.xCallData[] memory ops = new XChainLib.xCallData[](3);
         ops[0] = XChainLib.xCallData(1, new bytes(XChainLib.MAX_CALLDATA_LENGTH));
@@ -233,13 +362,13 @@ contract XChainLibTest is Test {
         assertEq(isXChainCallData, true);
         uint256 gasUsed = gasStart - gasleft();
         console2.log("Gas used for isXChainCallData (3):", gasUsed);
-        
+
         gasStart = gasleft();
         bytes memory op1 = XChainLib.extractXChainCallData(encoded, 1);
         gasUsed = gasStart - gasleft();
         assertEq(op1, new bytes(1000));
         console2.log("Gas used for extractXChainCallData chain id(1):", gasUsed);
-        
+
         gasStart = gasleft();
         bytes memory op3 = XChainLib.extractXChainCallData(encoded, 3);
         gasUsed = gasStart - gasleft();

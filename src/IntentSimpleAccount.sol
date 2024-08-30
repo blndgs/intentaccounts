@@ -67,7 +67,7 @@ contract IntentSimpleAccount is SimpleAccount {
         override
         returns (uint256 validationData)
     {
-        bytes32 userOpHash = _getUserOpHash(userOp, block.chainid);
+        bytes32 userOpHash = _getUserOpHash(userOp, XChainLib.concatChainIds(userOp.callData, block.chainid));
         bytes32 ethHash = userOpHash.toEthSignedMessageHash();
 
         // Extract the first 65 bytes of the signature
