@@ -110,7 +110,7 @@ contract IntentSimpleAccount is SimpleAccount {
         require(dest.length == funcs.length, "wrong array lengths");
         uint16 chainID = uint16(block.chainid);
         for (uint256 i = 0; i < dest.length; i++) {
-            if (XChainLib.concatChainIdsYul(funcs[i], block.chainid) == block.chainid) {
+            if (XChainLib.concatChainIds(funcs[i], block.chainid) == block.chainid) {
                 // conventional calldata
                 _call(dest[i], values[i], funcs[i]);
             } else {
@@ -124,7 +124,7 @@ contract IntentSimpleAccount is SimpleAccount {
      * execute a sequence of EVM calldata with Ether transfers.
      */
     function xChainCall(uint256 value, address dest, bytes calldata func) external {
-        if (XChainLib.concatChainIdsYul(func, block.chainid) == block.chainid) {
+        if (XChainLib.concatChainIds(func, block.chainid) == block.chainid) {
             // conventional calldata
             _call(dest, value, func);
         } else {

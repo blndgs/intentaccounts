@@ -243,32 +243,36 @@ library XChainLib {
      *
      * Visualized in 16-bit segments: 0x0001 | 0x0005 | 0x0064 | 0x03E8
      *
-     * The function returns defChainId if:
+     * The function returns targetChainId if:
      * - The input data is invalid or cannot be parsed.
-     * - None of the parsed chain IDs match the defChainId.
+     * - None of the parsed chain IDs match the targetChainId.
      * - The input is a conventional single userOp non-prefixed calldata.
      *
      * @param encodedData The encoded cross-chain call data containing chain IDs and their associated call data.
-     * @param defChainId The default chain ID to return in case of invalid input or no matching chain ID.
+     * @param targetChainId The default chain ID to return in case of invalid input or no matching chain ID.
      * @return concatIds A uint256 value with concatenated chain IDs, ordered from most to least significant bits,
-     *                   or defChainId if conditions are not met.
+     *                   or targetChainId if conditions are not met.
      */
-    function concatChainIds(bytes calldata encodedData, uint256 defChainId) public pure returns (uint256 concatIds) {
-        if (encodedData.length < 5) return defChainId; // Not enough data for even a single operation
+    function concatChainIdsSol(bytes calldata encodedData, uint256 targetChainId)
+        public
+        pure
+        returns (uint256 concatIds)
+    {
+        if (encodedData.length < 5) return targetChainId; // Not enough data for even a single operation
 
         uint8 numOps = uint8(encodedData[0]);
-        if (numOps == 0 || numOps > 4) return defChainId; // Invalid number of operations
+        if (numOps == 0 || numOps > 4) return targetChainId; // Invalid number of operations
 
         uint256 offset = 1;
         bool matchFound = false;
 
         for (uint8 i = 0; i < numOps; i++) {
-            if (offset + 4 > encodedData.length) return defChainId; // Not enough data for this operation
+            if (offset + 4 > encodedData.length) return targetChainId; // Not enough data for this operation
 
             uint16 chainId = uint16(bytes2(encodedData[offset:offset + 2]));
 
-            // Check if the parsed chainId matches defChainId
-            if (chainId == uint16(defChainId)) {
+            // Check if the parsed chainId matches targetChainId
+            if (chainId == uint16(targetChainId)) {
                 matchFound = true;
             }
 
@@ -277,13 +281,13 @@ library XChainLib {
             uint16 calldataLength = uint16(bytes2(encodedData[offset + 2:offset + 4]));
             offset += 4 + calldataLength;
 
-            if (offset > encodedData.length) return defChainId; // Calldata length exceeds available data
+            if (offset > encodedData.length) return targetChainId; // Calldata length exceeds available data
         }
 
-        if (offset != encodedData.length) return defChainId; // Extra data at the end
+        if (offset != encodedData.length) return targetChainId; // Extra data at the end
 
-        // If no match was found, return defChainId
-        return matchFound ? concatIds : defChainId;
+        // If no match was found, return targetChainId
+        return matchFound ? concatIds : targetChainId;
     }
 
     /**
@@ -305,29 +309,29 @@ library XChainLib {
      *
      * Visualized in 16-bit segments: 0x0001 | 0x0005 | 0x0064 | 0x03E8
      *
-     * The function returns defChainId if:
+     * The function returns targetChainId if:
      * - The input data is invalid or cannot be parsed.
-     * - None of the parsed chain IDs match the defChainId.
+     * - None of the parsed chain IDs match the targetChainId.
      * - The input is a conventional single userOp non-prefixed calldata.
      *
      * @param encodedData The encoded cross-chain call data containing chain IDs and their associated call data.
-     * @param defChainId The current block chain ID. This returns in case of invalid input or no matching chain ID.
+     * @param targetChainId The current block chain ID. This returns in case of invalid input or no matching chain ID.
      * @return concatIds A uint256 value with concatenated chain IDs, ordered from most to least significant bits,
-     *                   or defChainId if conditions are not met.
+     *                   or targetChainId if conditions are not met.
      */
-    function concatChainIdsYul(bytes calldata encodedData, uint256 defChainId)
+    function concatChainIds(bytes calldata encodedData, uint256 targetChainId)
         public
         pure
         returns (uint256 concatIds)
     {
         assembly {
-            // Initialize concatIds with defChainId
-            concatIds := defChainId
+            // Initialize concatIds with targetChainId
+            concatIds := targetChainId
 
             // Check if the input data is long enough to contain at least one operation
             if lt(calldatasize(), add(encodedData.offset, 5)) {
-                // Return defChainId if data is too short
-                mstore(0, defChainId)
+                // Return targetChainId if data is too short
+                mstore(0, targetChainId)
                 return(0, 32)
             }
 
@@ -336,8 +340,8 @@ library XChainLib {
 
             // Check if the number of operations is valid (between 1 and 4)
             if or(iszero(numOps), gt(numOps, 4)) {
-                // Return defChainId if number of operations is invalid
-                mstore(0, defChainId)
+                // Return targetChainId if number of operations is invalid
+                mstore(0, targetChainId)
                 return(0, 32)
             }
 
@@ -348,22 +352,22 @@ library XChainLib {
             // Reset concatIds to 0 before concatenation
             concatIds := 0
 
-            // Flag to check if any parsed chainId matches defChainId
+            // Flag to check if any parsed chainId matches targetChainId
             let matchFound := 0
 
             for { let i := 0 } lt(i, numOps) { i := add(i, 1) } {
                 // Check if there's enough data for the current operation
                 if gt(add(offset, 4), endOffset) {
-                    // Return defChainId if data is insufficient
-                    mstore(0, defChainId)
+                    // Return targetChainId if data is insufficient
+                    mstore(0, targetChainId)
                     return(0, 32)
                 }
 
                 // Extract the chain ID (2 bytes)
                 let chainId := and(shr(240, calldataload(offset)), 0xFFFF)
 
-                // Check if the parsed chainId matches defChainId
-                if eq(chainId, defChainId) { matchFound := 1 }
+                // Check if the parsed chainId matches targetChainId
+                if eq(chainId, targetChainId) { matchFound := 1 }
 
                 concatIds := or(shl(16, concatIds), chainId)
 
@@ -374,25 +378,25 @@ library XChainLib {
 
                 // Check if we've exceeded the available data
                 if gt(offset, endOffset) {
-                    // Return defChainId if we've exceeded available data
-                    mstore(0, defChainId)
+                    // Return targetChainId if we've exceeded available data
+                    mstore(0, targetChainId)
                     return(0, 32)
                 }
             }
 
             // Check if we've consumed exactly all the input data
             if iszero(eq(offset, endOffset)) {
-                // Return defChainId if there's extra data
-                mstore(0, defChainId)
+                // Return targetChainId if there's extra data
+                mstore(0, targetChainId)
                 return(0, 32)
             }
 
             // concatenation was successful
-            // Check if any chainId matched defChainId
+            // Check if any chainId matched targetChainId
             switch matchFound
             case 0 {
-                // unathorized chain, return defChainId
-                mstore(0, defChainId)
+                // unathorized chain, return targetChainId
+                mstore(0, targetChainId)
             }
             default {
                 // If a match was found, return the concatenated chain IDs
