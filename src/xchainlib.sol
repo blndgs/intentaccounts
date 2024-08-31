@@ -48,13 +48,18 @@ library XChainLib {
 
                     // Read chainId (2 bytes)
                     let chainId := shr(240, calldataload(currentPos))
+                    // chain id cannot be 0
+                    if eq(chainId, 0) {
+                        isValid := 0
+                        break
+                    }
                     // Read dataLength (2 bytes after chainId)
                     let dataLength := shr(240, calldataload(add(currentPos, 2)))
 
-                    // Check for valid chainId and dataLength
+                    // Check if dataLength is 0 or if remaining calldata is not long enough for this operation
                     if or(
-                        eq(chainId, 0),
-                        or(eq(dataLength, 0), gt(add(currentPos, add(4, dataLength)), add(callData.offset, length)))
+                        or(eq(dataLength, 0), gt(dataLength, MAX_CALLDATA_LENGTH)),
+                        gt(add(currentPos, add(4, dataLength)), add(callData.offset, length))
                     ) {
                         isValid := 0
                         break
@@ -142,6 +147,7 @@ library XChainLib {
 
         // Check first chain
         (chainId, offset) = readChainId(encodedData, offset);
+        if (chainId == 0) revert ZeroChainId();
         if (chainId == targetChainId) {
             return readCalldata(encodedData, offset);
         }
@@ -152,6 +158,7 @@ library XChainLib {
 
         // Check second chain
         (chainId, offset) = readChainId(encodedData, offset);
+        if (chainId == 0) revert ZeroChainId();
         if (chainId == targetChainId) {
             return readCalldata(encodedData, offset);
         }
@@ -162,6 +169,7 @@ library XChainLib {
 
         // Check third chain
         (chainId, offset) = readChainId(encodedData, offset);
+        if (chainId == 0) revert ZeroChainId();
         if (chainId == targetChainId) {
             return readCalldata(encodedData, offset);
         }
@@ -172,6 +180,7 @@ library XChainLib {
 
         // Check fourth chain
         (chainId, offset) = readChainId(encodedData, offset);
+        if (chainId == 0) revert ZeroChainId();
         if (chainId == targetChainId) {
             return readCalldata(encodedData, offset);
         }
@@ -245,6 +254,8 @@ library XChainLib {
      *
      * The function returns targetChainId if:
      * - The input data is invalid or cannot be parsed.
+     * - the targetChainId is 0 or exceeds MAX_CHAIN_ID.
+     * - Any parsed chain id is 0.
      * - None of the parsed chain IDs match the targetChainId.
      * - The input is a conventional single userOp non-prefixed calldata.
      *
@@ -258,7 +269,8 @@ library XChainLib {
         pure
         returns (uint256 concatIds)
     {
-        if (encodedData.length < 5) return targetChainId; // Not enough data for even a single operation
+        if (targetChainId == 0 || targetChainId > MAX_CHAIN_ID) return targetChainId; // Invalid target chain ID
+
 
         uint8 numOps = uint8(encodedData[0]);
         if (numOps == 0 || numOps > 4) return targetChainId; // Invalid number of operations
@@ -270,6 +282,7 @@ library XChainLib {
             if (offset + 4 > encodedData.length) return targetChainId; // Not enough data for this operation
 
             uint16 chainId = uint16(bytes2(encodedData[offset:offset + 2]));
+            if (chainId == 0) return targetChainId; // Invalid chain ID
 
             // Check if the parsed chainId matches targetChainId
             if (chainId == uint16(targetChainId)) {
@@ -310,6 +323,8 @@ library XChainLib {
      * Visualized in 16-bit segments: 0x0001 | 0x0005 | 0x0064 | 0x03E8
      *
      * The function returns targetChainId if:
+     * - Any parsed chain id is 0.
+     * - the targetChainId is 0 or exceeds MAX_CHAIN_ID.
      * - The input data is invalid or cannot be parsed.
      * - None of the parsed chain IDs match the targetChainId.
      * - The input is a conventional single userOp non-prefixed calldata.
@@ -325,6 +340,13 @@ library XChainLib {
         returns (uint256 concatIds)
     {
         assembly {
+            if or(iszero(targetChainId), gt(targetChainId, MAX_CHAIN_ID)) {
+                // currently only 16-bit chain IDs are supported
+                mstore(0, targetChainId) // redundant for 0 value? better safe than sorry
+                return(0, 32)
+            }
+
+
             // Initialize concatIds with targetChainId
             concatIds := targetChainId
 
@@ -365,6 +387,11 @@ library XChainLib {
 
                 // Extract the chain ID (2 bytes)
                 let chainId := and(shr(240, calldataload(offset)), 0xFFFF)
+                // zero chainid is invalid
+                if eq(chainId, 0) {
+                    mstore(0, targetChainId)
+                    return(0, 32)
+                }
 
                 // Check if the parsed chainId matches targetChainId
                 if eq(chainId, targetChainId) { matchFound := 1 }
