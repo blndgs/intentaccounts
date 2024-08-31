@@ -107,6 +107,7 @@ var (
 	ErrCallDataTooLong         = errors.New("calldata too long")
 	ErrInvalidEncodedData      = errors.New("invalid encoded data")
 	ErrInvalidNumberOfCallData = errors.New("invalid number of calldata")
+	ErrZeroChainID             = errors.New("chaiin ID cannot be zero")
 )
 
 // XCallData represents a single chain-specific UserOp
@@ -321,10 +322,13 @@ func ParseEncodedCalldata(encodedData []byte) (uint8, []uint16, [][]byte, error)
 
 	for i := uint8(0); i < numOps; i++ {
 		if offset+4 > len(encodedData) {
-			return 0, nil, nil, ErrInvalidEncodedData
+			return 0, nil, nil, fmt.Errorf("%w: \"offset+4 > len(encodedData)\" processing %d time (1..4), offset:%d, encodedDataLength:%d", ErrInvalidEncodedData, i+1, offset, len(encodedData))
 		}
 
 		chainId := binary.BigEndian.Uint16(encodedData[offset : offset+2])
+		if chainId == 0 {
+			return 0, nil, nil, fmt.Errorf("%w: while processing %d time (1..4)", ErrZeroChainID, i+1)
+		}
 		chainIds = append(chainIds, chainId)
 
 		calldataLength := binary.BigEndian.Uint16(encodedData[offset+2 : offset+4])
