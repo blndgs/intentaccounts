@@ -215,7 +215,11 @@ func TestParseEncodedCalldata(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			encodedData, _ := hex.DecodeString(tt.encodedData)
+			encodedData, err := hex.DecodeString(strings.TrimPrefix(tt.encodedData, "0x"))
+			if (err != nil) != tt.wantErr {
+				t.Errorf("hex.DecodeString() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
 			gotNumOps, gotChainIds, gotCalldatas, err := ParseEncodedCalldata(encodedData)
 
 			if (err != nil) != tt.wantErr {

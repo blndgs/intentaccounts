@@ -134,8 +134,8 @@ func main() {
 }
 
 func handleEncodeMode(args []string) {
-	if len(args) == 0 || len(args) > 4 {
-		fmt.Println("Error: Invalid number of arguments. Please provide 1 to 4 chain_id:calldata pairs.")
+	if len(args) < 2 || len(args) > 4 {
+		fmt.Println("Error: Invalid number of arguments. Attempting to encode a multichain calldata (default mode). Please provide 2 to 4 chain_id:calldata pairs.")
 		os.Exit(1)
 	}
 
@@ -180,7 +180,11 @@ func handleParseMode(args []string) {
 		os.Exit(1)
 	}
 
-	encodedData, err := hex.DecodeString(strings.TrimPrefix(args[0], "0x"))
+	encodedValue := args[0]
+	if strings.HasPrefix(encodedValue, "0x") {
+		encodedValue = strings.TrimPrefix(encodedValue, "0x")
+	}
+	encodedData, err := hex.DecodeString(encodedValue)
 	if err != nil {
 		fmt.Printf("Error: Invalid encoded calldata: %s\n", args[0])
 		os.Exit(1)
@@ -198,6 +202,12 @@ func handleParseMode(args []string) {
 		fmt.Printf("  Chain ID: %d\n", chainIDs[i])
 		fmt.Printf("  Calldata: 0x%s\n", hex.EncodeToString(calldatas[i]))
 	}
+}
+
+func are2BytesHex(s string) (uint64, bool) {
+	val, err := hex.DecodeString(strings.TrimPrefix(s, "0x"))
+	hexVal := binary.BigEndian.Uint16(val)
+	return uint64(hexVal), err == nil
 }
 
 func handleConcatMode(args []string) {
@@ -218,6 +228,13 @@ func handleConcatMode(args []string) {
 		// check if args[1] is a valid hexdecimal number
 		targetChainID, ok = are2BytesHex(args[1])
 
+		if !ok {
+			// try as a decimal number
+			targetChainID, err = strconv.ParseUint(args[1], 10, 64)
+			if err != nil {
+				fmt.Printf("Error: Invalid target chain ID: %s\n", args[1])
+				os.Exit(1)
+			}
 		}
 	}
 
@@ -329,7 +346,7 @@ func ParseEncodedCalldata(encodedData []byte) (uint8, []uint16, [][]byte, error)
 	}
 
 	numOps := uint8(encodedData[0])
-	if numOps == 0 || numOps > 4 {
+	if numOps < 2 || numOps > 4 {
 		return 0, nil, nil, ErrInvalidNumberOfCallData
 	}
 
@@ -363,7 +380,7 @@ func ParseEncodedCalldata(encodedData []byte) (uint8, []uint16, [][]byte, error)
 	}
 
 	if offset != len(encodedData) {
-		return 0, nil, nil, ErrInvalidEncodedData
+		return 0, nil, nil, fmt.Errorf("%w: final check \"offset != len(encodedData)\", offset:%d, encodedDataLend:%d", ErrInvalidEncodedData, offset, len(encodedData))
 	}
 
 	return numOps, chainIds, calldatas, nil
