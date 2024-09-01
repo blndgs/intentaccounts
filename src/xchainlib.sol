@@ -248,11 +248,14 @@ library XChainLib {
     }
 
     /**
-     * @notice Concatenates chain IDs from encoded cross-chain call data into a single uint256 value.
+     * Provides the cross-chain chain_id for a multichain userOp if the calldata provides the 
+     * cross-chain calldata for a multichain userOp by concatenating chain IDs from the encoded 
+     * cross-chain call data into the lower 64-bits of the returned uint256 value. 
      * @dev This function extracts and combines chain IDs from the encoded data structure,
      *      preserving their original order. The concatIds is a packed uint64 where:
      *      - The most significant 16 bits contain the first operation's chain ID.
      *      - Each subsequent 16-bit segment contains the next operation's chain ID.
+     *      - Minimum chains are 2 (least significant 32-bits) and maximum are 4.
      *      - Up to 4 chain IDs can be packed, utilizing at most 64 bits.
      *
      * For example, given chain IDs [0x0001, 0x0005, 0x0064, 0x03E8], the output would be:
@@ -321,13 +324,15 @@ library XChainLib {
     }
 
     /**
-     * @notice Yul version that concatenates chain IDs from encoded cross-chain call data
-     * into a single uint256 value.
+     * Yul version: provides the cross-chain chain_id for a multichain userOp if the calldata 
+     * provides the cross-chain calldata for a multichain userOp by concatenating chain IDs 
+     * from the encoded cross-chain call data into the lower 64-bits of the returned uint256 
+     * value. 
      * @dev This function extracts and combines chain IDs from the encoded data structure,
      *      preserving their original order. The concatIds is a packed uint256 where:
      *      - The most significant 16 bits contain the first operation's chain ID.
-     *      - Each subsequent 16-bit segment contains the next operation's chain ID.
-     *      - Up to 4 chain IDs can be packed, utilizing at most the upper 64 bits.
+     *      - Minimum chains are 2 (least significant 32-bits) and maximum are 4.
+     *      - Up to 4 chain IDs can be packed, utilizing at most 64 bits.
      *
      * For example, given chain IDs [0x0001, 0x0005, 0x0064, 0x03E8], the output would be:
      * 0x0001000500640388
