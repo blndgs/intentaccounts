@@ -172,38 +172,38 @@ contract XChainLibTest is Test {
         // Test with 1 chain ID
         {
             bytes memory encoded = hex"0100010004deadbeef";
-            uint256 result = XChainLib.concatChainIdsSol(encoded, testChainId);
+            uint256 result = XChainLib.getXChainIdsSol(encoded, testChainId);
             assertEq(result, testChainId, "Should return testChainId for 1 operation");
         }
 
         // Test with 2 chain IDs
         {
             bytes memory encoded = hex"0200010004deadbeef00020004cafebabe";
-            uint256 result = XChainLib.concatChainIdsSol(encoded, testChainId);
+            uint256 result = XChainLib.getXChainIdsSol(encoded, testChainId);
             assertEq(result, testChainId, "Should return testChainId when no match");
 
-            result = XChainLib.concatChainIdsSol(encoded, 1);
+            result = XChainLib.getXChainIdsSol(encoded, 1);
             assertEq(result, 0x00010002, "Concatenated chain IDs should be 0x00010002 when defChainId matches");
         }
 
         // Test with 4 chain IDs -- positive test case with defChainId matching
         {
             bytes memory encoded = hex"0400010001aa00050001bb00640001cc03e80001dd";
-            uint256 result = XChainLib.concatChainIdsSol(encoded, 1);
+            uint256 result = XChainLib.getXChainIdsSol(encoded, 1);
             assertEq(
                 result,
                 0x00010005006403e8,
                 "Concatenated chain IDs should be 0x00010005006403e8 when defChainId matches"
             );
 
-            result = XChainLib.concatChainIdsSol(encoded, 100);
+            result = XChainLib.getXChainIdsSol(encoded, 100);
             assertEq(
                 result,
                 0x00010005006403e8,
                 "Concatenated chain IDs should be 0x00010005006403e8 when defChainId matches any of the 4 chain IDs"
             );
 
-            result = XChainLib.concatChainIdsSol(encoded, 1);
+            result = XChainLib.getXChainIdsSol(encoded, 1);
             assertEq(
                 result,
                 0x00010005006403e8,
@@ -214,34 +214,34 @@ contract XChainLibTest is Test {
         // Test with 4 chain IDs -- negative test case
         {
             bytes memory encoded = hex"0400010001aa00050001bb00640001cc03e80001dd";
-            uint256 result = XChainLib.concatChainIdsSol(encoded, testChainId);
+            uint256 result = XChainLib.getXChainIdsSol(encoded, testChainId);
             assertEq(result, testChainId, "Should return testChainId when no match");
         }
 
         // Test with invalid data
         assertEq(
-            XChainLib.concatChainIdsSol(hex"", testChainId), testChainId, "Empty data should return the testChainId"
+            XChainLib.getXChainIdsSol(hex"", testChainId), testChainId, "Empty data should return the testChainId"
         );
 
         assertEq(
-            XChainLib.concatChainIdsSol(hex"deadbeef", testChainId),
+            XChainLib.getXChainIdsSol(hex"deadbeef", testChainId),
             testChainId,
             "Invalid data should return the testChainId"
         );
 
         assertEq(
-            XChainLib.concatChainIdsSol(hex"00", testChainId),
+            XChainLib.getXChainIdsSol(hex"00", testChainId),
             testChainId,
             "Invalid number of ops should return the testChainId"
         );
 
         assertEq(
-            XChainLib.concatChainIdsSol(hex"05", testChainId), testChainId, "Too many ops should return the testChainId"
+            XChainLib.getXChainIdsSol(hex"05", testChainId), testChainId, "Too many ops should return the testChainId"
         );
 
         // Test with conventional unprefixed calldata
         assertEq(
-            XChainLib.concatChainIdsSol(hex"a9059cbb000000000000000000000000", testChainId),
+            XChainLib.getXChainIdsSol(hex"a9059cbb000000000000000000000000", testChainId),
             testChainId,
             "Conventional calldata should return the testChainId"
         );
@@ -253,38 +253,38 @@ contract XChainLibTest is Test {
         // Test with 1 chain ID
         {
             bytes memory encoded = hex"0100010004deadbeef";
-            uint256 result = XChainLib.concatChainIds(encoded, testChainId);
+            uint256 result = XChainLib.getXChainIds(encoded, testChainId);
             assertEq(result, testChainId, "Should return testChainId for 1 operation");
         }
 
         // Test with 2 chain IDs
         {
             bytes memory encoded = hex"0200010004deadbeef00020004cafebabe";
-            uint256 result = XChainLib.concatChainIds(encoded, testChainId);
+            uint256 result = XChainLib.getXChainIds(encoded, testChainId);
             assertEq(result, testChainId, "Should return testChainId when no match");
 
-            result = XChainLib.concatChainIds(encoded, 1);
+            result = XChainLib.getXChainIds(encoded, 1);
             assertEq(result, 0x00010002, "Concatenated chain IDs should be 0x00010002 when defChainId matches");
         }
 
         // Test with 4 chain IDs -- positive test case with defChainId matching
         {
             bytes memory encoded = hex"0400010001aa00050001bb00640001cc03e80001dd";
-            uint256 result = XChainLib.concatChainIds(encoded, 1);
+            uint256 result = XChainLib.getXChainIds(encoded, 1);
             assertEq(
                 result,
                 0x00010005006403e8,
                 "Concatenated chain IDs should be 0x00010005006403e8 when defChainId matches"
             );
 
-            result = XChainLib.concatChainIds(encoded, 100);
+            result = XChainLib.getXChainIds(encoded, 100);
             assertEq(
                 result,
                 0x00010005006403e8,
                 "Concatenated chain IDs should be 0x00010005006403e8 when defChainId matches any of the 4 chain IDs"
             );
 
-            result = XChainLib.concatChainIds(encoded, 1);
+            result = XChainLib.getXChainIds(encoded, 1);
             assertEq(
                 result,
                 0x00010005006403e8,
@@ -295,29 +295,29 @@ contract XChainLibTest is Test {
         // Test with 4 chain IDs -- negative test case
         {
             bytes memory encoded = hex"0400010001aa00050001bb00640001cc03e80001dd";
-            uint256 result = XChainLib.concatChainIds(encoded, testChainId);
+            uint256 result = XChainLib.getXChainIds(encoded, testChainId);
             assertEq(result, testChainId, "Should return testChainId when no match");
         }
 
         // Test with invalid data
-        assertEq(XChainLib.concatChainIds(hex"", testChainId), testChainId, "Empty data should return the testChainId");
+        assertEq(XChainLib.getXChainIds(hex"", testChainId), testChainId, "Empty data should return the testChainId");
         assertEq(
-            XChainLib.concatChainIds(hex"deadbeef", testChainId),
+            XChainLib.getXChainIds(hex"deadbeef", testChainId),
             testChainId,
             "Invalid data should return the testChainId"
         );
         assertEq(
-            XChainLib.concatChainIds(hex"00", testChainId),
+            XChainLib.getXChainIds(hex"00", testChainId),
             testChainId,
             "Invalid number of ops should return the testChainId"
         );
         assertEq(
-            XChainLib.concatChainIds(hex"05", testChainId), testChainId, "Too many ops should return the testChainId"
+            XChainLib.getXChainIds(hex"05", testChainId), testChainId, "Too many ops should return the testChainId"
         );
 
         // Test with conventional unprefixed calldata
         assertEq(
-            XChainLib.concatChainIds(hex"a9059cbb000000000000000000000000", testChainId),
+            XChainLib.getXChainIds(hex"a9059cbb000000000000000000000000", testChainId),
             testChainId,
             "Conventional calldata should return the testChainId"
         );
@@ -358,13 +358,13 @@ contract XChainLibTest is Test {
 
         // Test Solidity version
         uint256 gasStartSolidity = gasleft();
-        uint256 resultSolidity = XChainLib.concatChainIdsSol(encoded, 0xffff);
+        uint256 resultSolidity = XChainLib.getXChainIdsSol(encoded, 0xffff);
         uint256 gasUsedSolidity = gasStartSolidity - gasleft();
         assertEq(resultSolidity, 0x000100020003ffff, "Incorrect result");
 
         // Test Yul version
         gasStartYul = gasleft();
-        uint256 resultYul = XChainLib.concatChainIds(encoded, 0xffff);
+        uint256 resultYul = XChainLib.getXChainIds(encoded, 0xffff);
         uint256 gasUsedYul = gasStartYul - gasleft();
         console2.log("resultYul", resultYul);
 

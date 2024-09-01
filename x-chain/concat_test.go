@@ -164,8 +164,8 @@ func TestConcatChainIds(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			encodedData, _ := hex.DecodeString(tt.encodedData)
-			if got := ConcatChainIds(encodedData, tt.defChainId); got != tt.want {
-				t.Errorf("ConcatChainIds() = %v, want %v", got, tt.want)
+			if got := getXChainIds(encodedData, tt.defChainId); got != tt.want {
+				t.Errorf("getXChainIds() = %v, want %v", got, tt.want)
 			}
 		})
 	}

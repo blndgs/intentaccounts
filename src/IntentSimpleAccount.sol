@@ -67,7 +67,7 @@ contract IntentSimpleAccount is SimpleAccount {
         override
         returns (uint256 validationData)
     {
-        bytes32 userOpHash = _getUserOpHash(userOp, XChainLib.concatChainIds(userOp.callData, block.chainid));
+        bytes32 userOpHash = _getUserOpHash(userOp, XChainLib.getXChainIds(userOp.callData, block.chainid));
         bytes32 ethHash = userOpHash.toEthSignedMessageHash();
 
         // Extract the first 65 bytes of the signature
@@ -110,7 +110,7 @@ contract IntentSimpleAccount is SimpleAccount {
         require(dest.length == funcs.length, "wrong array lengths");
         uint16 chainID = uint16(block.chainid);
         for (uint256 i = 0; i < dest.length; i++) {
-            if (XChainLib.concatChainIds(funcs[i], block.chainid) == block.chainid) {
+            if (XChainLib.getXChainIds(funcs[i], block.chainid) == block.chainid) {
                 // conventional calldata
                 _call(dest[i], values[i], funcs[i]);
             } else {
@@ -124,7 +124,7 @@ contract IntentSimpleAccount is SimpleAccount {
      * execute a sequence of EVM calldata with Ether transfers.
      */
     function xChainCall(uint256 value, address dest, bytes calldata func) external {
-        if (XChainLib.concatChainIds(func, block.chainid) == block.chainid) {
+        if (XChainLib.getXChainIds(func, block.chainid) == block.chainid) {
             // conventional calldata
             _call(dest, value, func);
         } else {

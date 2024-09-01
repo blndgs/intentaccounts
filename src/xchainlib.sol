@@ -280,7 +280,7 @@ library XChainLib {
      * @return concatIds A uint256 value with concatenated chain IDs, ordered from most to least significant bits,
      *                   or targetChainId if conditions are not met.
      */
-    function concatChainIdsSol(bytes calldata encodedData, uint256 targetChainId)
+    function getXChainIdsSol(bytes calldata encodedData, uint256 targetChainId)
         external
         pure
         returns (uint256 concatIds)
@@ -354,7 +354,7 @@ library XChainLib {
      * @return concatIds A uint256 value with concatenated chain IDs, ordered from most to least significant bits,
      *                   or targetChainId if conditions are not met.
      */
-    function concatChainIds(bytes calldata encodedData, uint256 targetChainId)
+    function getXChainIds(bytes calldata encodedData, uint256 targetChainId)
         public
         pure
         returns (uint256 concatIds)

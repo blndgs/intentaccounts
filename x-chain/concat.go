@@ -7,7 +7,7 @@ This package includes functions for:
 - Concatenating chain IDs from encoded cross-chain call data
 - Parsing encoded calldata to extract chain IDs and individual calldata values
 
-The ConcatChainIds function now implements the following behavior:
+The getXChainIds function now implements the following behavior:
 - It concatenates chain IDs from the encoded data only if at least one of the parsed chain IDs matches the provided default chain ID.
 - If no parsed chain ID matches the default chain ID, or if the input is invalid, it returns the default chain ID.
 
@@ -78,7 +78,7 @@ Output:
 
 Note:
 
-	The ConcatChainIds function now returns the concatenated chain IDs only if at least one of the parsed chain IDs matches the provided default chain ID.
+	The getXChainIds function now returns the concatenated chain IDs only if at least one of the parsed chain IDs matches the provided default chain ID.
 	If no match is found, or if the input is invalid, it returns the default chain ID. This ensures that the function only returns a concatenated result
 	when at least one of the encoded operations is intended for the current chain (as specified by the default chain ID).
 */
@@ -238,7 +238,7 @@ func handleConcatMode(args []string) {
 		}
 	}
 
-	result := ConcatChainIds(encodedData, targetChainID)
+	result := getXChainIds(encodedData, targetChainID)
 	fmt.Printf("0x%016x\n", result)
 }
 
@@ -281,11 +281,47 @@ func EncodeXChainCallData(chainUserOps []XCallData) ([]byte, error) {
 	return encoded, nil
 }
 
-// ConcatChainIds concatenates chain IDs from encoded cross-chain call data into a single uint64 value
-func ConcatChainIds(encodedData []byte, targetChainID uint64) uint64 {
-	const MAX_CHAIN_ID = 0xffff
+// getXChainIds provides the cross-chain chain_id for a multichain userOp by concatenating
+// chain IDs from encoded cross-chain call data into a single uint64 value.
+//
+// This function extracts and combines chain IDs from the encoded data structure,
+// preserving their original order. The resulting cross-chain chain_id indicates which
+// chains the userOp is authorized for when signing it. The concatIds is a packed uint64 where:
+//   - The most significant 16 bits contain the first operation's chain ID.
+//   - Each subsequent 16-bit segment contains the next operation's chain ID.
+//   - Up to 4 chain IDs can be packed, utilizing at most 64 bits.
+//
+// For example, given chain IDs [0x0001, 0x0005, 0x0064, 0x03E8], the output would be:
+// 0x0001000500640388
+// Which breaks down as:
+//   - 0x0001 (Most significant 16 bits, representing chain ID 1)
+//   - 0x0005 (Next 16 bits, representing chain ID 5)
+//   - 0x0064 (Next 16 bits, representing chain ID 100)
+//   - 0x03E8 (Least significant 16 bits, representing chain ID 1000)
+//
+// Visualized in 16-bit segments: 0x0001 | 0x0005 | 0x0064 | 0x03E8
+//
+// The function returns targetChainId if:
+//   - Any parsed chain id is 0.
+//   - the targetChainId is 0 or exceeds MAX_CHAIN_ID.
+//   - The input data is invalid or cannot be parsed.
+//   - None of the parsed chain IDs match the targetChainId.
+//   - The input is a conventional single userOp non-prefixed calldata.
+//   - The number of operations is less than 2 or more than 4.
+//
+// Parameters:
+//
+//	encodedData: The encoded cross-chain call data containing chain IDs and their associated call data.
+//	targetChainId: The current block chain ID. This returns in case of invalid input or no matching chain ID.
+//
+// Returns:
+//
+//	concatIds: A uint64 value with concatenated chain IDs, ordered from most to least significant bits,
+//	           representing the cross-chain chain_id for authorization, or targetChainId if conditions are not met.
+func getXChainIds(encodedData []byte, targetChainID uint64) uint64 {
+	const MaxChainId = 0xffff
 
-	if targetChainID > MAX_CHAIN_ID {
+	if targetChainID > MaxChainId {
 		return targetChainID
 	}
 
