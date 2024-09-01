@@ -104,7 +104,6 @@ const (
 var (
 	ErrCombinedCallDataTooLong = errors.New("combined calldata too long")
 	ErrInvalidCallDataLength   = errors.New("invalid calldata length")
-	ErrEmptyCallDataLength     = errors.New("empty calldata")
 	ErrCallDataTooLong         = errors.New("calldata too long")
 	ErrInvalidEncodedData      = errors.New("invalid encoded data")
 	ErrInvalidNumberOfCallData = errors.New("invalid number of calldata")
@@ -268,9 +267,6 @@ func EncodeXChainCallData(chainUserOps []XCallData) ([]byte, error) {
 
 		callDataLengthBytes := make([]byte, 2)
 		callDataLength := uint16(len(op.CallData))
-		if callDataLength == 0 {
-			return nil, ErrEmptyCallDataLength
-		}
 		binary.BigEndian.PutUint16(callDataLengthBytes, callDataLength)
 
 		encoded = append(encoded, chainIDBytes...)
@@ -353,9 +349,6 @@ func getXChainIds(encodedData []byte, targetChainID uint64) uint64 {
 		concatIds = (concatIds << 16) | uint64(chainId)
 
 		calldataLength := binary.BigEndian.Uint16(encodedData[offset+2 : offset+4])
-		if calldataLength == 0 {
-			return targetChainID
-		}
 		offset += 4 + int(calldataLength)
 
 		if offset > len(encodedData) {
@@ -402,9 +395,6 @@ func ParseEncodedCalldata(encodedData []byte) (uint8, []uint16, [][]byte, error)
 		chainIds = append(chainIds, chainId)
 
 		calldataLength := binary.BigEndian.Uint16(encodedData[offset+2 : offset+4])
-		if calldataLength == 0 {
-			return 0, nil, nil, fmt.Errorf("%w: while processing %d time (1..4)", ErrEmptyCallDataLength, i+1)
-		}
 		offset += 4
 
 		if offset+int(calldataLength) > len(encodedData) {

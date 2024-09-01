@@ -226,7 +226,6 @@ library XChainLib {
     function readCalldata(bytes calldata encodedData, uint256 offset) private pure returns (bytes memory) {
         if (encodedData.length < offset + 2) revert ChainDataTooShort();
         uint16 calldataLength = uint16(bytes2(encodedData[offset:offset + 2]));
-        if (calldataLength == 0) revert InvalidCallDataLength(0);
         if (calldataLength > MAX_CALLDATA_LENGTH) revert InvalidCallDataLength(calldataLength);
         offset += 2;
         if (encodedData.length < offset + calldataLength) {
@@ -244,7 +243,6 @@ library XChainLib {
     function skipCalldata(bytes calldata encodedData, uint256 offset) private pure returns (uint256) {
         if (encodedData.length < offset + 2) revert ChainDataTooShort();
         uint16 calldataLength = uint16(bytes2(encodedData[offset:offset + 2]));
-        if (calldataLength == 0) revert InvalidCallDataLength(0);
         if (calldataLength > MAX_CALLDATA_LENGTH) revert InvalidCallDataLength(calldataLength);
         return offset + 2 + calldataLength;
     }
@@ -309,7 +307,7 @@ library XChainLib {
             concatIds = (concatIds << 16) | chainId;
 
             uint16 calldataLength = uint16(bytes2(encodedData[offset + 2:offset + 4]));
-            if (calldataLength == 0 || calldataLength > MAX_CALLDATA_LENGTH) return targetChainId;
+            if (calldataLength > MAX_CALLDATA_LENGTH) return targetChainId;
 
             offset += 4 + calldataLength;
 
@@ -424,7 +422,7 @@ library XChainLib {
 
                 // Extract the calldata length (next 2 bytes after the chain ID)
                 let calldataLength := and(shr(240, calldataload(add(offset, 2))), 0xFFFF)
-                if or(iszero(calldataLength), gt(calldataLength, MAX_CALLDATA_LENGTH)) {
+                if gt(calldataLength, MAX_CALLDATA_LENGTH) {
                     mstore(0, targetChainId)
                     return(0, 32)
                 }
