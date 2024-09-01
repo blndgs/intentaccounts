@@ -16,6 +16,8 @@ library TestSimpleAccountHelper {
     error EndLessThanStart();
     error EndOutOfBounds(uint256 dataLength, uint256 end);
     error StartOutOfBounds(uint256 dataLength, uint256 start);
+    error CombinedCallDataTooLong(uint256 length);
+    error CallDataTooLong(uint256 length);
 
     /**
      * @notice Generates the initCode for creating a new account using a wallet factory
@@ -70,12 +72,12 @@ library TestSimpleAccountHelper {
 
             if (chainUserOps[i].callData.length > XChainLib.MAX_CALLDATA_LENGTH) {
                 console2.log("revert XChainLib.CallDataTooLong:", chainUserOps[i].callData.length);
-                revert XChainLib.CallDataTooLong(chainUserOps[i].callData.length);
+                revert CallDataTooLong(chainUserOps[i].callData.length);
             }
 
             if (callDataLengthTotal > XChainLib.MAX_COMBINED_CALLDATA_LENGTH) {
                 console2.log("revert XChainLib.CombinedCallDataTooLong:", callDataLengthTotal);
-                revert XChainLib.CombinedCallDataTooLong(callDataLengthTotal);
+                revert CombinedCallDataTooLong(callDataLengthTotal);
             }
 
             encoded = abi.encodePacked(
