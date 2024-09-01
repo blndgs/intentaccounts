@@ -160,7 +160,9 @@ contract XChainLibTest is Test {
         XChainLib.xCallData[] memory ops = new XChainLib.xCallData[](1);
         ops[0] = XChainLib.xCallData(1, new bytes(XChainLib.MAX_CALLDATA_LENGTH + 1));
 
-        vm.expectRevert(abi.encodeWithSelector(XChainLib.CallDataTooLong.selector, XChainLib.MAX_CALLDATA_LENGTH + 1));
+        vm.expectRevert(
+            abi.encodeWithSelector(TestSimpleAccountHelper.CallDataTooLong.selector, XChainLib.MAX_CALLDATA_LENGTH + 1)
+        );
         TestSimpleAccountHelper.encodeXChainCallData(ops);
     }
 
@@ -171,10 +173,7 @@ contract XChainLibTest is Test {
         {
             bytes memory encoded = hex"0100010004deadbeef";
             uint256 result = XChainLib.concatChainIdsSol(encoded, testChainId);
-            assertEq(result, testChainId, "Should return testChainId when no match");
-
-            result = XChainLib.concatChainIdsSol(encoded, 1);
-            assertEq(result, 0x0001, "Single chain ID should be 0x0001 when it matches defChainId");
+            assertEq(result, testChainId, "Should return testChainId for 1 operation");
         }
 
         // Test with 2 chain IDs
@@ -255,10 +254,7 @@ contract XChainLibTest is Test {
         {
             bytes memory encoded = hex"0100010004deadbeef";
             uint256 result = XChainLib.concatChainIds(encoded, testChainId);
-            assertEq(result, testChainId, "Should return testChainId when no match");
-
-            result = XChainLib.concatChainIds(encoded, 1);
-            assertEq(result, 0x0001, "Single chain ID should be 0x0001 when it matches defChainId");
+            assertEq(result, testChainId, "Should return testChainId for 1 operation");
         }
 
         // Test with 2 chain IDs
@@ -411,11 +407,12 @@ contract XChainLibTest is Test {
     }
 
     function testMaximumCallDataLength() public {
-        XChainLib.xCallData[] memory ops = new XChainLib.xCallData[](1);
+        XChainLib.xCallData[] memory ops = new XChainLib.xCallData[](2);
         ops[0] = XChainLib.xCallData(1, new bytes(XChainLib.MAX_CALLDATA_LENGTH));
+        ops[1] = XChainLib.xCallData(2, new bytes(XChainLib.MAX_CALLDATA_LENGTH));
 
         bytes memory encoded = TestSimpleAccountHelper.encodeXChainCallData(ops);
-        assertEq(XChainLib.extractXChainCallData(encoded, 1).length, XChainLib.MAX_CALLDATA_LENGTH);
+        assertEq(XChainLib.extractXChainCallData(encoded, 2).length, XChainLib.MAX_CALLDATA_LENGTH);
     }
 
     function testFourChainUserOp() public {

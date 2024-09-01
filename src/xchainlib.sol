@@ -151,7 +151,7 @@ library XChainLib {
         if (encodedData.length < 1) revert InvalidEncodedData();
 
         uint8 numOps = uint8(encodedData[0]);
-        if (numOps == 0 || numOps > 4) revert InvalidNumberOfCallData(numOps);
+        if (numOps < 2 || numOps > 4) revert InvalidNumberOfCallData(numOps);
 
         uint256 offset = 1;
         uint16 chainId;
@@ -226,6 +226,8 @@ library XChainLib {
     function readCalldata(bytes calldata encodedData, uint256 offset) private pure returns (bytes memory) {
         if (encodedData.length < offset + 2) revert ChainDataTooShort();
         uint16 calldataLength = uint16(bytes2(encodedData[offset:offset + 2]));
+        if (calldataLength == 0) revert InvalidCallDataLength(0);
+        if (calldataLength > MAX_CALLDATA_LENGTH) revert InvalidCallDataLength(calldataLength);
         offset += 2;
         if (encodedData.length < offset + calldataLength) {
             revert ChainDataTooShort();
@@ -242,6 +244,8 @@ library XChainLib {
     function skipCalldata(bytes calldata encodedData, uint256 offset) private pure returns (uint256) {
         if (encodedData.length < offset + 2) revert ChainDataTooShort();
         uint16 calldataLength = uint16(bytes2(encodedData[offset:offset + 2]));
+        if (calldataLength == 0) revert InvalidCallDataLength(0);
+        if (calldataLength > MAX_CALLDATA_LENGTH) revert InvalidCallDataLength(calldataLength);
         return offset + 2 + calldataLength;
     }
 
@@ -277,15 +281,16 @@ library XChainLib {
      *                   or targetChainId if conditions are not met.
      */
     function concatChainIdsSol(bytes calldata encodedData, uint256 targetChainId)
-        public
+        external
         pure
         returns (uint256 concatIds)
     {
         if (targetChainId == 0 || targetChainId > MAX_CHAIN_ID) return targetChainId; // Invalid target chain ID
 
+        if (encodedData.length < 5 || encodedData.length > MAX_COMBINED_CALLDATA_LENGTH) return targetChainId;
 
         uint8 numOps = uint8(encodedData[0]);
-        if (numOps == 0 || numOps > 4) return targetChainId; // Invalid number of operations
+        if (numOps < 2 || numOps > 4) return targetChainId; // Invalid number of operations
 
         uint256 offset = 1;
         bool matchFound = false;
@@ -297,13 +302,15 @@ library XChainLib {
             if (chainId == 0) return targetChainId; // Invalid chain ID
 
             // Check if the parsed chainId matches targetChainId
-            if (chainId == uint16(targetChainId)) {
+            if (chainId == targetChainId) {
                 matchFound = true;
             }
 
             concatIds = (concatIds << 16) | chainId;
 
             uint16 calldataLength = uint16(bytes2(encodedData[offset + 2:offset + 4]));
+            if (calldataLength == 0 || calldataLength > MAX_CALLDATA_LENGTH) return targetChainId;
+
             offset += 4 + calldataLength;
 
             if (offset > encodedData.length) return targetChainId; // Calldata length exceeds available data
@@ -359,6 +366,10 @@ library XChainLib {
                 return(0, 32)
             }
 
+            if gt(encodedData.length, MAX_COMBINED_CALLDATA_LENGTH) {
+                mstore(0, targetChainId)
+                return(0, 32)
+            }
 
             // Initialize concatIds with targetChainId
             concatIds := targetChainId
@@ -373,8 +384,8 @@ library XChainLib {
             // Extract the number of operations from the first byte
             let numOps := shr(248, calldataload(encodedData.offset))
 
-            // Check if the number of operations is valid (between 1 and 4)
-            if or(iszero(numOps), gt(numOps, 4)) {
+            // Check if the number of operations is valid (between 2 and 4)
+            if or(lt(numOps, 2), gt(numOps, 4)) {
                 // Return targetChainId if number of operations is invalid
                 mstore(0, targetChainId)
                 return(0, 32)
@@ -413,6 +424,11 @@ library XChainLib {
 
                 // Extract the calldata length (next 2 bytes after the chain ID)
                 let calldataLength := and(shr(240, calldataload(add(offset, 2))), 0xFFFF)
+                if or(iszero(calldataLength), gt(calldataLength, MAX_CALLDATA_LENGTH)) {
+                    mstore(0, targetChainId)
+                    return(0, 32)
+                }
+
                 // Move the offset to the next operation
                 offset := add(offset, add(calldataLength, 4))
 
