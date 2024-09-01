@@ -7,17 +7,17 @@ pragma solidity ^0.8.25;
  */
 library XChainLib {
     // Maximum allowed callData length for a UserOperation (14KB)
-    uint256 internal constant MAX_COMBINED_CALLDATA_LENGTH = 14336; // MAX_CALLDATA_LENGTH * 2
-    uint256 internal constant MAX_CALLDATA_LENGTH = 7168;
+    uint256 internal constant MAX_COMBINED_CALLDATA_LENGTH = 40960; // MAX_CALLDATA_LENGTH * 4
+    uint256 internal constant MAX_CALLDATA_LENGTH = 10240;
     uint256 internal constant MAX_CALLDATA_COUNT = 4;
+    uint256 internal constant MAX_CHAIN_ID = 0xFFFF;
 
     // Custom errors
-    error CombinedCallDataTooLong(uint256 length);
     error InvalidCallDataLength(uint256 length);
-    error CallDataTooLong(uint256 length);
     error InvalidEncodedData();
     error InvalidNumberOfCallData(uint256 count);
     error ChainDataTooShort();
+    error ZeroChainId();
 
     struct xCallData {
         uint16 chainId;
@@ -25,19 +25,29 @@ library XChainLib {
     }
 
     /**
-     * @notice Efficiently detects if the calldata is for multi-chain operations
+     * @notice Efficiently detects if the calldata is for multi-chain operations.
+     * Warning: it does not check if the calldata is a non-zero meaningful value.
+     *
+     * The function returns false if:
+     * - The input data is invalid or cannot be parsed.
+     * - Parsed chain id is 0.
+     * - Any nested calldata length is 0.
+     * - The number of operations is less than 2 or more than 4.
+     * - The calldata length doesn't match the sum of all operation lengths.
+     *
      * @param callData The calldata to check
      * @return bool True if the calldata appears to be for multi-chain operations, false otherwise
      */
-    function isXChainCallData(bytes calldata callData) public pure returns (bool) {
+    function isXChainCallData(bytes calldata callData) external pure returns (bool) {
         bool isValid;
         assembly {
             isValid := 1
             let length := callData.length
-            if lt(length, 5) { isValid := 0 } // Check if length is less than 5
+            // Check if calldata has at least 5 bytes (1 for numOps + 4 for first operation)
+            if lt(length, 5) { isValid := 0 }
             if isValid {
                 let numOps := byte(0, calldataload(callData.offset)) // Read number of operations
-                if or(eq(numOps, 0), gt(numOps, 4)) { isValid := 0 } // Check numOps bounds
+                if or(lt(numOps, 2), gt(numOps, 4)) { isValid := 0 } // Check numOps bounds (2 to 4)
                 let currentPos := add(callData.offset, 1) // Start position after numOps byte
                 let i := 0
                 for {} and(lt(i, numOps), isValid) { i := add(i, 1) } {
@@ -76,7 +86,7 @@ library XChainLib {
     }
 
     /* Solidity version of the above assembly code
-    function isXChainCallData2(bytes calldata callData) public pure returns (bool) {
+    function isXChainCallDataSol(bytes calldata callData) public pure returns (bool) {
         if (callData.length < 5) {
             return false;
         }
@@ -111,6 +121,7 @@ library XChainLib {
 
     /**
      * @notice Efficiently finds and returns the calldata for a specific chain ID (up to 4 chains)
+     * by favoring up to 4 static checks instead of looping.
      * @dev Encoding structure:
      * +-------------------+-------------------+-------------------+
      * |    Number of Ops  |       UserOp 1    |      UserOp 2     |
@@ -237,10 +248,10 @@ library XChainLib {
     /**
      * @notice Concatenates chain IDs from encoded cross-chain call data into a single uint256 value.
      * @dev This function extracts and combines chain IDs from the encoded data structure,
-     *      preserving their original order. The concatIds is a packed uint256 where:
+     *      preserving their original order. The concatIds is a packed uint64 where:
      *      - The most significant 16 bits contain the first operation's chain ID.
      *      - Each subsequent 16-bit segment contains the next operation's chain ID.
-     *      - Up to 4 chain IDs can be packed, utilizing at most the upper 64 bits.
+     *      - Up to 4 chain IDs can be packed, utilizing at most 64 bits.
      *
      * For example, given chain IDs [0x0001, 0x0005, 0x0064, 0x03E8], the output would be:
      * 0x0001000500640388
@@ -248,7 +259,7 @@ library XChainLib {
      * - 0x0001 (Most significant 16 bits, representing chain ID 1)
      * - 0x0005 (Next 16 bits, representing chain ID 5)
      * - 0x0064 (Next 16 bits, representing chain ID 100)
-     * - 0x03E8 (Least significant 16 bits of the used bits, representing chain ID 1000)
+     * - 0x03E8 (Least significant 16 bits, representing chain ID 1000)
      *
      * Visualized in 16-bit segments: 0x0001 | 0x0005 | 0x0064 | 0x03E8
      *
@@ -258,6 +269,7 @@ library XChainLib {
      * - Any parsed chain id is 0.
      * - None of the parsed chain IDs match the targetChainId.
      * - The input is a conventional single userOp non-prefixed calldata.
+     * - The number of operations is less than 2 or more than 4.
      *
      * @param encodedData The encoded cross-chain call data containing chain IDs and their associated call data.
      * @param targetChainId The default chain ID to return in case of invalid input or no matching chain ID.
@@ -328,6 +340,7 @@ library XChainLib {
      * - The input data is invalid or cannot be parsed.
      * - None of the parsed chain IDs match the targetChainId.
      * - The input is a conventional single userOp non-prefixed calldata.
+     * - The number of operations is less than 2 or more than 4.
      *
      * @param encodedData The encoded cross-chain call data containing chain IDs and their associated call data.
      * @param targetChainId The current block chain ID. This returns in case of invalid input or no matching chain ID.
