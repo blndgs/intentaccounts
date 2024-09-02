@@ -180,10 +180,7 @@ func handleParseMode(args []string) {
 	}
 
 	encodedValue := args[0]
-	if strings.HasPrefix(encodedValue, "0x") {
-		encodedValue = strings.TrimPrefix(encodedValue, "0x")
-	}
-	encodedData, err := hex.DecodeString(encodedValue)
+	encodedData, err := hex.DecodeString(strings.TrimPrefix(encodedValue, "0x"))
 	if err != nil {
 		fmt.Printf("Error: Invalid encoded calldata: %s\n", args[0])
 		os.Exit(1)
