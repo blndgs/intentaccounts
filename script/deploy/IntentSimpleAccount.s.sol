@@ -32,7 +32,7 @@ import "forge-std/Script.sol";
  *    --verifier-url $TENDERLY_VERIFIER_URL \
  *    --ffi
  */
-contract DeploySimpleAccountTenderly is Script {
+contract DeploySimpleAccount is Script {
     string internal _network;
 
     function setUp() public {
