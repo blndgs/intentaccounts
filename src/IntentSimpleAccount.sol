@@ -76,27 +76,27 @@ contract IntentSimpleAccount is SimpleAccount {
             return SIG_VALIDATION_FAILED;
         }
     }
-    
+
     /// parse the user operation calldata to extract the target or cross chain ids
     /// @param callData userOp callData value
     function getChainId(bytes calldata callData) internal view returns (uint256) {
         if (callData.length < 4) {
             return block.chainid;
         }
-        
+
         // Extract and compare the function selector
         bytes4 selector = bytes4(callData[:4]);
         if (selector != this.xChainCall.selector) {
             return block.chainid;
         }
-        
+
         // Parse the inner calldata (bytes)
         // [4:4+32]
         uint256 bytesParamPointer = abi.decode(callData[4:36], (uint256));
         uint256 bytesDataStart = 4 + bytesParamPointer;
-        uint256 bytesLength = abi.decode(callData[bytesDataStart:bytesDataStart+32], (uint256));
-        bytes memory calldataValue = callData[bytesDataStart+32:bytesDataStart+32+bytesLength];
-        
+        uint256 bytesLength = abi.decode(callData[bytesDataStart:bytesDataStart + 32], (uint256));
+        bytes memory calldataValue = callData[bytesDataStart + 32:bytesDataStart + 32 + bytesLength];
+
         return XChainLib.getXChainIds(calldataValue, block.chainid);
     }
 
@@ -124,7 +124,7 @@ contract IntentSimpleAccount is SimpleAccount {
             _call(dest[i], values[i], func[i]);
         }
     }
-    
+
     /**
      * execute a sequence of EVM calldata with Ether transfers.
      */

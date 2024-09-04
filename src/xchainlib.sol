@@ -248,9 +248,9 @@ library XChainLib {
     }
 
     /**
-     * Provides the cross-chain chain_id for a multichain userOp if the calldata provides the 
-     * cross-chain calldata for a multichain userOp by concatenating chain IDs from the encoded 
-     * cross-chain call data into the lower 64-bits of the returned uint256 value. 
+     * Provides the cross-chain chain_id for a multichain userOp if the calldata provides the
+     * cross-chain calldata for a multichain userOp by concatenating chain IDs from the encoded
+     * cross-chain call data into the lower 64-bits of the returned uint256 value.
      * @dev This function extracts and combines chain IDs from the encoded data structure,
      *      preserving their original order. The concatIds is a packed uint64 where:
      *      - The most significant 16 bits contain the first operation's chain ID.
@@ -324,10 +324,10 @@ library XChainLib {
     }
 
     /**
-     * Yul version: provides the cross-chain chain_id for a multichain userOp if the calldata 
-     * provides the cross-chain calldata for a multichain userOp by concatenating chain IDs 
-     * from the encoded cross-chain call data into the lower 64-bits of the returned uint256 
-     * value. 
+     * Yul version: provides the cross-chain chain_id for a multichain userOp if the calldata
+     * provides the cross-chain calldata for a multichain userOp by concatenating chain IDs
+     * from the encoded cross-chain call data into the lower 64-bits of the returned uint256
+     * value.
      * @dev This function extracts and combines chain IDs from the encoded data structure,
      *      preserving their original order. The concatIds is a packed uint256 where:
      *      - The most significant 16 bits contain the first operation's chain ID.
@@ -357,11 +357,7 @@ library XChainLib {
      * @return concatIds A uint256 value with concatenated chain IDs, ordered from most to least significant bits,
      *                   or targetChainId if conditions are not met.
      */
-    function getXChainIds(bytes calldata encodedData, uint256 targetChainId)
-        public
-        pure
-        returns (uint256 concatIds)
-    {
+    function getXChainIds(bytes calldata encodedData, uint256 targetChainId) public pure returns (uint256 concatIds) {
         assembly {
             if or(iszero(targetChainId), gt(targetChainId, MAX_CHAIN_ID)) {
                 // currently only 16-bit chain IDs are supported

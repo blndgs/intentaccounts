@@ -220,17 +220,11 @@ func handleConcatMode(args []string) {
 
 	var targetChainID uint64
 	if len(args) == 2 {
-		ok := false
-		// check if args[1] is a valid hexdecimal number
-		targetChainID, ok = are2BytesHex(args[1])
-
-		if !ok {
-			// try as a decimal number
-			targetChainID, err = strconv.ParseUint(args[1], 10, 64)
-			if err != nil {
-				fmt.Printf("Error: Invalid target chain ID: %s\n", args[1])
-				os.Exit(1)
-			}
+		// try as a decimal number
+		targetChainID, err = strconv.ParseUint(args[1], 10, 64)
+		if err != nil {
+			fmt.Printf("Error: Invalid target chain ID: %s\n", args[1])
+			os.Exit(1)
 		}
 	}
 
