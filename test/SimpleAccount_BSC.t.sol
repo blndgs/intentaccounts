@@ -33,13 +33,18 @@ contract SimpleAccountBscTest is Test {
     string network;
 
     function setUp() public {
-        // Derive the Ethereum address from the private key
-        ownerPrivateKey = 0xe8776ff1bf88707b464bda52319a747a71c41a137277161dcabb9f821d6c0bd7;
+        network = "BSC";
+
+        string memory privateKeyEnv = string(abi.encodePacked(network, "_PRIVATE_KEY"));
+        string memory privateKeyString = vm.envString(privateKeyEnv);
+        ownerPrivateKey = vm.parseUint(privateKeyString);
         ownerAddress = vm.addr(ownerPrivateKey);
         assertEq(ownerAddress, 0x30543aebBB9c91a7929849Dc07114c6E77710462, "Owner address should match");
 
-        // Create a VM instance for the MUMBAI fork
-        bscFork = vm.createSelectFork("https://site1.moralis-nodes.com/bsc/c5eed01219d047329ad71480019b7238");
+        // Create BSC Fork instance
+        string memory urlEnv = string(abi.encodePacked(network, "_RPC_URL"));
+        bscFork = vm.createSelectFork(vm.envString(urlEnv));
+        console2.log("ChainID:", block.chainid);
         require(CHAIN_ID == block.chainid, "Chain ID should match");
 
         vm.startPrank(ownerAddress);
