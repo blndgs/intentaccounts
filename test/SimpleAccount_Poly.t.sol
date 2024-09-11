@@ -37,7 +37,7 @@ contract SimpleAccounPolygonTest is Test {
         // Derive the Ethereum address from the private key
         ownerPrivateKey = vm.parseUint(privateKeyString);
         ownerAddress = vm.addr(ownerPrivateKey);
-        assertEq(ownerAddress, 0x43B32D92d8A6b67104D621E9a9C3831A01A8c50c, "Owner address should match");
+        assertEq(ownerAddress, 0xE381bAB2e0C5b678F2FBb8D4b0949e41a6487c8f, "Owner address should match");
 
         // Create a VM instance for the MUMBAI fork
         string memory urlEnv = "POLYGON_RPC_URL";
