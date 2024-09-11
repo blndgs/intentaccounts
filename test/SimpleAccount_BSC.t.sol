@@ -67,8 +67,8 @@ contract SimpleAccountBscTest is Test {
         uint256 DEST_CHAIN_ID = 56; // BSC
         address RECIPIENT = 0xd7b21a844f3a41c91a73d3F87B83fA93bb6cb518;
 
-        UserOperation memory sourceUserOp = createTransferUserOp(address(simpleAccount), RECIPIENT, 0.05 ether, 1);
-        UserOperation memory destUserOp = createTransferUserOp(address(simpleAccount), RECIPIENT, 0.00005 ether, 2);
+        UserOperation memory sourceUserOp = createTransferUserOp(XChainLib.UserOpType.SourceUserOp,address(simpleAccount), RECIPIENT, 0.05 ether);
+        UserOperation memory destUserOp = createTransferUserOp(XChainLib.UserOpType.DestUserOp,address(simpleAccount), RECIPIENT, 0.00005 ether);
 
         xSign(SOURCE_CHAIN_ID, DEST_CHAIN_ID, ownerPrivateKey, sourceUserOp, destUserOp);
         bool srcValid = verifySourceUserOp(SOURCE_CHAIN_ID, DEST_CHAIN_ID, sourceUserOp, ownerAddress);
@@ -85,12 +85,15 @@ contract SimpleAccountBscTest is Test {
         UserOperation memory destUserOp
     ) internal view {
         // Embed destUserOp within sourceUserOp.callData
-        sourceUserOp.callData = embedDestUserOpToSource(uint16(sourceChainId), sourceUserOp.callData, destUserOp);
+        sourceUserOp.callData = embedDestUserOpToSource(
+            XChainLib.UserOpType.SourceUserOp, uint16(sourceChainId), sourceUserOp.callData, destUserOp
+        );
 
         bytes32 hash1 = simpleAccount.getUserOpHash(sourceUserOp, sourceChainId);
 
         // Embed hash1 into destUserOp.callData
-        destUserOp.callData = embedHash1ToDestOp(uint16(destChainId), destUserOp.callData, hash1);
+        destUserOp.callData =
+            embedHash1ToDestOp(XChainLib.UserOpType.DestUserOp, uint16(destChainId), destUserOp.callData, hash1);
 
         bytes32 hash2 = genHash2(hash1, destUserOp, destChainId);
 
@@ -101,12 +104,14 @@ contract SimpleAccountBscTest is Test {
         destUserOp.signature = signature;
     }
 
-    function embedDestUserOpToSource(uint16 sourceChainId, bytes memory sourceCallData, UserOperation memory destUserOp)
-        internal
-        pure
-        returns (bytes memory)
-    {
+    function embedDestUserOpToSource(
+        XChainLib.UserOpType opType,
+        uint16 sourceChainId,
+        bytes memory sourceCallData,
+        UserOperation memory destUserOp
+    ) internal pure returns (bytes memory) {
         return abi.encodePacked(
+            uint8(opType),
             sourceChainId,
             uint16(sourceCallData.length),
             sourceCallData,
@@ -114,12 +119,13 @@ contract SimpleAccountBscTest is Test {
         );
     }
 
-    function embedHash1ToDestOp(uint16 destChainId, bytes memory destCallData, bytes32 hash1)
-        internal
-        pure
-        returns (bytes memory)
-    {
-        return abi.encodePacked(destChainId, uint16(destCallData.length), destCallData, hash1);
+    function embedHash1ToDestOp(
+        XChainLib.UserOpType opType,
+        uint16 destChainId,
+        bytes memory destCallData,
+        bytes32 hash1
+    ) internal pure returns (bytes memory) {
+        return abi.encodePacked(uint8(opType), destChainId, uint16(destCallData.length), destCallData, hash1);
     }
 
     function generateSignature(UserOperation memory userOp, uint256 chainID, uint256 prvKey)
@@ -147,7 +153,8 @@ contract SimpleAccountBscTest is Test {
         bytes32 hash1 = simpleAccount.getUserOpHash(srcUserOp, sourceChainId);
         UserOperation memory embeddedDestUserOp = extractDestUserOp(srcUserOp);
 
-        embeddedDestUserOp.callData = embedHash1ToDestOp(uint16(destChainId), embeddedDestUserOp.callData, hash1);
+        embeddedDestUserOp.callData =
+            embedHash1ToDestOp(XChainLib.UserOpType.DestUserOp, uint16(destChainId), embeddedDestUserOp.callData, hash1);
         bytes32 hash2 = genHash2(hash1, embeddedDestUserOp, destChainId);
         bytes32 prefixedHash = hash2.toEthSignedMessageHash();
 
@@ -177,8 +184,12 @@ contract SimpleAccountBscTest is Test {
         pure
         returns (UserOperation memory destUserOp)
     {
-        // Skip source chain ID (2 bytes) and source calldata length (2 bytes)
-        uint256 destUserOpStart = 4 + uint16(bytes2(srcUserOp.callData._slice(2, 4)));
+        if (uint8(srcUserOp.callData[0]) != uint8(XChainLib.UserOpType.SourceUserOp)) {
+            revert XChainLib.InvalidUserOpType(uint8(srcUserOp.callData[0]));
+        }
+
+        // Skip opType (1 byte), source chain ID (2 bytes) and source calldata length (2 bytes)
+        uint256 destUserOpStart = 5 + uint16(bytes2(srcUserOp.callData._slice(3, 5)));
         bytes memory destUserOpData = srcUserOp.callData._slice(destUserOpStart, srcUserOp.callData.length);
 
         // Decode the destUserOp data
@@ -186,17 +197,20 @@ contract SimpleAccountBscTest is Test {
     }
 
     function extractHash1(bytes memory callData) internal pure returns (bytes32 hash1) {
-        require(callData.length >= 36, "Invalid callData length"); // 2 (chainId) + 2 (length) + min 1 (data) + 32 (hash1)
+        if (uint8(callData[0]) != uint8(XChainLib.UserOpType.DestUserOp)) {
+            revert XChainLib.InvalidUserOpType(uint8(callData[0]));
+        }
+        require(callData.length >= 37, "Invalid callData length"); // 1 (opType) + 2 (chainId) + 2 (length) + min 1 (data) + 32 (hash1)
 
         uint16 destCallDataLen;
         assembly {
-            destCallDataLen := shr(240, mload(add(callData, 34)))
+            destCallDataLen := shr(240, mload(add(callData, 35)))
         }
 
-        require(callData.length == 36 + destCallDataLen, "Invalid callData length");
+        require(callData.length == 37 + destCallDataLen, "Invalid callData length");
 
         assembly {
-            hash1 := mload(add(callData, add(36, destCallDataLen)))
+            hash1 := mload(add(callData, add(37, destCallDataLen)))
         }
     }
 
@@ -215,7 +229,7 @@ contract SimpleAccountBscTest is Test {
         return keccak256(abi.encodePacked(hash1, simpleAccount.getUserOpHash(destUserOp, chainId)));
     }
 
-    function createTransferUserOp(address from, address to, uint256 amount, uint8 opType)
+    function createTransferUserOp(XChainLib.UserOpType opType, address from, address to, uint256 amount)
         internal
         pure
         returns (UserOperation memory)
@@ -226,14 +240,14 @@ contract SimpleAccountBscTest is Test {
             sender: from,
             nonce: 0,
             initCode: "",
-            callData: transferData,
+            callData: abi.encodePacked(uint8(opType), transferData),
             callGasLimit: 100000,
             verificationGasLimit: 100000,
             preVerificationGas: 21000,
             maxFeePerGas: 20 gwei,
             maxPriorityFeePerGas: 1 gwei,
             paymasterAndData: "",
-            signature: abi.encodePacked(opType)
+            signature: ""
         });
     }
 

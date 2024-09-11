@@ -12,12 +12,19 @@ library XChainLib {
     uint256 internal constant MAX_CALLDATA_COUNT = 4;
     uint256 internal constant MAX_CHAIN_ID = 0xFFFF;
 
+    enum UserOpType {
+        Conventional,
+        SourceUserOp,
+        DestUserOp
+    }
+
     // Custom errors
     error InvalidCallDataLength(uint256 length);
     error InvalidEncodedData();
     error InvalidNumberOfCallData(uint256 count);
     error ChainDataTooShort();
     error ZeroChainId();
+    error InvalidUserOpType(uint8 opType);
 
     struct xCallData {
         uint16 chainId;
