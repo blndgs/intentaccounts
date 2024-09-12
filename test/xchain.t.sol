@@ -219,9 +219,7 @@ contract XChainLibTest is Test {
         }
 
         // Test with invalid data
-        assertEq(
-            XChainLib.getXChainIdsSol(hex"", testChainId), testChainId, "Empty data should return the testChainId"
-        );
+        assertEq(XChainLib.getXChainIdsSol(hex"", testChainId), testChainId, "Empty data should return the testChainId");
 
         assertEq(
             XChainLib.getXChainIdsSol(hex"deadbeef", testChainId),
