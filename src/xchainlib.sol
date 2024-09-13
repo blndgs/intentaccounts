@@ -26,30 +26,30 @@ library XChainLib {
     error ZeroChainId();
     error InvalidUserOpType(uint8 opType);
 
-    struct xCallData {
-        uint16 chainId;
-        bytes callData;
+    function identifyUserOpType(bytes calldata callData) internal pure returns (UserOpType) {
+        // Minimum length for cross-chain callData:
+        // opType (1) + chainId (2) + calldataLength (2) + otherChainHash (32)
+        uint256 minCrossChainLength = 1 + CHAINID_LENGTH + CALLDATA_LENGTH_SIZE + HASH_LENGTH;
+        
+        if (callData.length >= minCrossChainLength) {
+            uint8 opType = uint8(callData[0]);
+            if (opType == 1) {
+                // Potentially a cross-chain UserOp, validate further
+                uint256 offset = 1 + CHAINID_LENGTH;
+                if (callData.length >= offset + CALLDATA_LENGTH_SIZE) {
+                    uint16 calldataLength = (uint16(uint8(callData[offset])) << 8) | uint8(callData[offset + 1]);
+                    offset += CALLDATA_LENGTH_SIZE;
+                    // Expected total length
+                    uint256 expectedLength = 1 + CHAINID_LENGTH + CALLDATA_LENGTH_SIZE + calldataLength + HASH_LENGTH;
+                    if (callData.length == expectedLength) {
+                        return UserOpType.CrossChain;
+                    }
+                }
+            }
+        }
+        return UserOpType.Conventional;
     }
 
-    /**
-     * @notice Efficiently detects if the calldata is for multi-chain operations.
-     * Warning: it does not check if the calldata is a non-zero meaningful value.
-     *
-     * The function returns false if:
-     * - The input data is invalid or cannot be parsed.
-     * - Parsed chain id is 0.
-     * - Any nested calldata length is 0.
-     * - The number of operations is less than 2 or more than 4.
-     * - The calldata length doesn't match the sum of all operation lengths.
-     *
-     * @param callData The calldata to check
-     * @return bool True if the calldata appears to be for multi-chain operations, false otherwise
-     */
-    function isXChainCallData(bytes calldata callData) external pure returns (bool) {
-        bool isValid;
-        assembly {
-            isValid := 1
-            let length := callData.length
             // Check if calldata has at least 5 bytes (1 for numOps + 4 for first operation)
             if lt(length, 5) { isValid := 0 }
             if isValid {
