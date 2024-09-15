@@ -37,17 +37,38 @@ contract IntentSimpleAccount is SimpleAccount {
     }
 
     function _getUserOpHash(UserOperation calldata userOp, uint256 chainID) internal view returns (bytes32) {
-        bytes32 callData = calldataKeccak(userOp.callData);
-
+        XChainLib.UserOpType opType = XChainLib.identifyUserOpType(userOp.callData);
+    
+        bytes32 callDataHash = _getCallDataHash(userOp, opType);
+        
+        bytes32 opHash = userOp.hashIntentOp(callDataHash);
+        
+        if (opType == XChainLib.UserOpType.CrossChain) {
+            (, bytes32 otherChainHash) = XChainLib.extractChainIdHash(userOp.callData);
+    
+            // Combine hashes using XOR for symmetry
+            opHash = opHash ^ otherChainHash;
+        }
+        
+        return keccak256(abi.encode(opHash, address(entryPoint()), chainID));
+    }
+    
+    function _getCallDataHash(UserOperation calldata userOp, XChainLib.UserOpType opType) internal pure returns (bytes32 callDataHash) {
         uint256 sigLength = userOp.signature.length;
 
         if (sigLength > SIGNATURE_LENGTH) {
             // There is an intent JSON at the end of the signature,
             // include the remaining part of signature > 65 (ECDSA len) to hashing
-            callData = calldataKeccak(userOp.signature[SIGNATURE_LENGTH:]);
+            return calldataKeccak(userOp.signature[SIGNATURE_LENGTH:]);
         }
 
-        return keccak256(abi.encode(userOp.hashIntentOp(callData), address(entryPoint()), chainID));
+        if (opType == XChainLib.UserOpType.Conventional) {
+            return calldataKeccak(userOp.callData);
+        } else {
+            // Cross-chain UserOp
+            bytes calldata callData = XChainLib.extractCallData(userOp.callData);
+            return calldataKeccak(callData);
+        }
     }
 
     /**
@@ -67,7 +88,7 @@ contract IntentSimpleAccount is SimpleAccount {
         override
         returns (uint256 validationData)
     {
-        bytes32 userOpHash = _getUserOpHash(userOp, getChainId(userOp.callData));
+        bytes32 userOpHash = _getUserOpHash(userOp, block.chainid);
         bytes32 ethHash = userOpHash.toEthSignedMessageHash();
 
         // Extract the first 65 bytes of the signature
@@ -77,51 +98,20 @@ contract IntentSimpleAccount is SimpleAccount {
         }
     }
 
-    /// parse the user operation calldata to extract the target or cross chain ids
-    /// @param callData userOp callData value
-    function getChainId(bytes calldata callData) internal view returns (uint256) {
-        if (callData.length < 4) {
-            return block.chainid;
-        }
-
-        // Extract and compare the function selector
-        bytes4 selector = bytes4(callData[:4]);
-        if (selector != this.xChainCall.selector) {
-            return block.chainid;
-        }
-
-        // Parse the inner calldata (bytes)
-        // [4:4+32]
-        uint256 bytesParamPointer = abi.decode(callData[4:36], (uint256));
-        uint256 bytesDataStart = 4 + bytesParamPointer;
-        uint256 bytesLength = abi.decode(callData[bytesDataStart:bytesDataStart + 32], (uint256));
-        bytes memory calldataValue = callData[bytesDataStart + 32:bytesDataStart + 32 + bytesLength];
-
-        return XChainLib.getXChainIds(calldataValue, block.chainid);
-    }
-
-    // Exposed for testing to convert CallData value storage from memory to calldata
-    function extractXChainCallData(bytes calldata combinedCallData, uint16 chainID)
-        external
-        pure
-        returns (bytes memory)
-    {
-        return XChainLib.extractXChainCallData(combinedCallData, chainID);
-    }
-
-    // Expose for testing to convert teh callData value storage from memory to calldata
-    function isXChainCallData(bytes calldata callData) external pure returns (bool) {
-        return XChainLib.isXChainCallData(callData);
-    }
-
     /**
      * execute a sequence of EVM calldata with Ether transfers.
      */
-    function execValueBatch(uint256[] calldata values, address[] calldata dest, bytes[] calldata func) external {
+    function execValueBatch(uint256[] calldata values, address[] calldata dest, bytes[] calldata func) public {
         _requireFromEntryPointOrOwner();
         require(dest.length == func.length, "wrong array lengths");
         for (uint256 i = 0; i < dest.length; i++) {
-            _call(dest[i], values[i], func[i]);
+            XChainLib.UserOpType opType = XChainLib.identifyUserOpType(func[i]);
+            if (opType == XChainLib.UserOpType.Conventional) {
+                _call(dest[i], values[i], func[i]);
+            } else {
+                bytes memory extractedCallData = XChainLib.extractCallData(func[i]);
+                _call(dest[i], values[i], extractedCallData);
+            }
         }
     }
 
@@ -129,13 +119,14 @@ contract IntentSimpleAccount is SimpleAccount {
      * execute a sequence of EVM calldata with Ether transfers.
      */
     function xChainCall(bytes calldata func, uint256 value, address dest) external {
-        if (XChainLib.getXChainIds(func, block.chainid) == block.chainid) {
-            // conventional calldata
+        _requireFromEntryPointOrOwner();
+        XChainLib.UserOpType opType = XChainLib.identifyUserOpType(func);
+        if (opType == XChainLib.UserOpType.Conventional) {
             _call(dest, value, func);
         } else {
-            // extract the current chain calldata value to execute
-            bytes memory xCallData = XChainLib.extractXChainCallData(func, uint16(block.chainid));
-            _call(dest, value, xCallData);
+            bytes memory extractedCallData = XChainLib.extractCallData(func);
+            _call(dest, value, extractedCallData);
         }
     }
+
 }
