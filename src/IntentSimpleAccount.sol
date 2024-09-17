@@ -103,49 +103,27 @@ contract IntentSimpleAccount is SimpleAccount {
     }
 
     /**
-     * @notice Executes a batch of calls with specified values.
-     *         The first call can be cross-chain; subsequent calls are treated as conventional.
+     * Executes a batch of calls with specified values.
      * @param values The values (Ether amounts) to send with each call.
      * @param dest The destination addresses for each call.
      * @param func The function data (call data) for each call.
      */
-    function execValueBatch(uint256[] calldata values, address[] calldata dest, bytes[] calldata func) public {
+    function execValueBatch(uint256[] calldata values, address[] calldata dest, bytes[] calldata func) external {
         _requireFromEntryPointOrOwner();
         require(dest.length == func.length, "wrong array lengths");
-        require(dest.length > 0, "empty batch");
-
-        XChainLib.UserOpType opType = XChainLib.identifyUserOpType(func[0]);
-
-        if (opType == XChainLib.UserOpType.CrossChain) {
-            // Process the first function as cross-chain
-            bytes calldata extractedCallData = XChainLib.extractCallData(func[0]);
-            _call(dest[0], values[0], extractedCallData);
-            // Process the rest as conventional
-            for (uint256 i = 1; i < dest.length; i++) {
-                _call(dest[i], values[i], func[i]);
-            }
-        } else {
-            // All functions are conventional
-            for (uint256 i = 0; i < dest.length; i++) {
-                _call(dest[i], values[i], func[i]);
-            }
+        for (uint256 i = 0; i < dest.length; i++) {
+            _call(dest[i], values[i], func[i]);
         }
     }
 
     /**
-     * @notice Executes a cross-chain call.
-     * @param func The function data (call data) to execute.
+     * @notice Executes a single call.
      * @param value The Ether value to send with the call.
      * @param dest The destination address for the call.
+     * @param func The function data (call data) to execute.
      */
-    function xChainCall(bytes calldata func, uint256 value, address dest) external {
+    function xCall(uint256 value, address dest, bytes calldata func) external {
         _requireFromEntryPointOrOwner();
-        XChainLib.UserOpType opType = XChainLib.identifyUserOpType(func);
-        if (opType == XChainLib.UserOpType.Conventional) {
-            _call(dest, value, func);
-        } else {
-            bytes calldata extractedCallData = XChainLib.extractCallData(func);
-            _call(dest, value, extractedCallData);
-        }
+        _call(dest, value, func);
     }
 }
