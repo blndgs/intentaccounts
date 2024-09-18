@@ -5,19 +5,19 @@ import "../src/IntentUserOperation.sol";
 import "./TestBytesHelper.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {IntentSimpleAccountFactory} from "../src/IntentSimpleAccountFactory.sol";
-import "../src/xchainlib.sol";
+import "../src/IntentSimpleAccount.sol";
 import "forge-std/Test.sol";
 
 library TestSimpleAccountHelper {
-    address constant ENTRYPOINT_V06 = 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789;
+    using ECDSA for bytes32;
+
     uint256 private constant SIGNATURE_LENGTH = 65;
+    uint256 private constant OPTYPE_LENGTH = 2;
 
     // Custom errors
     error EndLessThanStart();
     error EndOutOfBounds(uint256 dataLength, uint256 end);
     error StartOutOfBounds(uint256 dataLength, uint256 start);
-    error CombinedCallDataTooLong(uint256 length);
-    error CallDataTooLong(uint256 length);
 
     /**
      * @notice Generates the initCode for creating a new account using a wallet factory
@@ -54,41 +54,104 @@ library TestSimpleAccountHelper {
     }
 
     /**
-     * @notice Encodes multiple chain-specific UserOps into a single byte array
-     * @param chainUserOps Array of xCallData structs to encode
-     * @return bytes The encoded multi-chain UserOp data
+     * @notice Creates cross-chain call data according to the linked hash specification
+     * @param chainId The chain ID where the operation is intended to be executed
+     * @param callData The call data for the operation
+     * @param otherChainHash The hash of the UserOperation on the other chain
+     * @return bytes The encoded cross-chain call data
      */
-    function encodeXChainCallData(XChainLib.xCallData[] memory chainUserOps) internal pure returns (bytes memory) {
-        if (chainUserOps.length == 0 || chainUserOps.length > XChainLib.MAX_CALLDATA_COUNT) {
-            revert XChainLib.InvalidNumberOfCallData(chainUserOps.length);
-        }
+    function createCrossChainCallData(uint16 chainId, bytes memory callData, bytes32 otherChainHash)
+        internal
+        pure
+        returns (bytes memory)
+    {
+        return abi.encodePacked(
+            uint16(0xFFFF), // opType marker
+            chainId,
+            uint16(callData.length),
+            callData,
+            otherChainHash
+        );
+    }
 
-        bytes memory encoded = abi.encodePacked(uint8(chainUserOps.length)); // First byte: number of ops
+    /**
+     * @notice Creates a cross-chain UserOperation for testing
+     * @param sender The address of the account initiating the operation
+     * @param nonce The nonce of the account
+     * @param callData The call data for the operation
+     * @param callGasLimit The gas limit for the call
+     * @param verificationGasLimit The gas limit for verification
+     * @param preVerificationGas The gas cost before verification
+     * @param maxFeePerGas The max fee per gas
+     * @param maxPriorityFeePerGas The max priority fee per gas
+     * @param otherChainHash The hash of the UserOperation on the other chain
+     * @param chainId The chain ID for the operation
+     * @return UserOperation The generated cross-chain UserOperation
+     */
+    function createCrossChainUserOp(
+        address sender,
+        uint256 nonce,
+        bytes memory callData,
+        uint256 callGasLimit,
+        uint256 verificationGasLimit,
+        uint256 preVerificationGas,
+        uint256 maxFeePerGas,
+        uint256 maxPriorityFeePerGas,
+        bytes32 otherChainHash,
+        uint16 chainId
+    ) internal pure returns (UserOperation memory) {
+        bytes memory crossChainCallData = createCrossChainCallData(chainId, callData, otherChainHash);
 
-        uint256 callDataLengthTotal = 0;
-        for (uint256 i = 0; i < chainUserOps.length; i++) {
-            callDataLengthTotal += chainUserOps[i].callData.length;
-            console2.log("callDataLengthTotal:", callDataLengthTotal);
+        return UserOperation({
+            sender: sender,
+            nonce: nonce,
+            initCode: "",
+            callData: crossChainCallData,
+            callGasLimit: callGasLimit,
+            verificationGasLimit: verificationGasLimit,
+            preVerificationGas: preVerificationGas,
+            maxFeePerGas: maxFeePerGas,
+            maxPriorityFeePerGas: maxPriorityFeePerGas,
+            paymasterAndData: "",
+            signature: ""
+        });
+    }
 
-            if (chainUserOps[i].callData.length > XChainLib.MAX_CALLDATA_LENGTH) {
-                console2.log("revert XChainLib.CallDataTooLong:", chainUserOps[i].callData.length);
-                revert CallDataTooLong(chainUserOps[i].callData.length);
-            }
-
-            if (callDataLengthTotal > XChainLib.MAX_COMBINED_CALLDATA_LENGTH) {
-                console2.log("revert XChainLib.CombinedCallDataTooLong:", callDataLengthTotal);
-                revert CombinedCallDataTooLong(callDataLengthTotal);
-            }
-
-            encoded = abi.encodePacked(
-                encoded,
-                chainUserOps[i].chainId, // 2 bytes: chain ID (range: 1 to 65535)
-                uint16(chainUserOps[i].callData.length), // 2 bytes: callData length
-                chainUserOps[i].callData // Variable length: callData
-            );
-        }
-
-        return encoded;
+    /**
+     * @notice Creates a conventional UserOperation for testing
+     * @param sender The address of the account initiating the operation
+     * @param nonce The nonce of the account
+     * @param callData The call data for the operation
+     * @param callGasLimit The gas limit for the call
+     * @param verificationGasLimit The gas limit for verification
+     * @param preVerificationGas The gas cost before verification
+     * @param maxFeePerGas The max fee per gas
+     * @param maxPriorityFeePerGas The max priority fee per gas
+     * @return UserOperation The generated conventional UserOperation
+     */
+    function createConventionalUserOp(
+        address sender,
+        uint256 nonce,
+        bytes memory callData,
+        uint256 callGasLimit,
+        uint256 verificationGasLimit,
+        uint256 preVerificationGas,
+        uint256 maxFeePerGas,
+        uint256 maxPriorityFeePerGas
+    ) internal pure returns (UserOperation memory) {
+        return UserOperation({
+            sender: sender,
+            nonce: nonce,
+            initCode: "",
+            callData: callData,
+            callGasLimit: callGasLimit,
+            verificationGasLimit: verificationGasLimit,
+            preVerificationGas: preVerificationGas,
+            maxFeePerGas: maxFeePerGas,
+            maxPriorityFeePerGas: maxPriorityFeePerGas,
+            paymasterAndData: "",
+            signature: ""
+        });
     }
 
     function printUserOperation(UserOperation memory userOp) internal pure {
@@ -114,36 +177,5 @@ library TestSimpleAccountHelper {
         console2.logBytes(userOp.paymasterAndData);
         console2.log("  Signature (hex):");
         console2.logBytes(userOp.signature);
-    }
-
-    /**
-     * @dev Slices a bytes array to return a portion specified by the start and end indices.
-     * @param data The bytes array to be sliced.
-     * @param start The index in the bytes array where the slice begins.
-     * @param end The index in the bytes array where the slice ends (exclusive).
-     * @return result The sliced portion of the bytes array.
-     * Note: The function reverts if the start index is not less than the end index,
-     *       if start or end is out of the bounds of the data array.
-     */
-    function _slice(bytes memory data, uint256 start, uint256 end) internal pure returns (bytes memory result) {
-        if (end <= start) revert EndLessThanStart();
-        if (end > data.length) revert EndOutOfBounds(data.length, end);
-        if (start >= data.length) revert StartOutOfBounds(data.length, start);
-
-        assembly {
-            // Allocate memory for the result
-            result := mload(0x40)
-            mstore(result, sub(end, start)) // Set the length of the result
-            let resultPtr := add(result, 0x20)
-
-            // Copy the data from the start to the end
-            for { let i := start } lt(i, end) { i := add(i, 0x20) } {
-                let dataPtr := add(add(data, 0x20), i)
-                mstore(add(resultPtr, sub(i, start)), mload(dataPtr))
-            }
-
-            // Update the free memory pointer
-            mstore(0x40, add(resultPtr, sub(end, start)))
-        }
     }
 }
