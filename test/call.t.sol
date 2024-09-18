@@ -12,9 +12,11 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "../src/IntentSimpleAccountFactory.sol";
 import "./TestSimpleAccountHelper.sol";
+import "./TestBytesHelper.sol";
 
 using Strings for bytes32;
 using UserOperationLib for UserOperation;
+using TestBytesHelper for bytes;
 
 contract Smt is ERC20 {
     constructor() ERC20("Super Morpheus Tokens", "SMT") {
@@ -214,7 +216,7 @@ contract callsTest is Test {
         if (!success) {
             // If the call failed, try to decode the revert reason
             if (returnData.length > 4) {
-                bytes memory reasonSlice = TestSimpleAccountHelper._slice(returnData, 4, returnData.length);
+                bytes memory reasonSlice = returnData._slice(4, returnData.length);
                 (string memory reason) = abi.decode(reasonSlice, (string));
                 console.log("Revert reason:", reason);
             } else {
