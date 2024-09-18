@@ -13,7 +13,8 @@ library XChainLib {
     uint256 private constant CHAINID_LENGTH = 2;
     uint256 private constant CALLDATA_LENGTH_SIZE = 2;
     uint256 private constant HASH_LENGTH = 32;
-    uint256 private constant OPTYPE_LENGTH = 2; // Updated from 1 to 2 bytes
+    uint256 private constant OPTYPE_LENGTH = 2;
+    uint16 private constant XC_MARKER = 0xFFFF;
 
     enum UserOpType {
         Conventional,
@@ -32,10 +33,12 @@ library XChainLib {
      * @notice Identifies the type of UserOperation based on the call data.
      * @param callData The call data of the UserOperation.
      * @return The UserOperation type (Conventional or CrossChain).
+     * X-chain calldata format:
+     * [2 bytes opType (0xFFFF)] + [2 bytes chainId] + [2 bytes calldataLength] + [callData] + [32 bytes otherChainHash]
      */
     function identifyUserOpType(bytes calldata callData) public pure returns (UserOpType) {
         uint256 minCrossChainLength = OPTYPE_LENGTH + CHAINID_LENGTH + CALLDATA_LENGTH_SIZE + HASH_LENGTH;
-        
+
         if (callData.length >= minCrossChainLength) {
             uint16 opType;
             assembly {
@@ -45,7 +48,7 @@ library XChainLib {
                 // Potentially a cross-chain UserOp, validate further
                 uint256 offset = OPTYPE_LENGTH + CHAINID_LENGTH;
                 if (callData.length >= offset + CALLDATA_LENGTH_SIZE) {
-                    // read calldataLength directly from calldata without 
+                    // read calldataLength directly from calldata without
                     // copying to memory
                     uint16 calldataLength;
                     assembly {
@@ -72,10 +75,10 @@ library XChainLib {
         if (callData.length < OPTYPE_LENGTH + CHAINID_LENGTH + CALLDATA_LENGTH_SIZE + HASH_LENGTH) {
             revert InvalidCallDataLength(callData.length);
         }
-        
+
         uint256 offset = OPTYPE_LENGTH + CHAINID_LENGTH; // opType (2 bytes) + chainId (2 bytes)
 
-        // read calldataLength directly from calldata without 
+        // read calldataLength directly from calldata without
         // copying to memory
         uint16 calldataLength;
         assembly {
@@ -83,32 +86,36 @@ library XChainLib {
             calldataLength := shr(240, calldataload(ptr))
         }
         offset += CALLDATA_LENGTH_SIZE;
-        
+
         if (callData.length != offset + calldataLength + HASH_LENGTH) {
             revert InvalidCallDataLength(callData.length);
         }
-        
-        return callData[offset : offset + calldataLength];
+
+        return callData[offset:offset + calldataLength];
     }
-    
+
     /**
      * @notice Extracts the chain ID and the other chain's hash from the call data.
      * @param callData The call data containing the chain ID and other chain's hash.
      * @return chainId The extracted chain ID.
      * @return otherChainHash The extracted hash of the other chain's operation.
      */
-    function extractChainIdHash(bytes calldata callData) internal pure returns (uint16 chainId, bytes32 otherChainHash) {
+    function extractChainIdHash(bytes calldata callData)
+        internal
+        pure
+        returns (uint16 chainId, bytes32 otherChainHash)
+    {
         if (callData.length < OPTYPE_LENGTH + CHAINID_LENGTH + CALLDATA_LENGTH_SIZE + HASH_LENGTH) {
             revert InvalidCallDataLength(callData.length);
         }
-        
-        // read chainId directly from calldata without 
+
+        // read chainId directly from calldata without
         // copying to memory
         assembly {
             let ptr := add(callData.offset, OPTYPE_LENGTH) // Skip opType (2 bytes)
             chainId := shr(240, calldataload(ptr))
         }
-        
-        otherChainHash = bytes32(callData[callData.length - HASH_LENGTH : callData.length]);
-    }    
+
+        otherChainHash = bytes32(callData[callData.length - HASH_LENGTH:callData.length]);
+    }
 }
