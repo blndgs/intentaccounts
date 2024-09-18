@@ -40,37 +40,41 @@ contract IntentSimpleAccount is SimpleAccount {
     }
 
     function _getUserOpHash(UserOperation calldata userOp, uint256 chainID) internal view returns (bytes32) {
-        XChainLib.UserOpType opType = XChainLib.identifyUserOpType(userOp.callData);
-    
-        bytes32 callDataHash = _getCallDataHash(userOp, opType);
-        
-        bytes32 opHash = userOp.hashIntentOp(callDataHash);
-        
-        if (opType == XChainLib.UserOpType.CrossChain) {
-            (, bytes32 otherChainHash) = XChainLib.extractChainIdHash(userOp.callData);
-    
-            // Combine hashes using XOR for symmetry
+        (XChainLib.UserOpType opType, bytes32 callDataHash, bytes32 otherChainHash) = _getCallDataHash(userOp);
+
+        bytes32 opHash = keccak256(abi.encode(userOp.hashIntentOp(callDataHash), address(entryPoint()), chainID));
+
+        if (opType == XChainLib.UserOpType.Conventional) {
+            return opHash;
+        } else {
+            // link cross-chain hashes
             opHash = opHash ^ otherChainHash;
+            return opHash;
         }
-        
-        return keccak256(abi.encode(opHash, address(entryPoint()), chainID));
     }
-    
-    function _getCallDataHash(UserOperation calldata userOp, XChainLib.UserOpType opType) internal pure returns (bytes32 callDataHash) {
+
+    function _getCallDataHash(UserOperation calldata userOp)
+        internal
+        pure
+        returns (XChainLib.UserOpType opType, bytes32 cdHash, bytes32 otherChainHash)
+    {
         uint256 sigLength = userOp.signature.length;
 
         if (sigLength > SIGNATURE_LENGTH) {
             // There is an intent JSON at the end of the signature,
-            // include the remaining part of signature > 65 (ECDSA len) to hashing
-            return keccak256(userOp.signature[SIGNATURE_LENGTH:]);
-        }
-
-        if (opType == XChainLib.UserOpType.Conventional) {
-            return keccak256(userOp.callData);
+            // Intent userOp
+            bytes calldata callDataVal = userOp.signature[SIGNATURE_LENGTH:];
+            opType = XChainLib.identifyUserOpType(callDataVal);
+            if (opType == XChainLib.UserOpType.CrossChain) {
+                // Cross-chain UserOp
+                (, otherChainHash) = XChainLib.extractChainIdHash(callDataVal);
+                return (opType, keccak256(XChainLib.extractCallData(callDataVal)), otherChainHash);
+            } else {
+                return (opType, keccak256(callDataVal), otherChainHash);
+            }
         } else {
-            // Cross-chain UserOp
-            bytes calldata callData = XChainLib.extractCallData(userOp.callData);
-            return keccak256(callData);
+            // We don't support cross-chain userOps for conventional userOps
+            return (XChainLib.UserOpType.Conventional, keccak256(userOp.callData), otherChainHash);
         }
     }
 
