@@ -9,7 +9,7 @@ import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "../src/IntentUserOperation.sol";
 import "./TestSimpleAccountHelper.sol";
-import "../src/xchainlib.sol";
+// import "../src/xchainlib.sol";
 
 contract SimpleAccounEthereumTest is Test {
     using Strings for bytes32;
@@ -267,31 +267,21 @@ contract SimpleAccounEthereumTest is Test {
             signature: hex"fe050651afae2c8d5b87a4f2995bbc77c6efba4eb0a801bca371bfccd7dc551009f829eb0c17836968f49210a3e3a5cc955f40e3b66f512d956302d9a963bb081b7b2266726f6d223a7b2274797065223a22544f4b454e222c2261646472657373223a22307845656565654565656545654565654565456545656545454565656565456565656565656545456545222c22616d6f756e74223a22302e38222c22636861696e4964223a2231227d2c22746f223a7b2274797065223a22544f4b454e222c2261646472657373223a22307864616331376639353864326565353233613232303632303639393435393763313364383331656337222c22636861696e4964223a2231227d7d"
         });
 
-        XChainLib.xCallData[] memory chainUserOps = new XChainLib.xCallData[](2);
-        chainUserOps[0] = XChainLib.xCallData({chainId: uint16(1), callData: sourceEthOp.callData});
-        chainUserOps[1] = XChainLib.xCallData({chainId: 137, callData: destPolygonOp.callData});
+        bytes[] memory chainUserOps = new bytes[](2);
+        chainUserOps[0] = TestSimpleAccountHelper.createCrossChainCallData(1, sourceEthOp.callData, bytes32(0));
+        chainUserOps[1] = TestSimpleAccountHelper.createCrossChainCallData(137, destPolygonOp.callData, bytes32(0));
 
-        sourceEthOp.callData = TestSimpleAccountHelper.encodeXChainCallData(chainUserOps);
-        require(_simpleAccount.isXChainCallData(sourceEthOp.callData), "Combined UserOp is not cross-chain");
+        sourceEthOp.callData = chainUserOps[0];
+        require(
+            XChainLib.identifyUserOpType(sourceEthOp.callData) == XChainLib.UserOpType.CrossChain,
+            "Combined UserOp is not cross-chain"
+        );
 
-        //        assertEq(extractedDestOp.sender, destPolygonOp.sender);
-        //        assertEq(extractedDestOp.nonce, destPolygonOp.nonce);
-        //        assertEq(extractedDestOp.callGasLimit, destPolygonOp.callGasLimit);
-        //        assertEq(extractedDestOp.verificationGasLimit, destPolygonOp.verificationGasLimit);
-        //        assertEq(extractedDestOp.preVerificationGas, destPolygonOp.preVerificationGas);
-        //        assertEq(extractedDestOp.maxFeePerGas, destPolygonOp.maxFeePerGas);
-        //        assertEq(extractedDestOp.maxPriorityFeePerGas, destPolygonOp.maxPriorityFeePerGas);
-        //
-        //        // Optional: Log the extracted UserOperation for debugging
-        //        console2.log("Extracted UserOperation:");
-        //        console2.log("  sender:", extractedDestOp.sender);
-        //        console2.log("  nonce:", extractedDestOp.nonce);
-        //        console2.log("  callGasLimit:", extractedDestOp.callGasLimit);
-        //        console2.log("  verificationGasLimit:", extractedDestOp.verificationGasLimit);
-        //        console2.log("  preVerificationGas:", extractedDestOp.preVerificationGas);
-        //        console2.log("  maxFeePerGas:", extractedDestOp.maxFeePerGas);
-        //        console2.log("  maxPriorityFeePerGas:", extractedDestOp.maxPriorityFeePerGas);
-        //        console2.log("  callData length:", extractedDestOp.callData.length);
+        destPolygonOp.callData = chainUserOps[1];
+        require(
+            XChainLib.identifyUserOpType(destPolygonOp.callData) == XChainLib.UserOpType.CrossChain,
+            "Combined UserOp is not cross-chain"
+        );
     }
 
     /**
