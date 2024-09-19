@@ -30,7 +30,7 @@ library XChainLib {
     error InvalidUserOpType(uint16 opType);
 
     /**
-     * @notice Identifies the type of UserOperation based on the call data.
+     * @dev Identifies the type of UserOperation based on the call data.
      * @param callData The call data of the UserOperation.
      * @return The UserOperation type (Conventional or CrossChain).
      * X-chain calldata format:
@@ -67,7 +67,7 @@ library XChainLib {
     }
 
     /**
-     * @notice Extracts the call data from a cross-chain UserOperation.
+     * @dev Extracts the call data from a cross-chain UserOperation.
      * @param callData The call data containing the embedded call data.
      * @return The extracted call data.
      */
@@ -95,7 +95,7 @@ library XChainLib {
     }
 
     /**
-     * @notice Extracts the chain ID and the other chain's hash from the call data.
+     * @dev Extracts the chain ID and the other chain's hash from the call data.
      * @param callData The call data containing the chain ID and other chain's hash.
      * @return otherChainHash The extracted hash of the other chain's operation.
      */

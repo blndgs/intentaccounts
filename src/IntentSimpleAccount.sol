@@ -135,7 +135,7 @@ contract IntentSimpleAccount is SimpleAccount {
     }
 
     /**
-     * @notice Executes a single call.
+     * @dev Executes a single call.
      * @param value The Ether value to send with the call.
      * @param dest The destination address for the call.
      * @param func The function data (call data) to execute.
