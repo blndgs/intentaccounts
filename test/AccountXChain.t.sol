@@ -89,8 +89,8 @@ contract AccountXChainTest is Test {
         uint256 validationResult = simpleAccount.validateSignature(userOp, bytes32(0));
         assertEq(validationResult, 0, "Signature validation failed");
 
-        XChainLib.UserOpType opType = this.identifyUserOpType(userOp.callData);
-        assertEq(uint256(opType), uint256(XChainLib.UserOpType.CrossChain), "UserOpType is not CrossChain");
+        XChainLib.OpType opType = this.identifyUserOpType(userOp.callData);
+        assertEq(uint256(opType), uint256(XChainLib.OpType.CrossChain), "OpType is not CrossChain");
 
         bytes memory cd = this.extractCallData(userOp.callData);
         assertEq(cd, transferCallData1, "extracted calldata does not match");
@@ -100,7 +100,7 @@ contract AccountXChainTest is Test {
         return XChainLib.extractCallData(callData);
     }
 
-    function identifyUserOpType(bytes calldata callData) public pure returns (XChainLib.UserOpType) {
+    function identifyUserOpType(bytes calldata callData) public pure returns (XChainLib.OpType) {
         return XChainLib.identifyUserOpType(callData);
     }
 

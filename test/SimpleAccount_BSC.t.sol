@@ -90,8 +90,8 @@ contract SimpleAccountBscTest is Test {
          */
         // slice post signature to retrieve the x-chain encoded Intent
         // bytes memory sourceSigXChainCalldata = sourceUserOp.signature._slice(65, sourceUserOp.signature.length);
-        // XChainLib.UserOpType opType = XChainLib.identifyUserOpType(sourceSigXChainCalldata);
-        // assertEq(uint(opType), uint(XChainLib.UserOpType.CrossChain), "UserOpType should be CrossChain");
+        // XChainLib.OpType opType = XChainLib.identifyUserOpType(sourceSigXChainCalldata);
+        // assertEq(uint(opType), uint(XChainLib.OpType.CrossChain), "OpType should be CrossChain");
 
         // // extract the source Intent bytes
         // bytes memory extractedIntent = this.extractCallData(sourceSigXChainCalldata);

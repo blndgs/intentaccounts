@@ -40,11 +40,11 @@ contract IntentSimpleAccount is SimpleAccount {
     }
 
     function _getUserOpHash(UserOperation calldata userOp, uint256 chainID) internal view returns (bytes32) {
-        (XChainLib.UserOpType opType, bytes32 callDataHash, bytes32 otherChainHash) = _getCallDataHash(userOp);
+        (XChainLib.OpType opType, bytes32 callDataHash, bytes32 otherChainHash) = _getCallDataHash(userOp);
 
         bytes32 opHash = keccak256(abi.encode(userOp.hashIntentOp(callDataHash), address(entryPoint()), chainID));
 
-        if (opType == XChainLib.UserOpType.Conventional) {
+        if (opType == XChainLib.OpType.Conventional) {
             return opHash;
         } else {
             // link cross-chain hashes
@@ -56,7 +56,7 @@ contract IntentSimpleAccount is SimpleAccount {
     function _getCallDataHash(UserOperation calldata userOp)
         internal
         pure
-        returns (XChainLib.UserOpType opType, bytes32 cdHash, bytes32 otherChainHash)
+        returns (XChainLib.OpType opType, bytes32 cdHash, bytes32 otherChainHash)
     {
         uint256 sigLength = userOp.signature.length;
 
@@ -65,7 +65,7 @@ contract IntentSimpleAccount is SimpleAccount {
             // Intent userOp
             bytes calldata callDataVal = userOp.signature[SIGNATURE_LENGTH:];
             opType = XChainLib.identifyUserOpType(callDataVal);
-            if (opType == XChainLib.UserOpType.CrossChain) {
+            if (opType == XChainLib.OpType.CrossChain) {
                 // Cross-chain UserOp
                 (, otherChainHash) = XChainLib.extractChainIdHash(callDataVal);
                 return (opType, keccak256(XChainLib.extractCallData(callDataVal)), otherChainHash);
@@ -73,8 +73,8 @@ contract IntentSimpleAccount is SimpleAccount {
                 return (opType, keccak256(callDataVal), otherChainHash);
             }
         } else {
-            // We don't support cross-chain userOps for conventional userOps
-            return (XChainLib.UserOpType.Conventional, keccak256(userOp.callData), otherChainHash);
+            // We don't support cross-chain userOpTypeonventional userOps
+            return (XChainLib.OpType.Conventional, keccak256(userOp.callData), otherChainHash);
         }
     }
 

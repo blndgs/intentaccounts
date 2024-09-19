@@ -16,7 +16,7 @@ library XChainLib {
     uint256 private constant OPTYPE_LENGTH = 2;
     uint16 private constant XC_MARKER = 0xFFFF;
 
-    enum UserOpType {
+    enum OpType {
         Conventional,
         CrossChain
     }
@@ -36,7 +36,7 @@ library XChainLib {
      * X-chain calldata format:
      * [2 bytes opType (0xFFFF)] + [2 bytes chainId] + [2 bytes calldataLength] + [callData] + [32 bytes otherChainHash]
      */
-    function identifyUserOpType(bytes calldata callData) public pure returns (UserOpType) {
+    function identifyUserOpType(bytes calldata callData) public pure returns (OpType) {
         uint256 minCrossChainLength = OPTYPE_LENGTH + CHAINID_LENGTH + CALLDATA_LENGTH_SIZE + HASH_LENGTH;
 
         if (callData.length >= minCrossChainLength) {
@@ -58,12 +58,12 @@ library XChainLib {
                     offset += CALLDATA_LENGTH_SIZE;
                     uint256 expectedLength = offset + calldataLength + HASH_LENGTH;
                     if (callData.length == expectedLength) {
-                        return UserOpType.CrossChain;
+                        return OpType.CrossChain;
                     }
                 }
             }
         }
-        return UserOpType.Conventional;
+        return OpType.Conventional;
     }
 
     /**

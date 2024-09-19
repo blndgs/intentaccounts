@@ -27,17 +27,17 @@ contract XChainLibTest is Test {
         // Test Conventional UserOp
         assertEq(
             uint256(XChainLib.identifyUserOpType(hex"")),
-            uint256(XChainLib.UserOpType.Conventional),
+            uint256(XChainLib.OpType.Conventional),
             "Empty calldata should be Conventional"
         );
         assertEq(
             uint256(XChainLib.identifyUserOpType(hex"00deadbeef")),
-            uint256(XChainLib.UserOpType.Conventional),
+            uint256(XChainLib.OpType.Conventional),
             "Conventional UserOp should be identified"
         );
         assertEq(
             uint256(XChainLib.identifyUserOpType(hex"03deadbeef")),
-            uint256(XChainLib.UserOpType.Conventional),
+            uint256(XChainLib.OpType.Conventional),
             "Invalid opType should be Conventional"
         );
 
@@ -53,7 +53,7 @@ contract XChainLibTest is Test {
         );
         assertEq(
             uint256(XChainLib.identifyUserOpType(sourceUserOp)),
-            uint256(XChainLib.UserOpType.CrossChain),
+            uint256(XChainLib.OpType.CrossChain),
             "Should be identified as SourceUserOp"
         );
 
@@ -68,19 +68,19 @@ contract XChainLibTest is Test {
         );
         assertEq(
             uint256(XChainLib.identifyUserOpType(destUserOp)),
-            uint256(XChainLib.UserOpType.CrossChain),
+            uint256(XChainLib.OpType.CrossChain),
             "Should be identified as DestUserOp"
         );
 
         // Test invalid cases (should return Conventional)
         assertEq(
             uint256(XChainLib.identifyUserOpType(hex"0100")),
-            uint256(XChainLib.UserOpType.Conventional),
+            uint256(XChainLib.OpType.Conventional),
             "Incomplete SourceUserOp should be Conventional"
         );
         assertEq(
             uint256(XChainLib.identifyUserOpType(hex"0200")),
-            uint256(XChainLib.UserOpType.Conventional),
+            uint256(XChainLib.OpType.Conventional),
             "Incomplete DestUserOp should be Conventional"
         );
 
@@ -94,7 +94,7 @@ contract XChainLibTest is Test {
         );
         assertEq(
             uint256(XChainLib.identifyUserOpType(edgeCaseSource)),
-            uint256(XChainLib.UserOpType.Conventional),
+            uint256(XChainLib.OpType.Conventional),
             "Invalid SourceUserOp structure should be Conventional"
         );
 
@@ -107,7 +107,7 @@ contract XChainLibTest is Test {
         );
         assertEq(
             uint256(XChainLib.identifyUserOpType(edgeCaseDest)),
-            uint256(XChainLib.UserOpType.Conventional),
+            uint256(XChainLib.OpType.Conventional),
             "Invalid DestUserOp structure should be Conventional"
         );
     }
@@ -123,8 +123,8 @@ contract XChainLibTest is Test {
         bytes memory destUserOpEncoded = TestSimpleAccountHelper.createCrossChainCallData(1, destCallData, dummyHash1);
 
         uint256 gasStart = gasleft();
-        XChainLib.UserOpType opType = XChainLib.identifyUserOpType(sourceUserOpCallData);
-        bool isXChainCallData = opType == XChainLib.UserOpType.CrossChain;
+        XChainLib.OpType opType = XChainLib.identifyUserOpType(sourceUserOpCallData);
+        bool isXChainCallData = opType == XChainLib.OpType.CrossChain;
         assertEq(isXChainCallData, true, "Should be identified as SourceUserOp");
         uint256 gasUsed = gasStart - gasleft();
         console2.log("Gas used for identifyUserOpType:", gasUsed);
