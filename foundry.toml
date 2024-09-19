@@ -10,7 +10,7 @@ etherscan = { key = "${ETHEREUMSCAN_API_KEY}", chain = "1" }
 v-mainnet888scan = { key = "${TENDERLY_ACCESS_TOKEN}", chain = "888", url = "${ETHEREUM_RPC_URL}/verify/etherscan" }
 
 [profile.default]
-solc = "0.8.25"
+solc = "0.8.27"
 src = "src"
 out = "out"
 libs = ["lib"]
