@@ -268,8 +268,8 @@ contract SimpleAccounEthereumTest is Test {
         });
 
         bytes[] memory chainUserOps = new bytes[](2);
-        chainUserOps[0] = TestSimpleAccountHelper.createCrossChainCallData(1, sourceEthOp.callData, bytes32(0));
-        chainUserOps[1] = TestSimpleAccountHelper.createCrossChainCallData(137, destPolygonOp.callData, bytes32(0));
+        chainUserOps[0] = TestSimpleAccountHelper.createCrossChainCallData(sourceEthOp.callData, bytes32(0));
+        chainUserOps[1] = TestSimpleAccountHelper.createCrossChainCallData(destPolygonOp.callData, bytes32(0));
 
         sourceEthOp.callData = chainUserOps[0];
         require(

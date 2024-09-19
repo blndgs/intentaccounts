@@ -10,7 +10,6 @@ library XChainLib {
     uint256 internal constant MAX_CALLDATA_LENGTH = 10240;
     uint256 internal constant MAX_CALLDATA_COUNT = 4;
     uint256 internal constant MAX_CHAIN_ID = 0xFFFF;
-    uint256 private constant CHAINID_LENGTH = 2;
     uint256 private constant CALLDATA_LENGTH_SIZE = 2;
     uint256 private constant HASH_LENGTH = 32;
     uint256 private constant OPTYPE_LENGTH = 2;
@@ -34,10 +33,10 @@ library XChainLib {
      * @param callData The call data of the UserOperation.
      * @return The UserOperation type (Conventional or CrossChain).
      * X-chain calldata format:
-     * [2 bytes opType (0xFFFF)] + [2 bytes chainId] + [2 bytes calldataLength] + [callData] + [32 bytes otherChainHash]
+     * [2 bytes opType (0xFFFF)] + [2 bytes calldataLength] + [callData] + [32 bytes otherChainHash]
      */
     function identifyUserOpType(bytes calldata callData) public pure returns (OpType) {
-        uint256 minCrossChainLength = OPTYPE_LENGTH + CHAINID_LENGTH + CALLDATA_LENGTH_SIZE + HASH_LENGTH;
+        uint256 minCrossChainLength = OPTYPE_LENGTH + CALLDATA_LENGTH_SIZE + HASH_LENGTH;
 
         if (callData.length >= minCrossChainLength) {
             uint16 opType;
@@ -46,7 +45,7 @@ library XChainLib {
             }
             if (opType == 0xFFFF) {
                 // Potentially a cross-chain UserOp, validate further
-                uint256 offset = OPTYPE_LENGTH + CHAINID_LENGTH;
+                uint256 offset = OPTYPE_LENGTH;
                 if (callData.length >= offset + CALLDATA_LENGTH_SIZE) {
                     // read calldataLength directly from calldata without
                     // copying to memory
@@ -72,11 +71,11 @@ library XChainLib {
      * @return The extracted call data.
      */
     function extractCallData(bytes calldata callData) internal pure returns (bytes calldata) {
-        if (callData.length < OPTYPE_LENGTH + CHAINID_LENGTH + CALLDATA_LENGTH_SIZE + HASH_LENGTH) {
+        if (callData.length < OPTYPE_LENGTH + CALLDATA_LENGTH_SIZE + HASH_LENGTH) {
             revert InvalidCallDataLength(callData.length);
         }
 
-        uint256 offset = OPTYPE_LENGTH + CHAINID_LENGTH; // opType (2 bytes) + chainId (2 bytes)
+        uint256 offset = OPTYPE_LENGTH; // opType (2 bytes)
 
         // read calldataLength directly from calldata without
         // copying to memory
@@ -99,12 +98,8 @@ library XChainLib {
      * @param callData The call data containing the chain ID and other chain's hash.
      * @return otherChainHash The extracted hash of the other chain's operation.
      */
-    function extractHash(bytes calldata callData)
-        internal
-        pure
-        returns (bytes32 otherChainHash)
-    {
-        if (callData.length < OPTYPE_LENGTH + CHAINID_LENGTH + CALLDATA_LENGTH_SIZE + HASH_LENGTH) {
+    function extractHash(bytes calldata callData) internal pure returns (bytes32 otherChainHash) {
+        if (callData.length < OPTYPE_LENGTH + CALLDATA_LENGTH_SIZE + HASH_LENGTH) {
             revert InvalidCallDataLength(callData.length);
         }
 

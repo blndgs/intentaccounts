@@ -80,8 +80,7 @@ contract SimpleAccountBscTest is Test {
             xSign(SOURCE_CHAIN_ID, DEST_CHAIN_ID, ownerPrivateKey, sourceUserOp, destUserOp);
 
         // solve sourceUserOp
-        bytes memory xSrcIntent =
-            TestSimpleAccountHelper.createCrossChainCallData(uint16(SOURCE_CHAIN_ID), sourceUserOp.callData, destHash);
+        bytes memory xSrcIntent = TestSimpleAccountHelper.createCrossChainCallData(sourceUserOp.callData, destHash);
         sourceUserOp.signature = bytes(abi.encodePacked(sourceUserOp.signature, xSrcIntent));
         sourceUserOp.callData = abi.encodeWithSignature("transfer(address,uint256)", RECIPIENT_SRC, 0.05 ether);
 
@@ -105,8 +104,7 @@ contract SimpleAccountBscTest is Test {
         this.verifySignature(sourceUserOp);
 
         // solve destUserOp
-        bytes memory xDestIntent =
-            TestSimpleAccountHelper.createCrossChainCallData(uint16(DEST_CHAIN_ID), destUserOp.callData, srcHash);
+        bytes memory xDestIntent = TestSimpleAccountHelper.createCrossChainCallData(destUserOp.callData, srcHash);
         destUserOp.signature = bytes(abi.encodePacked(destUserOp.signature, xDestIntent));
         destUserOp.callData = abi.encodeWithSignature("transfer(address,uint256)", RECIPIENT_DEST, 0.00005 ether);
 

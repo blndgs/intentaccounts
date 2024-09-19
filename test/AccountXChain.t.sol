@@ -52,7 +52,7 @@ contract AccountXChainTest is Test {
 
         // Create cross-chain call data for the first function
         bytes memory crossChainCallData =
-            TestSimpleAccountHelper.createCrossChainCallData(uint16(DEST_CHAIN_ID), transferCallData1, otherChainHash);
+            TestSimpleAccountHelper.createCrossChainCallData(transferCallData1, otherChainHash);
 
         // Prepare the batch arrays
         uint256[] memory values = new uint256[](2);

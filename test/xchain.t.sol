@@ -16,8 +16,8 @@ contract XChainLibTest is Test {
     function testEncodeAndDecodeXChainCallData() public {
         bytes32 otherChainHash = keccak256("deadbeef");
         bytes[] memory ops = new bytes[](2);
-        ops[0] = TestSimpleAccountHelper.createCrossChainCallData(1, hex"deadbeef", otherChainHash);
-        ops[1] = TestSimpleAccountHelper.createCrossChainCallData(2, hex"cafebabe", otherChainHash);
+        ops[0] = TestSimpleAccountHelper.createCrossChainCallData(hex"deadbeef", otherChainHash);
+        ops[1] = TestSimpleAccountHelper.createCrossChainCallData(hex"cafebabe", otherChainHash);
 
         assertEq(this.extractCallData(ops[0]), hex"deadbeef");
         assertEq(this.extractCallData(ops[1]), hex"cafebabe");
@@ -46,7 +46,6 @@ contract XChainLibTest is Test {
         // Test SourceUserOp
         bytes memory sourceUserOp = abi.encodePacked(
             uint16(0xffff), // opType for cross-chain
-            uint16(1), // source chainId
             uint16(8), // src-calldata-length
             hex"1234567890abcdef", // src-calldata-value
             dummyHash
@@ -61,7 +60,6 @@ contract XChainLibTest is Test {
         bytes32 dummyHash1 = bytes32(uint256(0x123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0));
         bytes memory destUserOp = abi.encodePacked(
             uint16(0xffff), // opType for cross-chain
-            uint16(1), // dest chainId
             uint16(4), // dest-calldata-length
             hex"deadbeef", // dest-calldata-value
             dummyHash1 // hash1
@@ -87,7 +85,6 @@ contract XChainLibTest is Test {
         // Test edge cases
         bytes memory edgeCaseSource = abi.encodePacked(
             uint8(1), // opType for SourceUserOp
-            uint16(1), // source chainId
             uint16(4), // src-calldata-length
             hex"deadbeef" // src-calldata-value
                 // missing dest-userOp-encoded
@@ -100,7 +97,6 @@ contract XChainLibTest is Test {
 
         bytes memory edgeCaseDest = abi.encodePacked(
             uint8(2), // opType for DestUserOp
-            uint16(1), // dest chainId
             uint16(4), // dest-calldata-length
             hex"deadbeef", // dest-calldata-value
             bytes31(0) // incomplete hash1
@@ -118,9 +114,9 @@ contract XChainLibTest is Test {
         bytes memory destCallData = new bytes(2000);
         bytes32 dummyHash1 = bytes32(uint256(0x123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0));
 
-        bytes memory sourceUserOpCallData = TestSimpleAccountHelper.createCrossChainCallData(2, srcCallData, dummyHash1);
+        bytes memory sourceUserOpCallData = TestSimpleAccountHelper.createCrossChainCallData(srcCallData, dummyHash1);
 
-        bytes memory destUserOpEncoded = TestSimpleAccountHelper.createCrossChainCallData(1, destCallData, dummyHash1);
+        bytes memory destUserOpEncoded = TestSimpleAccountHelper.createCrossChainCallData(destCallData, dummyHash1);
 
         uint256 gasStart = gasleft();
         XChainLib.OpType opType = XChainLib.identifyUserOpType(sourceUserOpCallData);

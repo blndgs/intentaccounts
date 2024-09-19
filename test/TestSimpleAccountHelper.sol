@@ -55,19 +55,17 @@ library TestSimpleAccountHelper {
 
     /**
      * @notice Creates cross-chain call data according to the linked hash specification
-     * @param chainId The chain ID where the operation is intended to be executed
      * @param callData The call data for the operation
      * @param otherChainHash The hash of the UserOperation on the other chain
      * @return bytes The encoded cross-chain call data
      */
-    function createCrossChainCallData(uint16 chainId, bytes memory callData, bytes32 otherChainHash)
+    function createCrossChainCallData(bytes memory callData, bytes32 otherChainHash)
         internal
         pure
         returns (bytes memory)
     {
         return abi.encodePacked(
             uint16(0xFFFF), // opType marker
-            chainId,
             uint16(callData.length),
             callData,
             otherChainHash
@@ -85,7 +83,6 @@ library TestSimpleAccountHelper {
      * @param maxFeePerGas The max fee per gas
      * @param maxPriorityFeePerGas The max priority fee per gas
      * @param otherChainHash The hash of the UserOperation on the other chain
-     * @param chainId The chain ID for the operation
      * @return UserOperation The generated cross-chain UserOperation
      */
     function createCrossChainUserOp(
@@ -97,10 +94,9 @@ library TestSimpleAccountHelper {
         uint256 preVerificationGas,
         uint256 maxFeePerGas,
         uint256 maxPriorityFeePerGas,
-        bytes32 otherChainHash,
-        uint16 chainId
+        bytes32 otherChainHash
     ) internal pure returns (UserOperation memory) {
-        bytes memory crossChainCallData = createCrossChainCallData(chainId, callData, otherChainHash);
+        bytes memory crossChainCallData = createCrossChainCallData(callData, otherChainHash);
 
         return UserOperation({
             sender: sender,
