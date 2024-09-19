@@ -4,7 +4,7 @@ pragma solidity ^0.8.25;
 import "forge-std/Test.sol";
 import "../src/IntentSimpleAccount.sol";
 import "../src/IntentSimpleAccountFactory.sol";
-import "../src/XChainLib.sol";
+import "../src/xchainlib.sol";
 import "@account-abstraction/interfaces/IEntryPoint.sol";
 import "@account-abstraction/core/EntryPoint.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";

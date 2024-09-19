@@ -9,7 +9,7 @@ import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@account-abstraction/samples/SimpleAccount.sol";
 import "./IntentUserOperation.sol";
 import "@account-abstraction/interfaces/IEntryPoint.sol";
-import "./XChainLib.sol";
+import "./xchainlib.sol";
 
 /**
  * @title IntentSimpleAccount
