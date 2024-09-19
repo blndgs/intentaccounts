@@ -12,10 +12,10 @@ import "@account-abstraction/interfaces/IEntryPoint.sol";
 import "./XChainLib.sol";
 
 /**
- * minimal account.
- *  this is sample minimal account.
- *  has execute, eth handling methods
- *  has a single signer that can send requests through the entryPoint.
+ * @title IntentSimpleAccount
+ * @dev An extended SimpleAccount that supports intent-based and cross-chain operations.
+ * This contract implements ERC-4337 account abstraction with additional features for
+ * handling intents and cross-chain transactions.
  */
 contract IntentSimpleAccount is SimpleAccount {
     using IntentUserOperationLib for UserOperation;
@@ -30,7 +30,7 @@ contract IntentSimpleAccount is SimpleAccount {
     }
 
     /**
-     * @notice Expose _getUserOpHash
+     * @dev Expose _getUserOpHash
      * @param userOp The UserOperation to hash.
      * @param chainID The chain ID for the operation.
      * @return The computed hash.
@@ -39,20 +39,31 @@ contract IntentSimpleAccount is SimpleAccount {
         return _getUserOpHash(userOp, chainID);
     }
 
+    /**
+     * @dev Internal function to compute the hash of a UserOperation.
+     * @param userOp The UserOperation to hash.
+     * @param chainID The chain ID for the operation.
+     * @return The computed hash of the UserOperation.
+     */
     function _getUserOpHash(UserOperation calldata userOp, uint256 chainID) internal view returns (bytes32) {
         (XChainLib.OpType opType, bytes32 callDataHash, bytes32 otherChainHash) = _getCallDataHash(userOp);
 
         bytes32 opHash = keccak256(abi.encode(userOp.hashIntentOp(callDataHash), address(entryPoint()), chainID));
 
-        if (opType == XChainLib.OpType.Conventional) {
-            return opHash;
-        } else {
-            // link cross-chain hashes
-            opHash = opHash ^ otherChainHash;
-            return opHash;
+        if (opType == XChainLib.OpType.CrossChain) {
+            opHash ^= otherChainHash;
         }
+
+        return opHash;
     }
 
+    /**
+     * @dev Computes the hash of the call data and determines the UserOperation type.
+     * @param userOp The UserOperation to process.
+     * @return opType The type of the UserOperation (Conventional or CrossChain).
+     * @return cdHash The hash of the call data.
+     * @return otherChainHash The hash of the other chain's operation (for cross-chain ops).
+     */
     function _getCallDataHash(UserOperation calldata userOp)
         internal
         pure
@@ -62,33 +73,31 @@ contract IntentSimpleAccount is SimpleAccount {
 
         if (sigLength > SIGNATURE_LENGTH) {
             // There is an intent JSON at the end of the signature,
-            // Intent userOp
             bytes calldata callDataVal = userOp.signature[SIGNATURE_LENGTH:];
             opType = XChainLib.identifyUserOpType(callDataVal);
+
             if (opType == XChainLib.OpType.CrossChain) {
-                // Cross-chain UserOp
-                (, otherChainHash) = XChainLib.extractChainIdHash(callDataVal);
-                return (opType, keccak256(XChainLib.extractCallData(callDataVal)), otherChainHash);
+                otherChainHash = XChainLib.extractHash(callDataVal);
+                cdHash = keccak256(XChainLib.extractCallData(callDataVal));
             } else {
-                return (opType, keccak256(callDataVal), otherChainHash);
+                cdHash = keccak256(callDataVal);
             }
         } else {
-            // We don't support cross-chain userOpTypeonventional userOps
-            return (XChainLib.OpType.Conventional, keccak256(userOp.callData), otherChainHash);
+            opType = XChainLib.OpType.Conventional;
+            cdHash = keccak256(userOp.callData);
         }
     }
 
     /**
-     * @notice Validates the signature of a UserOperation.
+     * @dev Validates the signature of a UserOperation.
      * @param userOp The UserOperation to validate.
-     * @param hash The hash of the UserOperation (unused).
      * @return validationData An error code or zero if validation succeeds.
      */
-    function validateSignature(UserOperation calldata userOp, bytes32 hash) external returns (uint256) {
-        return _validateSignature(userOp, hash);
+    function validateSignature(UserOperation calldata userOp, bytes32) external returns (uint256) {
+        return _validateSignature(userOp, bytes32(0));
     }
 
-    /// @notice Internal method to validate the signature of a UserOperation.
+    /// @dev Internal method to validate the signature of a UserOperation.
     function _validateSignature(UserOperation calldata userOp, bytes32)
         internal
         virtual
@@ -107,7 +116,7 @@ contract IntentSimpleAccount is SimpleAccount {
     }
 
     /**
-     * Executes a batch of calls with specified values.
+     * @dev Executes a batch of calls with specified values.
      * @param values The values (Ether amounts) to send with each call.
      * @param dest The destination addresses for each call.
      * @param func The function data (call data) for each call.
@@ -115,8 +124,13 @@ contract IntentSimpleAccount is SimpleAccount {
     function execValueBatch(uint256[] calldata values, address[] calldata dest, bytes[] calldata func) external {
         _requireFromEntryPointOrOwner();
         require(dest.length == func.length, "wrong array lengths");
-        for (uint256 i = 0; i < dest.length; i++) {
+
+        uint256 len = dest.length;
+        for (uint256 i = 0; i < len;) {
             _call(dest[i], values[i], func[i]);
+            unchecked {
+                ++i;
+            }
         }
     }
 

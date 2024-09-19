@@ -97,23 +97,15 @@ library XChainLib {
     /**
      * @notice Extracts the chain ID and the other chain's hash from the call data.
      * @param callData The call data containing the chain ID and other chain's hash.
-     * @return chainId The extracted chain ID.
      * @return otherChainHash The extracted hash of the other chain's operation.
      */
-    function extractChainIdHash(bytes calldata callData)
+    function extractHash(bytes calldata callData)
         internal
         pure
-        returns (uint16 chainId, bytes32 otherChainHash)
+        returns (bytes32 otherChainHash)
     {
         if (callData.length < OPTYPE_LENGTH + CHAINID_LENGTH + CALLDATA_LENGTH_SIZE + HASH_LENGTH) {
             revert InvalidCallDataLength(callData.length);
-        }
-
-        // read chainId directly from calldata without
-        // copying to memory
-        assembly {
-            let ptr := add(callData.offset, OPTYPE_LENGTH) // Skip opType (2 bytes)
-            chainId := shr(240, calldataload(ptr))
         }
 
         otherChainHash = bytes32(callData[callData.length - HASH_LENGTH:callData.length]);
