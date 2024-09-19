@@ -22,7 +22,7 @@ import "forge-std/Script.sol";
  * PRIVATE_KEY=
  * TENDERLY_ACCESS_TOKEN=
  *
- * forge script script/deploy/IntentSimpleAccount_Tenderly.s.sol \
+ * forge script script/deploy/IntentSimpleAccount.s.sol \
  *   --rpc-url $RPC_URL \
  *    --broadcast \
  *    --slow \

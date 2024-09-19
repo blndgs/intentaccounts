@@ -2,10 +2,11 @@
 mumbai = "${MUMBAI_RPC_URL}"
 polygon = "${POLYGON_RPC_URL}"
 ethereum = "${ETHEREUM_RPC_URL}"
+bsc = "${BSC_RPC_URL}"
 
 [etherscan]
-mumbai = { key = "${POLYGONSCAN_API_KEY}", chain = "80001" }
 polygon = { key = "${POLYGONSCAN_API_KEY}", chain = "137" }
+v-bsc-890 = { key = "${TENDERLY_ACCESS_TOKEN}", chain = "890", url = "${BSC_RPC_URL}/verify/etherscan" }
 etherscan = { key = "${ETHEREUMSCAN_API_KEY}", chain = "1" }
 v-mainnet888scan = { key = "${TENDERLY_ACCESS_TOKEN}", chain = "888", url = "${ETHEREUM_RPC_URL}/verify/etherscan" }
 
