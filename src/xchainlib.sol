@@ -9,7 +9,7 @@ library XChainLib {
     uint256 private constant CALLDATA_LENGTH_SIZE = 2;
     uint256 private constant HASH_LENGTH = 32;
     uint256 private constant OPTYPE_LENGTH = 2;
-    uint16 private constant XC_MARKER = 0xFFFF;
+    uint16 internal constant XC_MARKER = 0xFFFF;
 
     enum OpType {
         Conventional,
@@ -34,7 +34,7 @@ library XChainLib {
             assembly {
                 opType := shr(240, calldataload(callData.offset))
             }
-            if (opType == 0xFFFF) {
+            if (opType == XC_MARKER) {
                 // Potentially a cross-chain UserOp, validate further
                 uint256 offset = OPTYPE_LENGTH;
                 if (callData.length >= offset + CALLDATA_LENGTH_SIZE) {

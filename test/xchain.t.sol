@@ -45,7 +45,7 @@ contract XChainLibTest is Test {
 
         // Test SourceUserOp
         bytes memory sourceUserOp = abi.encodePacked(
-            uint16(0xffff), // opType for cross-chain
+            uint16(XChainLib.XC_MARKER), // opType for cross-chain
             uint16(8), // src-calldata-length
             hex"1234567890abcdef", // src-calldata-value
             dummyHash
@@ -59,7 +59,7 @@ contract XChainLibTest is Test {
         // Test DestUserOp
         bytes32 dummyHash1 = bytes32(uint256(0x123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0));
         bytes memory destUserOp = abi.encodePacked(
-            uint16(0xffff), // opType for cross-chain
+            uint16(XChainLib.XC_MARKER), // opType for cross-chain
             uint16(4), // dest-calldata-length
             hex"deadbeef", // dest-calldata-value
             dummyHash1 // hash1
