@@ -6,10 +6,6 @@ pragma solidity ^0.8.27;
  * @dev Library for handling cross-chain UserOperations in ERC-4337 compatible wallets with packed callData
  */
 library XChainLib {
-    uint256 internal constant MAX_COMBINED_CALLDATA_LENGTH = 40960; // MAX_CALLDATA_LENGTH * 4
-    uint256 internal constant MAX_CALLDATA_LENGTH = 10240;
-    uint256 internal constant MAX_CALLDATA_COUNT = 4;
-    uint256 internal constant MAX_CHAIN_ID = 0xFFFF;
     uint256 private constant CALLDATA_LENGTH_SIZE = 2;
     uint256 private constant HASH_LENGTH = 32;
     uint256 private constant OPTYPE_LENGTH = 2;
@@ -22,11 +18,6 @@ library XChainLib {
 
     // Custom errors
     error InvalidCallDataLength(uint256 length);
-    error InvalidEncodedData();
-    error InvalidNumberOfCallData(uint256 count);
-    error ChainDataTooShort();
-    error ZeroChainId();
-    error InvalidUserOpType(uint16 opType);
 
     /**
      * @dev Identifies the type of UserOperation based on the call data.

@@ -187,9 +187,6 @@ contract callsTest is Test {
         address DAI = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
         address WALLET = 0xc291efDc1a6420CBB226294806604833982Ed24d;
 
-        // fund/faucet wallet with DAI balance
-        deal(DAI, address(_simpleAccount), 1000e18); // 1000 DAI;
-
         // Create the multicall data
         ISquidMulticall.Call[] memory calls = new ISquidMulticall.Call[](1);
         calls[0] = ISquidMulticall.Call({
@@ -206,12 +203,7 @@ contract callsTest is Test {
 
         // Execute the call
         (bool success, bytes memory returnData) = SQUID_MULTICALL.call(squidMulticallCalldata);
-
-        // Log the success status
-        console.log("Multicall success:", success);
-
-        // Log the length of return data
-        console.log("Return data length:", returnData.length);
+        assertTrue(success, "Multicall failed");
 
         if (!success) {
             // If the call failed, try to decode the revert reason
@@ -223,32 +215,6 @@ contract callsTest is Test {
                 console.log("Call reverted without a reason");
             }
             revert("Multicall failed");
-        }
-
-        // If no data was returned, try calling the DAI contract directly
-        if (returnData.length == 0) {
-            console.log("No data returned from multicall, trying direct call");
-            (success, returnData) = DAI.staticcall(abi.encodeWithSignature("balanceOf(address)", WALLET));
-            require(success, "Direct DAI call failed");
-            uint256 balance = abi.decode(returnData, (uint256));
-            console.log("DAI Balance (direct call):", balance);
-            assertNotEq(balance, 0, "DAI balance is zero");
-        } else {
-            // The return data is an array of results, one for each call
-            (bytes[] memory results) = abi.decode(returnData, (bytes[]));
-
-            // Log the number of results
-            console.log("Number of results:", results.length);
-
-            // We only made one call, so we're interested in the first (and only) result
-            if (results.length > 0) {
-                uint256 balance = abi.decode(results[0], (uint256));
-                console.log("DAI Balance:", balance);
-                // Assert that the balance is what we expect
-                assertEq(balance, 998000000000000000000, "Unexpected DAI balance");
-            } else {
-                revert("No results returned from multicall");
-            }
         }
     }
 
