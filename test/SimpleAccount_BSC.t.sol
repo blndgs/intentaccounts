@@ -53,7 +53,7 @@ contract SimpleAccountBscTest is Test {
 
         salt = 0;
 
-        // Sync the factory with the deployed contract at Mannet
+        // Sync the factory with the deployed contract at Mainnet
         factory = new IntentSimpleAccountFactory(entryPoint);
         simpleAccount = factory.createAccount(ownerAddress, salt);
 
@@ -66,39 +66,47 @@ contract SimpleAccountBscTest is Test {
         address RECIPIENT_SRC = 0xd7b21a844f3a41c91a73d3F87B83fA93bb6cb518;
         address RECIPIENT_DEST = 0xE381bAB2e0C5b678F2FBb8D4b0949e41a6487c8f;
 
+        // UI Intent creation
         bytes memory srcIntent = bytes(
             "{\"chainId\":137, \"sender\":\"0x18Dd70639de2ca9146C32f9c84B90A68bBDaAA96\",\"kind\":\"swap\",\"hash\":\"\",\"sellToken\":\"0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE\",\"buyToken\":\"0xc2132D05D31c914a87C6611C10748AEb04B58e8F\",\"sellAmount\":10,\"buyAmount\":5,\"partiallyFillable\":false,\"status\":\"Received\",\"createdAt\":0,\"expirationAt\":0}"
         );
         UserOperation memory sourceUserOp = createUserOp(address(simpleAccount), srcIntent);
 
         bytes memory destIntent = bytes(
-            "{\"chainId\":56, \"sender\":\"0x18Dd70639de2ca9146C32f9c84B90A68bBDaAA96\",\"kind\":\"swap\",\"hash\":\"\",\"sellToken\":\"0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE\",\"buyToken\":\"0xc2132D05D31c914a87C6611C10748AEb04B58e8F\",\"sellAmount\":10,\"buyAmount\":5,\"partiallyFillable\":false,\"status\":\"Received\",\"createdAt\":0,\"expirationAt\":0}"
+            "{\"chainId\":137, \"sender\":\"0x18Dd70639de2ca9146C32f9c84B90A68bBDaAA96\",\"kind\":\"swap\",\"hash\":\"\",\"sellToken\":\"0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE\",\"buyToken\":\"0xc2132D05D31c914a87C6611C10748AEb04B58e8F\",\"sellAmount\":10,\"buyAmount\":5,\"partiallyFillable\":false,\"status\":\"Received\",\"createdAt\":0,\"expirationAt\":0}"
         );
         UserOperation memory destUserOp = createUserOp(address(simpleAccount), destIntent);
 
+        // UI signs the source and destination userOps
         (bytes32 srcHash, bytes32 destHash) =
             xSign(SOURCE_CHAIN_ID, DEST_CHAIN_ID, ownerPrivateKey, sourceUserOp, destUserOp);
 
-        // solve sourceUserOp
         bytes memory xSrcIntent = TestSimpleAccountHelper.createCrossChainCallData(sourceUserOp.callData, destHash);
+
+        // Submit to the bundler
+        // Bundler to the solver
+            
+        // solve sourceUserOp
         sourceUserOp.signature = bytes(abi.encodePacked(sourceUserOp.signature, xSrcIntent));
         sourceUserOp.callData = abi.encodeWithSignature("transfer(address,uint256)", RECIPIENT_SRC, 0.05 ether);
 
         /**
          * Uncomment only for debugging *****
+         * And compile with '--via-ir' flag to avoid stack too deep error
+         *
+         * slice post signature to retrieve the x-chain encoded Intent
+         * bytes memory sourceSigXChainCalldata = sourceUserOp.signature._slice(65, sourceUserOp.signature.length);
+         * XChainLib.OpType opType = XChainLib.identifyUserOpType(sourceSigXChainCalldata);
+         * assertEq(uint(opType), uint(XChainLib.OpType.CrossChain), "OpType should be CrossChain");
+
+         * extract the source Intent bytes
+         * bytes memory extractedIntent = this.extractCallData(sourceSigXChainCalldata);
+         * assertEq(extractedIntent, srcIntent, "Source Intent should match");
+
+         * bytes32 srcPostHash = simpleAccount.getUserOpHash(sourceUserOp, SOURCE_CHAIN_ID);
+         * assertEq(srcPostHash, srcHash^destHash, "Source Post Hash should match");
          */
-        // slice post signature to retrieve the x-chain encoded Intent
-        // bytes memory sourceSigXChainCalldata = sourceUserOp.signature._slice(65, sourceUserOp.signature.length);
-        // XChainLib.OpType opType = XChainLib.identifyUserOpType(sourceSigXChainCalldata);
-        // assertEq(uint(opType), uint(XChainLib.OpType.CrossChain), "OpType should be CrossChain");
-
-        // // extract the source Intent bytes
-        // bytes memory extractedIntent = this.extractCallData(sourceSigXChainCalldata);
-        // assertEq(extractedIntent, srcIntent, "Source Intent should match");
-
-        // bytes32 srcPostHash = simpleAccount.getUserOpHash(sourceUserOp, SOURCE_CHAIN_ID);
-        // assertEq(srcPostHash, srcHash^destHash, "Source Post Hash should match");
-
+         
         vm.chainId(SOURCE_CHAIN_ID);
         assertEq(SOURCE_CHAIN_ID, block.chainid, "Chain ID should match");
         this.verifySignature(sourceUserOp);
