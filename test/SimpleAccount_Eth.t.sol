@@ -9,7 +9,6 @@ import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "../src/IntentUserOperation.sol";
 import "./TestSimpleAccountHelper.sol";
-// import "../src/xchainlib.sol";
 
 contract SimpleAccounEthereumTest is Test {
     using Strings for bytes32;

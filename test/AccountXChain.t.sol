@@ -43,29 +43,12 @@ contract AccountXChainTest is Test {
         uint256 amount1 = 0.05 ether;
         bytes memory transferCallData1 = abi.encodeWithSignature("transfer(address,uint256)", recipient1, amount1);
 
-        address recipient2 = address(0xcafebabe);
-        uint256 amount2 = 0.02 ether;
-        bytes memory transferCallData2 = abi.encodeWithSignature("transfer(address,uint256)", recipient2, amount2);
-
         // Compute otherChainHash (for simplicity, use a dummy hash)
         bytes32 otherChainHash = keccak256("dummy other chain hash");
 
         // Create cross-chain call data for the first function
         bytes memory crossChainCallData =
             TestSimpleAccountHelper.createCrossChainCallData(transferCallData1, otherChainHash);
-
-        // Prepare the batch arrays
-        uint256[] memory values = new uint256[](2);
-        values[0] = 0; // Assuming no Ether transfer for the first call
-        values[1] = 0;
-
-        address[] memory dest = new address[](2);
-        dest[0] = address(simpleAccount); // Assuming the call is to the account itself
-        dest[1] = address(simpleAccount);
-
-        bytes[] memory func = new bytes[](2);
-        func[0] = crossChainCallData;
-        func[1] = transferCallData2; // Conventional call data
 
         // Create a UserOperation
         UserOperation memory userOp = UserOperation({
