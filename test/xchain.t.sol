@@ -7,8 +7,6 @@ import "./TestSimpleAccountHelper.sol";
 contract XChainLibTest is Test {
     using XChainLib for bytes;
 
-    function setUp() public {}
-
     function extractCallData(bytes calldata callData) public pure returns (bytes calldata) {
         return XChainLib.extractCallData(callData);
     }
