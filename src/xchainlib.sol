@@ -10,6 +10,10 @@ library XChainLib {
     uint256 private constant HASH_LENGTH = 32;
     uint256 private constant OPTYPE_LENGTH = 2;
     uint16 internal constant XC_MARKER = 0xFFFF;
+    uint256 private constant PLACEHOLDER_LENGTH = 2;
+    uint256 private constant HASHLIST_LENGTH_SIZE = 1;
+    uint256 internal constant MIN_HASH_COUNT = 2;
+    uint256 internal constant MAX_HASH_COUNT = 3;
 
     enum OpType {
         Conventional,
@@ -23,32 +27,48 @@ library XChainLib {
      * @dev Identifies the type of UserOperation based on the call data.
      * @param callData The call data of the UserOperation.
      * @return The UserOperation type (Conventional or CrossChain).
+     *
      * X-chain calldata format:
-     * [2 bytes opType (0xFFFF)] + [2 bytes calldataLength] + [callData] + [32 bytes otherChainHash]
+     * [2 bytes opType (0xFFFF)] + [2 bytes callDataLength] + [callData] + [2 bytes hashList length] +[hashListEntries]
+     *
+     * Each hash list entry is either:
+     * - 2 bytes (placeholder 0xFFFF)
+     * - 32 bytes (hash)
      */
     function identifyUserOpType(bytes calldata callData) public pure returns (OpType) {
-        uint256 minCrossChainLength = OPTYPE_LENGTH + CALLDATA_LENGTH_SIZE + HASH_LENGTH;
-
-        if (callData.length >= minCrossChainLength) {
-            uint16 opType;
+        if (callData.length >= OPTYPE_LENGTH + CALLDATA_LENGTH_SIZE + HASHLIST_LENGTH_SIZE + PLACEHOLDER_LENGTH) {
+            uint256 offset = 0;
+            uint16 marker;
             assembly {
-                opType := shr(240, calldataload(callData.offset))
+                marker := shr(240, calldataload(add(callData.offset, offset)))
             }
-            if (opType == XC_MARKER) {
-                // Potentially a cross-chain UserOp, validate further
-                uint256 offset = OPTYPE_LENGTH;
-                if (callData.length >= offset + CALLDATA_LENGTH_SIZE) {
-                    // read calldataLength directly from calldata without
-                    // copying to memory
-                    uint16 calldataLength;
+            offset += OPTYPE_LENGTH;
+
+            if (marker == XC_MARKER) {
+                // Read callDataLength
+                uint16 callDataLength;
+                assembly {
+                    callDataLength := shr(240, calldataload(add(callData.offset, offset)))
+                }
+                offset += CALLDATA_LENGTH_SIZE;
+
+                // Check if there is enough data for callData and hash list
+                if (callData.length >= offset + callDataLength + HASHLIST_LENGTH_SIZE + PLACEHOLDER_LENGTH) {
+                    offset += callDataLength;
+
+                    // Read hashListLength
+                    uint8 hashListLength;
                     assembly {
-                        let ptr := add(callData.offset, offset)
-                        calldataLength := shr(240, calldataload(ptr))
+                        hashListLength := calldataload(add(callData.offset, offset))
                     }
-                    offset += CALLDATA_LENGTH_SIZE;
-                    uint256 expectedLength = offset + calldataLength + HASH_LENGTH;
-                    if (callData.length == expectedLength) {
-                        return OpType.CrossChain;
+                    offset += HASHLIST_LENGTH_SIZE;
+
+                    if (hashListLength >= MIN_HASH_COUNT && hashListLength <= MAX_HASH_COUNT) {
+                        // Calculate expected total length
+                        uint256 expectedLength = offset + PLACEHOLDER_LENGTH + (hashListLength - 1) * HASH_LENGTH;
+                        if (callData.length == expectedLength) {
+                            return OpType.CrossChain;
+                        }
                     }
                 }
             }
