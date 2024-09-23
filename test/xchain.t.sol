@@ -106,16 +106,25 @@ contract XChainLibTest is Test {
         );
     }
 
+    /**
+     * @dev Test the gas cost of extracting cross-chain call data.
+     * This function performs the following:
+     * 1. Creates a SourceUserOp with embedded DestUserOp.
+     * 2. Measures the gas cost of identifying the UserOp type.
+     * 3. Measures the gas cost of extracting the source call data.
+     * 4. Measures the gas cost of extracting the destination call data.
+     */
     function testExtractXChainCallDataGasCost() public {
         // Create a SourceUserOp with embedded DestUserOp
-        bytes memory srcCallData = new bytes(1000);
-        bytes memory destCallData = new bytes(2000);
+        bytes memory srcCallData = new bytes(1000); // Source call data of 1000 bytes
+        bytes memory destCallData = new bytes(2000); // Destination call data of 2000 bytes
         bytes32 dummyHash1 = bytes32(uint256(0x123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0));
 
+        // Create cross-chain call data for source and destination
         bytes memory sourceUserOpCallData = TestSimpleAccountHelper.createCrossChainCallData(srcCallData, dummyHash1);
-
         bytes memory destUserOpEncoded = TestSimpleAccountHelper.createCrossChainCallData(destCallData, dummyHash1);
 
+        // Measure gas cost for identifying UserOp type
         uint256 gasStart = gasleft();
         XChainLib.OpType opType = XChainLib.identifyUserOpType(sourceUserOpCallData);
         bool isXChainCallData = opType == XChainLib.OpType.CrossChain;
@@ -123,12 +132,14 @@ contract XChainLibTest is Test {
         uint256 gasUsed = gasStart - gasleft();
         console2.log("Gas used for identifyUserOpType:", gasUsed);
 
+        // Measure gas cost for extracting source call data
         gasStart = gasleft();
         bytes memory extractedSrcCallData = this.extractCallData(sourceUserOpCallData);
         gasUsed = gasStart - gasleft();
         assertEq(extractedSrcCallData, srcCallData, "Extracted source callData should match");
         console2.log("Gas used for extractSourceUserOpData:", gasUsed);
 
+        // Measure gas cost for extracting destination call data
         gasStart = gasleft();
         bytes memory extractedDestCallData = this.extractCallData(destUserOpEncoded);
         gasUsed = gasStart - gasleft();
