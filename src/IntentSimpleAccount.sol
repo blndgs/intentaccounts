@@ -42,11 +42,11 @@ contract IntentSimpleAccount is SimpleAccount {
     /**
      * @dev Expose _getUserOpHash
      * @param userOp The UserOperation to hash.
-     * @param chainID The chain ID for the operation.
+     * @param chainId The chain Id for the operation.
      * @return The computed hash.
      */
-    function getUserOpHash(UserOperation calldata userOp, uint256 chainID) external view returns (bytes32) {
-        return _getUserOpHash(userOp);
+    function getUserOpHash(UserOperation calldata userOp, uint256 chainId) external view returns (bytes32) {
+        return _getUserOpHash(userOp, chainId);
     }
 
     /// Struct to hold parsed data from extraData
@@ -161,28 +161,113 @@ contract IntentSimpleAccount is SimpleAccount {
             parsedData.callDataHash = keccak256(extraData);
         }
     }
+    function _parseExtraData(bytes calldata extraData) internal pure returns (ParsedExtraData memory parsedData) {
+        // Initialize with default values
+        parsedData.opType = XChainLib.OpType.Conventional;
+        parsedData.hashCount = 0;
+    
+        uint256 extraDataLength = extraData.length;
+    
+        if (extraDataLength >= OPTYPE_LENGTH + CALLDATA_LENGTH_SIZE + HASHLIST_LENGTH_SIZE + PLACEHOLDER_LENGTH) {
+            uint256 offset = 0;
+    
+            // Read the marker (2 bytes)
+            bytes2 marker = bytes2(extraData[offset:offset + OPTYPE_LENGTH]);
+            offset += OPTYPE_LENGTH;
+    
+            if (uint16(marker) == XC_MARKER) {
+                // Set opType to CrossChain
+                parsedData.opType = XChainLib.OpType.CrossChain;
+    
+                // Read callDataLength (2 bytes)
+                uint16 callDataLength = uint16(bytes2(extraData[offset:offset + CALLDATA_LENGTH_SIZE]));
+                offset += CALLDATA_LENGTH_SIZE;
+    
+                if (extraDataLength >= offset + callDataLength + HASHLIST_LENGTH_SIZE + PLACEHOLDER_LENGTH) {
+                    // Extract callDataHash
+                    parsedData.callDataHash = keccak256(extraData[offset:offset + callDataLength]);
+                    offset += callDataLength;
+    
+                    // Read hashListLength
+                    uint8 hashListLength = uint8(extraData[offset]);
+                    offset += HASHLIST_LENGTH_SIZE;
+    
+                    if (hashListLength >= MIN_HASH_COUNT && hashListLength <= MAX_HASH_COUNT) {
+                        parsedData.hashCount = hashListLength;
+    
+                        uint256 expectedLength =
+                            offset + PLACEHOLDER_LENGTH + (hashListLength - 1) * HASH_LENGTH;
+                        if (extraDataLength >= expectedLength) {
+                            // Read placeholder
+                            bytes2 placeholder = bytes2(extraData[offset:offset + PLACEHOLDER_LENGTH]);
+                            if (uint16(placeholder) == XC_MARKER) {
+                                // Store placeholder in hashList
+                                parsedData.hashList[0] = bytes32(uint256(XC_MARKER) << 240);
+                                offset += PLACEHOLDER_LENGTH;
+    
+                                // Read remaining hashes
+                                for (uint256 i = 1; i < hashListLength; i++) {
+                                    parsedData.hashList[i] = bytes32(extraData[offset:offset + HASH_LENGTH]);
+                                    offset += HASH_LENGTH;
+                                }
+                            } else {
+                                // If placeholder is invalid, set opType back to Conventional
+                                parsedData.opType = XChainLib.OpType.Conventional;
+                            }
+                        } else {
+                            // If not enough data for all hashes, set opType back to Conventional
+                            parsedData.opType = XChainLib.OpType.Conventional;
+                        }
+                    } else {
+                        // If hashListLength is invalid, set opType back to Conventional
+                        parsedData.opType = XChainLib.OpType.Conventional;
+                    }
+                } else {
+                    // If not enough data, set opType back to Conventional
+                    parsedData.opType = XChainLib.OpType.Conventional;
+                }
+            }
+        }
+    
+        // Do NOT set callDataHash for conventional operations here
+    }
 
     /// Computes the hash for a UserOperation, handling both cross-chain and conventional operations
     /// @param userOp The UserOperation to process
     /// @return opHash The computed operation hash
-    function _getUserOpHash(UserOperation calldata userOp) internal view returns (bytes32 opHash) {
+    function _getUserOpHash(UserOperation calldata userOp, uint256 chainId) internal view returns (bytes32 opHash) {
         // Extract extraData from the signature if present
         bytes calldata extraData = userOp.signature.length > SIGNATURE_LENGTH
             ? userOp.signature[SIGNATURE_LENGTH:]
-            : userOp.signature[userOp.signature.length:userOp.signature.length];
-
+            : userOp.signature[userOp.signature.length : userOp.signature.length];
+    
         // Parse the extraData
         ParsedExtraData memory parsedData = _parseExtraData(extraData);
-
+    
+        // Compute callDataHash for conventional operations
+        if (parsedData.opType == XChainLib.OpType.Conventional) {
+            if (extraData.length > 0) {
+                // Use extraData as the callDataHash
+                parsedData.callDataHash = keccak256(extraData);
+            } else {
+                parsedData.callDataHash = keccak256(userOp.callData);
+            }
+        }
+    
         // Compute the initial opHash
-        opHash =
-            keccak256(abi.encode(userOp.hashIntentOp(parsedData.callDataHash), address(entryPoint()), block.chainid));
-
+        opHash = keccak256(
+            abi.encode(
+                userOp.hashIntentOp(parsedData.callDataHash),
+                address(entryPoint()),
+                chainId
+            )
+        );
+    
         // For cross-chain operations, compute the combined hash
         if (parsedData.opType == XChainLib.OpType.CrossChain && parsedData.hashCount > 0) {
             opHash = _computeCrossChainHash(opHash, parsedData.hashList, parsedData.hashCount);
         }
-
+    
         return opHash;
     }
 
@@ -237,7 +322,7 @@ contract IntentSimpleAccount is SimpleAccount {
         override
         returns (uint256 validationData)
     {
-        bytes32 userOpHash = _getUserOpHash(userOp);
+        bytes32 userOpHash = _getUserOpHash(userOp, block.chainid);
         bytes32 ethHash = userOpHash.toEthSignedMessageHash();
 
         // Extract the first 65 bytes of the signature
