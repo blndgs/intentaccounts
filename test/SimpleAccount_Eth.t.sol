@@ -266,9 +266,22 @@ contract SimpleAccounEthereumTest is Test {
             signature: hex"fe050651afae2c8d5b87a4f2995bbc77c6efba4eb0a801bca371bfccd7dc551009f829eb0c17836968f49210a3e3a5cc955f40e3b66f512d956302d9a963bb081b7b2266726f6d223a7b2274797065223a22544f4b454e222c2261646472657373223a22307845656565654565656545654565654565456545656545454565656565456565656565656545456545222c22616d6f756e74223a22302e38222c22636861696e4964223a2231227d2c22746f223a7b2274797065223a22544f4b454e222c2261646472657373223a22307864616331376639353864326565353233613232303632303639393435393763313364383331656337222c22636861696e4964223a2231227d7d"
         });
 
+        bytes memory placeholder = abi.encodePacked(uint16(0xFFFF));
+        bytes32 otherChainHash = keccak256("deadbeef");
+
+        // Build the hash lists
+        // define a bytes slice of length 2
+        bytes[] memory srcHashList = new bytes[](2);
+        bytes[] memory destHashList = new bytes[](2);
+        srcHashList[0] = placeholder; // Placeholder in position 0
+        srcHashList[1] = abi.encodePacked(otherChainHash);
+
+        destHashList[0] = abi.encodePacked(otherChainHash);
+        destHashList[1] = placeholder; // Placeholder in position 1
+
         bytes[] memory chainUserOps = new bytes[](2);
-        chainUserOps[0] = TestSimpleAccountHelper.createCrossChainCallData(sourceEthOp.callData, bytes32(0));
-        chainUserOps[1] = TestSimpleAccountHelper.createCrossChainCallData(destPolygonOp.callData, bytes32(0));
+        chainUserOps[0] = TestSimpleAccountHelper.createCrossChainCallData(sourceEthOp.callData, srcHashList);
+        chainUserOps[1] = TestSimpleAccountHelper.createCrossChainCallData(destPolygonOp.callData, destHashList);
 
         sourceEthOp.callData = chainUserOps[0];
         require(

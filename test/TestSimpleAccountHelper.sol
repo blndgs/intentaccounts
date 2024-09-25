@@ -6,13 +6,12 @@ import "./TestBytesHelper.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {IntentSimpleAccountFactory} from "../src/IntentSimpleAccountFactory.sol";
 import "../src/IntentSimpleAccount.sol";
-import "forge-std/Test.sol";
+// import "forge-std/Test.sol";
 
 library TestSimpleAccountHelper {
     using ECDSA for bytes32;
 
     uint256 private constant SIGNATURE_LENGTH = 65;
-    uint256 private constant OPTYPE_LENGTH = 2;
 
     // Custom errors
     error EndLessThanStart();
@@ -54,22 +53,28 @@ library TestSimpleAccountHelper {
     }
 
     /**
-     * @notice Creates cross-chain call data according to the linked hash specification
-     * @param callData The call data for the operation
-     * @param otherChainHash The hash of the UserOperation on the other chain
-     * @return bytes The encoded cross-chain call data
+     * @notice Creates cross-chain call data according to the linked hash specification.
+     * @param intent The call data for the operation.
+     * @param hashList The array of hash list entries (including the placeholder).
+     * @return bytes The encoded cross-chain call data.
      */
-    function createCrossChainCallData(bytes memory callData, bytes32 otherChainHash)
+    function createCrossChainCallData(bytes memory intent, bytes[] memory hashList)
         internal
         pure
         returns (bytes memory)
     {
-        return abi.encodePacked(
-            uint16(0xFFFF), // opType marker
-            uint16(callData.length),
-            callData,
-            otherChainHash
+        bytes memory result = abi.encodePacked(
+            uint16(XChainLib.XC_MARKER), // Marker (2 bytes)
+            uint16(intent.length), // callDataLength (2 bytes)
+            intent, // callData
+            uint8(hashList.length) // hashListLength (1 byte)
         );
+
+        for (uint256 i = 0; i < hashList.length; i++) {
+            result = abi.encodePacked(result, hashList[i]);
+        }
+
+        return result;
     }
 
     /**
@@ -82,7 +87,7 @@ library TestSimpleAccountHelper {
      * @param preVerificationGas The gas cost before verification
      * @param maxFeePerGas The max fee per gas
      * @param maxPriorityFeePerGas The max priority fee per gas
-     * @param otherChainHash The hash of the UserOperation on the other chain
+     * @param hashListEntries The array of hash list entries (including the placeholder)
      * @return UserOperation The generated cross-chain UserOperation
      */
     function createCrossChainUserOp(
@@ -94,9 +99,9 @@ library TestSimpleAccountHelper {
         uint256 preVerificationGas,
         uint256 maxFeePerGas,
         uint256 maxPriorityFeePerGas,
-        bytes32 otherChainHash
+        bytes[] memory hashListEntries
     ) internal pure returns (UserOperation memory) {
-        bytes memory crossChainCallData = createCrossChainCallData(callData, otherChainHash);
+        bytes memory crossChainCallData = createCrossChainCallData(callData, hashListEntries);
 
         return UserOperation({
             sender: sender,

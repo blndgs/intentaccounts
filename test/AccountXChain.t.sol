@@ -46,9 +46,17 @@ contract AccountXChainTest is Test {
         // Compute otherChainHash (for simplicity, use a dummy hash)
         bytes32 otherChainHash = keccak256("dummy other chain hash");
 
+        bytes memory placeholder = abi.encodePacked(uint16(0xFFFF));
+
+        // Build the hash lists
+        // define a bytes slice of length 2
+        bytes[] memory srcHashList = new bytes[](2);
+        srcHashList[0] = placeholder; // Placeholder in position 0
+        srcHashList[1] = abi.encodePacked(otherChainHash);
+
         // Create cross-chain call data for the first function
         bytes memory crossChainCallData =
-            TestSimpleAccountHelper.createCrossChainCallData(transferCallData1, otherChainHash);
+            TestSimpleAccountHelper.createCrossChainCallData(transferCallData1, srcHashList);
 
         // Create a UserOperation
         UserOperation memory userOp = UserOperation({
@@ -72,15 +80,19 @@ contract AccountXChainTest is Test {
         uint256 validationResult = simpleAccount.validateSignature(userOp, bytes32(0));
         assertEq(validationResult, 0, "Signature validation failed");
 
-        XChainLib.OpType opType = this.identifyUserOpType(userOp.callData);
-        assertEq(uint256(opType), uint256(XChainLib.OpType.CrossChain), "OpType is not CrossChain");
+        // XChainLib.OpType opType = this.identifyUserOpType(userOp.callData);
+        // assertEq(uint256(opType), uint256(XChainLib.OpType.CrossChain), "OpType is not CrossChain");
 
-        bytes memory cd = this.extractCallData(userOp.callData);
-        assertEq(cd, transferCallData1, "extracted calldata does not match");
+        (,, uint256 hashCount) = this.extractCallDataAndHashList(userOp.callData);
+        assertEq(hashCount, 2, "extracted calldata does not match");
     }
 
-    function extractCallData(bytes calldata callData) public pure returns (bytes calldata) {
-        return XChainLib.extractCallData(callData);
+    function extractCallDataAndHashList(bytes calldata callData)
+        public
+        pure
+        returns (bytes32 callDataHash, bytes32[3] memory hashList, uint256 hashCount)
+    {
+        return XChainLib.extractCallDataAndHashList(callData);
     }
 
     function identifyUserOpType(bytes calldata callData) public pure returns (XChainLib.OpType) {

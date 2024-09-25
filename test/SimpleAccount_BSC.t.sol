@@ -77,44 +77,43 @@ contract SimpleAccountBscTest is Test {
         );
         UserOperation memory destUserOp = createUserOp(address(simpleAccount), destIntent);
 
-        // UI signs the source and destination userOps
-        (bytes32 srcHash, bytes32 destHash) =
-            xSign(SOURCE_CHAIN_ID, DEST_CHAIN_ID, ownerPrivateKey, sourceUserOp, destUserOp);
+        bytes32 hash1 = simpleAccount.getUserOpHash(sourceUserOp, SOURCE_CHAIN_ID);
+        bytes32 hash2 = simpleAccount.getUserOpHash(destUserOp, DEST_CHAIN_ID);
 
-        bytes memory xSrcIntent = TestSimpleAccountHelper.createCrossChainCallData(sourceUserOp.callData, destHash);
+        // UI signs the source and destination userOps
+        xSign(hash1, hash2, ownerPrivateKey, sourceUserOp, destUserOp);
 
         // Submit to the bundler
         // Bundler to the solver
-            
         // solve sourceUserOp
-        sourceUserOp.signature = bytes(abi.encodePacked(sourceUserOp.signature, xSrcIntent));
+
+        // solve sourceUserOp which means the source userOp receives the EVM calldata solution
+        // after appending the cross-chain calldata value (Intent) to the signature
+        sourceUserOp.signature = bytes(abi.encodePacked(sourceUserOp.signature, sourceUserOp.callData));
         sourceUserOp.callData = abi.encodeWithSignature("transfer(address,uint256)", RECIPIENT_SRC, 0.05 ether);
 
+        // solve destUserOp: the source userOp receives the EVM calldata solution
+        // after appending the cross-chain calldata value (Intent) to the signature
+        destUserOp.signature = bytes(abi.encodePacked(destUserOp.signature, destUserOp.callData));
+        destUserOp.callData = abi.encodeWithSignature("transfer(address,uint256)", RECIPIENT_DEST, 0.00005 ether);
+
         /**
-         * Uncomment only for debugging *****
+         * Uncomment for debugging
          * And compile with '--via-ir' flag to avoid stack too deep error
          *
          * slice post signature to retrieve the x-chain encoded Intent
          * bytes memory sourceSigXChainCalldata = sourceUserOp.signature._slice(65, sourceUserOp.signature.length);
          * XChainLib.OpType opType = XChainLib.identifyUserOpType(sourceSigXChainCalldata);
          * assertEq(uint(opType), uint(XChainLib.OpType.CrossChain), "OpType should be CrossChain");
-
+         *
          * extract the source Intent bytes
-         * bytes memory extractedIntent = this.extractCallData(sourceSigXChainCalldata);
-         * assertEq(extractedIntent, srcIntent, "Source Intent should match");
-
-         * bytes32 srcPostHash = simpleAccount.getUserOpHash(sourceUserOp, SOURCE_CHAIN_ID);
-         * assertEq(srcPostHash, srcHash^destHash, "Source Post Hash should match");
          */
-         
+
+        // Bundler submits cross-chain userOps on-chain
+        // On-chain signature verification
         vm.chainId(SOURCE_CHAIN_ID);
         assertEq(SOURCE_CHAIN_ID, block.chainid, "Chain ID should match");
         this.verifySignature(sourceUserOp);
-
-        // solve destUserOp
-        bytes memory xDestIntent = TestSimpleAccountHelper.createCrossChainCallData(destUserOp.callData, srcHash);
-        destUserOp.signature = bytes(abi.encodePacked(destUserOp.signature, xDestIntent));
-        destUserOp.callData = abi.encodeWithSignature("transfer(address,uint256)", RECIPIENT_DEST, 0.00005 ether);
 
         vm.chainId(DEST_CHAIN_ID);
         assertEq(DEST_CHAIN_ID, block.chainid, "Chain ID should match");
@@ -122,19 +121,99 @@ contract SimpleAccountBscTest is Test {
     }
 
     function xSign(
-        uint256 sourceChainId,
-        uint256 destChainId,
+        bytes32 hash1,
+        bytes32 hash2,
         uint256 privateKey,
         UserOperation memory sourceUserOp,
         UserOperation memory destUserOp
-    ) internal view returns (bytes32 hash1, bytes32 hash2) {
-        hash1 = simpleAccount.getUserOpHash(sourceUserOp, sourceChainId);
-        hash2 = simpleAccount.getUserOpHash(destUserOp, destChainId);
+    ) internal {
+        bytes32 xChainHash = keccak256(abi.encodePacked(hash1, hash2));
+        console2.log("xChainHash");
+        console2.logBytes32(xChainHash);
 
-        bytes32 sigHash = hash1 ^ hash2;
-
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, sigHash.toEthSignedMessageHash());
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, xChainHash.toEthSignedMessageHash());
         bytes memory signature = abi.encodePacked(r, s, v);
+
+        // Build the cross-chain calldata values:
+        // construct hash lists
+        bytes memory placeholder = abi.encodePacked(uint16(XChainLib.XC_MARKER));
+        bytes[] memory srcHashList = new bytes[](2);
+        bytes[] memory destHashList = new bytes[](2);
+        srcHashList[0] = placeholder; // Placeholder in position 0 for source userOp hash1
+        srcHashList[1] = abi.encodePacked(hash2);
+
+        destHashList[0] = abi.encodePacked(hash1);
+        destHashList[1] = placeholder; // Placeholder in position 1 for destination chain userOp hash2
+
+        assertEq(
+            xChainHash,
+            keccak256(abi.encodePacked(destHashList[0], srcHashList[1])),
+            "Cross-chain hash with hashlist should match"
+        );
+
+        bytes32 placeholder32 = bytes32(uint256(XChainLib.XC_MARKER) << 240);
+
+        // Uncomment for debugging
+        // bytes32[3] memory srcHashes = [placeholder32, hash2, bytes32(0)];
+        // bytes32 srcXHash = XChainLib.computeCrossChainHash(hash1, srcHashes, 2);
+        // assertEq(srcXHash, xChainHash, "Cross-chain hash should match");
+
+        // bytes32[3] memory destHashes = [hash1, placeholder32, bytes32(0)];
+        // bytes32 destXHash = XChainLib.computeCrossChainHash(hash2, destHashes, 2);
+        // assertEq(destXHash, xChainHash, "Cross-chain hash should match");
+
+        // set the cross-chain calldata value after signing
+        sourceUserOp.callData = TestSimpleAccountHelper.createCrossChainCallData(sourceUserOp.callData, srcHashList);
+        destUserOp.callData = TestSimpleAccountHelper.createCrossChainCallData(destUserOp.callData, destHashList);
+
+        sourceUserOp.signature = signature;
+        destUserOp.signature = signature;
+    }
+
+    function xSignRev(
+        bytes32 hash1,
+        bytes32 hash2,
+        uint256 privateKey,
+        UserOperation memory sourceUserOp,
+        UserOperation memory destUserOp
+    ) internal {
+        bytes32 xChainHash = keccak256(abi.encodePacked(hash2, hash1));
+        console2.log("xChainHash");
+        console2.logBytes32(xChainHash);
+
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, xChainHash.toEthSignedMessageHash());
+        bytes memory signature = abi.encodePacked(r, s, v);
+
+        // Build the cross-chain calldata values:
+        // construct hash lists
+        bytes memory placeholder = abi.encodePacked(uint16(XChainLib.XC_MARKER));
+        bytes[] memory srcHashList = new bytes[](2);
+        bytes[] memory destHashList = new bytes[](2);
+        srcHashList[0] = abi.encodePacked(hash2);
+        srcHashList[1] = placeholder; // Placeholder in position 0 for source userOp hash1
+
+        destHashList[0] = placeholder; // Placeholder in position 1 for destination chain userOp hash2
+        destHashList[1] = abi.encodePacked(hash1);
+
+        assertEq(
+            xChainHash,
+            keccak256(abi.encodePacked(srcHashList[0], destHashList[1])),
+            "Cross-chain hash with hashlist should match"
+        );
+
+        bytes32 placeholder32 = bytes32(uint256(XChainLib.XC_MARKER) << 240);
+
+        bytes32[3] memory srcHashes = [hash2, placeholder32, bytes32(0)];
+        bytes32 srcXHash = XChainLib.computeCrossChainHash(hash1, srcHashes, 2);
+        assertEq(srcXHash, xChainHash, "Cross-chain hash should match");
+
+        bytes32[3] memory destHashes = [placeholder32, hash1, bytes32(0)];
+        bytes32 destXHash = XChainLib.computeCrossChainHash(hash2, destHashes, 2);
+        assertEq(destXHash, xChainHash, "Cross-chain hash should match");
+
+        // set the cross-chain calldata value after signing
+        sourceUserOp.callData = TestSimpleAccountHelper.createCrossChainCallData(sourceUserOp.callData, srcHashList);
+        destUserOp.callData = TestSimpleAccountHelper.createCrossChainCallData(destUserOp.callData, destHashList);
 
         sourceUserOp.signature = signature;
         destUserOp.signature = signature;
@@ -142,22 +221,6 @@ contract SimpleAccountBscTest is Test {
 
     function getUserOpHash(UserOperation calldata userOp, uint256 chainID) public view returns (bytes32) {
         return simpleAccount.getUserOpHash(userOp, chainID);
-    }
-
-    function generateSignature(UserOperation memory userOp, uint256 chainID, uint256 prvKey)
-        internal
-        view
-        returns (bytes memory)
-    {
-        bytes32 userOpHash = simpleAccount.getUserOpHash(userOp, chainID);
-
-        // Sign the hash with the owner's private key
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(prvKey, userOpHash.toEthSignedMessageHash());
-
-        // Combine (v, r, s) into a signature
-        bytes memory signature = abi.encodePacked(r, s, v);
-
-        return signature;
     }
 
     function verifySignature(UserOperation calldata userOp) public returns (uint256) {
@@ -183,9 +246,5 @@ contract SimpleAccountBscTest is Test {
         });
 
         return op;
-    }
-
-    function extractCallData(bytes calldata callData) public pure returns (bytes calldata) {
-        return XChainLib.extractCallData(callData);
     }
 }
