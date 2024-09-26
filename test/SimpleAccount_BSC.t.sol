@@ -151,9 +151,9 @@ contract SimpleAccountBscTest is Test {
             "Cross-chain hash with hashlist should match"
         );
 
-        bytes32 placeholder32 = bytes32(uint256(XChainLib.XC_MARKER) << 240);
-
         // Uncomment for debugging
+        // bytes32 placeholder32 = bytes32(uint256(XChainLib.XC_MARKER) << 240);
+
         // bytes32[3] memory srcHashes = [placeholder32, hash2, bytes32(0)];
         // bytes32 srcXHash = XChainLib.computeCrossChainHash(hash1, srcHashes, 2);
         // assertEq(srcXHash, xChainHash, "Cross-chain hash should match");
