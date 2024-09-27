@@ -229,7 +229,12 @@ library XChainLib {
                     offset += callDataLength;
 
                     // Read hashListLength
-                    uint8 hashListLength = uint8(extraData[offset]);
+                    uint8 hashListLength;
+                    assembly {
+                        // calldataload(add(extraData.offset, offset)) reads 32 bytes from calldata.
+                        // shr(248, ...) shifts the loaded data right by 248 bits, moving the byte we want to the least significant position.
+                        hashListLength := shr(248, calldataload(add(extraData.offset, offset)))
+                    }
                     offset += HASHLIST_LENGTH_SIZE;
 
                     if (
