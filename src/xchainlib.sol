@@ -14,8 +14,8 @@ library XChainLib {
     uint16 internal constant XC_MARKER = 0xFFFF;
     uint256 internal constant PLACEHOLDER_LENGTH = 2;
     uint256 internal constant HASHLIST_LENGTH_SIZE = 1;
-    uint256 internal constant MIN_HASH_COUNT = 2;
-    uint256 internal constant MAX_HASH_COUNT = 3;
+    uint256 internal constant MIN_OP_COUNT = 2;
+    uint256 internal constant MAX_OP_COUNT = 3;
 
     enum OpType {
         Conventional,
@@ -37,16 +37,8 @@ library XChainLib {
      * - 2 bytes (placeholder 0xFFFF)
      * - 32 bytes (hash)
      */
-    function identifyUserOpType(
-        bytes calldata callData
-    ) public pure returns (OpType) {
-        if (
-            callData.length >=
-            OPTYPE_LENGTH +
-                CALLDATA_LENGTH_SIZE +
-                HASHLIST_LENGTH_SIZE +
-                PLACEHOLDER_LENGTH
-        ) {
+    function identifyUserOpType(bytes calldata callData) public pure returns (OpType) {
+        if (callData.length >= OPTYPE_LENGTH + CALLDATA_LENGTH_SIZE + HASHLIST_LENGTH_SIZE + PLACEHOLDER_LENGTH) {
             uint256 offset = 0;
             uint16 marker;
             assembly {
@@ -56,33 +48,20 @@ library XChainLib {
 
             if (marker == XC_MARKER) {
                 // Read callDataLength
-                uint16 callDataLength = (uint16(uint8(callData[offset])) << 8) |
-                    uint16(uint8(callData[offset + 1]));
+                uint16 callDataLength = (uint16(uint8(callData[offset])) << 8) | uint16(uint8(callData[offset + 1]));
                 offset += CALLDATA_LENGTH_SIZE;
 
                 // Check if there is enough data for callData and hash list
-                if (
-                    callData.length >=
-                    offset +
-                        callDataLength +
-                        HASHLIST_LENGTH_SIZE +
-                        PLACEHOLDER_LENGTH
-                ) {
+                if (callData.length >= offset + callDataLength + HASHLIST_LENGTH_SIZE + PLACEHOLDER_LENGTH) {
                     offset += callDataLength;
 
                     // Read hashListLength
                     uint8 hashListLength = uint8(callData[offset]);
                     offset += HASHLIST_LENGTH_SIZE;
 
-                    if (
-                        hashListLength >= MIN_HASH_COUNT &&
-                        hashListLength <= MAX_HASH_COUNT
-                    ) {
+                    if (hashListLength >= MIN_OP_COUNT && hashListLength <= MAX_OP_COUNT) {
                         // Calculate expected total length
-                        uint256 expectedLength = offset +
-                            PLACEHOLDER_LENGTH +
-                            (hashListLength - 1) *
-                            HASH_LENGTH;
+                        uint256 expectedLength = offset + PLACEHOLDER_LENGTH + (hashListLength - 1) * HASH_LENGTH;
                         if (callData.length == expectedLength) {
                             return OpType.CrossChain;
                         }
@@ -100,16 +79,10 @@ library XChainLib {
      * @return hashList The array of hashes (including the placeholder).
      * @return hashCount The number of hashes in the hash list.
      */
-    function extractCallDataAndHashList(
-        bytes calldata callData
-    )
+    function extractCallDataAndHashList(bytes calldata callData)
         internal
         pure
-        returns (
-            bytes32 callDataHash,
-            bytes32[3] memory hashList,
-            uint256 hashCount
-        )
+        returns (bytes32 callDataHash, bytes32[MAX_OP_COUNT] memory hashList, uint256 hashCount)
     {
         uint256 offset = 0;
 
@@ -119,10 +92,7 @@ library XChainLib {
         // Read callDataLength
         uint16 callDataLength;
         assembly {
-            callDataLength := shr(
-                240,
-                calldataload(add(callData.offset, offset))
-            )
+            callDataLength := shr(240, calldataload(add(callData.offset, offset)))
         }
         offset += CALLDATA_LENGTH_SIZE;
 
@@ -135,7 +105,7 @@ library XChainLib {
         uint8 hashListLength = uint8(callData[offset]);
         offset += HASHLIST_LENGTH_SIZE;
 
-        if (hashListLength < 1 || hashListLength > MAX_HASH_COUNT) {
+        if (hashListLength < 1 || hashListLength > MAX_OP_COUNT) {
             // Invalid hash count
             hashCount = 0;
             return (callDataHash, hashList, hashCount);
@@ -151,10 +121,7 @@ library XChainLib {
             // Check if the next 2 bytes are the placeholder
             uint16 possiblePlaceholder;
             assembly {
-                possiblePlaceholder := shr(
-                    240,
-                    calldataload(add(callData.offset, entryOffset))
-                )
+                possiblePlaceholder := shr(240, calldataload(add(callData.offset, entryOffset)))
             }
 
             if (possiblePlaceholder == XC_MARKER) {
@@ -179,31 +146,22 @@ library XChainLib {
     struct xCallData {
         OpType opType;
         bytes32 callDataHash;
-        bytes32[3] hashList;
+        bytes32[MAX_OP_COUNT] hashList;
         uint256 hashCount;
     }
 
-    function parseXElems(
-        bytes calldata extraData
-    ) internal pure returns (xCallData memory xElems) {
+    function parseXElems(bytes calldata extraData) internal pure returns (xCallData memory xElems) {
         // Initialize with default values
         xElems.opType = XChainLib.OpType.Conventional;
         xElems.hashCount = 0;
 
         uint256 extraDataLength = extraData.length;
 
-        if (
-            extraDataLength >=
-            OPTYPE_LENGTH +
-                CALLDATA_LENGTH_SIZE +
-                HASHLIST_LENGTH_SIZE +
-                PLACEHOLDER_LENGTH
-        ) {
+        if (extraDataLength >= OPTYPE_LENGTH + CALLDATA_LENGTH_SIZE + HASHLIST_LENGTH_SIZE + PLACEHOLDER_LENGTH) {
             uint256 offset = 0;
 
             // Read the marker (2 bytes)
-            uint16 marker = (uint16(uint8(extraData[offset])) << 8) |
-                uint16(uint8(extraData[offset + 1]));
+            uint16 marker = (uint16(uint8(extraData[offset])) << 8) | uint16(uint8(extraData[offset + 1]));
             offset += OPTYPE_LENGTH;
 
             if (marker == XC_MARKER) {
@@ -211,21 +169,12 @@ library XChainLib {
                 xElems.opType = XChainLib.OpType.CrossChain;
 
                 // Read callDataLength (2 bytes)
-                uint16 callDataLength = (uint16(uint8(extraData[offset])) <<
-                    8) | uint16(uint8(extraData[offset + 1]));
+                uint16 callDataLength = (uint16(uint8(extraData[offset])) << 8) | uint16(uint8(extraData[offset + 1]));
                 offset += CALLDATA_LENGTH_SIZE;
 
-                if (
-                    extraDataLength >=
-                    offset +
-                        callDataLength +
-                        HASHLIST_LENGTH_SIZE +
-                        PLACEHOLDER_LENGTH
-                ) {
+                if (extraDataLength >= offset + callDataLength + HASHLIST_LENGTH_SIZE + PLACEHOLDER_LENGTH) {
                     // Extract callDataHash
-                    xElems.callDataHash = keccak256(
-                        extraData[offset:offset + callDataLength]
-                    );
+                    xElems.callDataHash = keccak256(extraData[offset:offset + callDataLength]);
                     offset += callDataLength;
 
                     // Read hashListLength
@@ -237,10 +186,7 @@ library XChainLib {
                     }
                     offset += HASHLIST_LENGTH_SIZE;
 
-                    if (
-                        hashListLength >= MIN_HASH_COUNT &&
-                        hashListLength <= MAX_HASH_COUNT
-                    ) {
+                    if (hashListLength >= MIN_OP_COUNT && hashListLength <= MAX_OP_COUNT) {
                         xElems.hashCount = hashListLength;
 
                         uint256 expectedLength = offset;
@@ -252,12 +198,7 @@ library XChainLib {
                             // Check if the next 2 bytes are the placeholder
                             uint16 possiblePlaceholder;
                             assembly {
-                                possiblePlaceholder := shr(
-                                    240,
-                                    calldataload(
-                                        add(extraData.offset, entryOffset)
-                                    )
-                                )
+                                possiblePlaceholder := shr(240, calldataload(add(extraData.offset, entryOffset)))
                             }
 
                             if (possiblePlaceholder == XC_MARKER) {
@@ -275,27 +216,18 @@ library XChainLib {
                                 // Check if the next 2 bytes are the placeholder
                                 uint16 possiblePlaceholder;
                                 assembly {
-                                    possiblePlaceholder := shr(
-                                        240,
-                                        calldataload(
-                                            add(extraData.offset, entryOffset)
-                                        )
-                                    )
+                                    possiblePlaceholder := shr(240, calldataload(add(extraData.offset, entryOffset)))
                                 }
 
                                 if (possiblePlaceholder == XC_MARKER) {
                                     // It's a placeholder
-                                    xElems.hashList[i] = bytes32(
-                                        uint256(XC_MARKER) << 240
-                                    );
+                                    xElems.hashList[i] = bytes32(uint256(XC_MARKER) << 240);
                                     offset += PLACEHOLDER_LENGTH;
                                 } else {
                                     // It's a hash (32 bytes)
                                     bytes32 hashEntry;
                                     assembly {
-                                        hashEntry := calldataload(
-                                            add(extraData.offset, offset)
-                                        )
+                                        hashEntry := calldataload(add(extraData.offset, offset))
                                     }
                                     xElems.hashList[i] = hashEntry;
                                     offset += HASH_LENGTH;
@@ -324,11 +256,11 @@ library XChainLib {
     /// @param hashList Array of hashes including the placeholder
     /// @param hashCount Number of valid hashes in the hashList
     /// @return The computed cross-chain hash
-    function computeCrossChainHash(
-        bytes32 initialOpHash,
-        bytes32[3] memory hashList,
-        uint256 hashCount
-    ) internal pure returns (bytes32) {
+    function computeCrossChainHash(bytes32 initialOpHash, bytes32[MAX_OP_COUNT] memory hashList, uint256 hashCount)
+        internal
+        pure
+        returns (bytes32)
+    {
         bool placeholderReplaced = false;
         for (uint256 i = 0; i < hashCount; i++) {
             if (hashList[i] == bytes32(uint256(XC_MARKER) << 240)) {
@@ -344,13 +276,10 @@ library XChainLib {
         }
 
         // Compute combined hash based on hashCount
-        if (hashCount == 2) {
+        if (hashCount == MIN_OP_COUNT) {
             return keccak256(abi.encodePacked(hashList[0], hashList[1]));
-        } else if (hashCount == 3) {
-            return
-                keccak256(
-                    abi.encodePacked(hashList[0], hashList[1], hashList[2])
-                );
+        } else if (hashCount == MAX_OP_COUNT) {
+            return keccak256(abi.encodePacked(hashList[0], hashList[1], hashList[2]));
         } else {
             // For hashCount == 1, use the single hash
             return keccak256(abi.encodePacked(hashList[0]));

@@ -202,7 +202,7 @@ library TestSimpleAccountHelper {
                     console2.log("parseXElems, hashListLength:", hashListLength);
                     offset += XChainLib.HASHLIST_LENGTH_SIZE;
 
-                    if (hashListLength >= XChainLib.MIN_HASH_COUNT && hashListLength <= XChainLib.MAX_HASH_COUNT) {
+                    if (hashListLength >= XChainLib.MIN_OP_COUNT && hashListLength <= XChainLib.MAX_OP_COUNT) {
                         xElems.hashCount = hashListLength;
                         console2.log("parseXElems, hashCount set to:", xElems.hashCount);
 
