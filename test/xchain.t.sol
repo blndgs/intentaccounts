@@ -7,14 +7,6 @@ import "./TestSimpleAccountHelper.sol";
 contract XChainLibTest is Test {
     using XChainLib for bytes;
 
-    function extractCallDataAndHashList(bytes calldata callData)
-        public
-        pure
-        returns (bytes32 callDataHash, bytes32[3] memory hashList, uint256 listCount)
-    {
-        return XChainLib.extractCallDataAndHashList(callData);
-    }
-
     function testEncodeAndDecodeXChainCallData() public {
         // Placeholder as 2 bytes
         bytes memory placeholder = abi.encodePacked(uint16(0xFFFF));
@@ -34,21 +26,27 @@ contract XChainLibTest is Test {
         ops[0] = TestSimpleAccountHelper.createCrossChainCallData(hex"deadbeef", srcHashList);
         ops[1] = TestSimpleAccountHelper.createCrossChainCallData(hex"cafebabe", destHashList);
 
-        (bytes32 cdHash, bytes32[3] memory hashList, uint256 listCount) = this.extractCallDataAndHashList(ops[0]);
-        assertEq(listCount, 2, "Hash list length should be 2");
-        assertEq(cdHash, keccak256(hex"deadbeef"), "Calldata Hash should match");
+        // (bytes32 cdHash, bytes32[3] memory hashList, uint256 listCount) = this.extractCallDataAndHashList(ops[0]);
+        XChainLib.xCallData memory xcd = this.parseXElems(ops[0]);
+        assertEq(xcd.hashCount, 2, "Hash list length should be 2");
+        assertEq(xcd.callDataHash, keccak256(hex"deadbeef"), "Calldata Hash should match");
 
         // Check hash list entries
-        assertEq(hashList[0], bytes32(uint256(0xFFFF) << 240), "First hash should be placeholder");
-        assertEq(hashList[1], otherChainHash, "Second hash should be otherChainHash");
+        assertEq(xcd.hashList[0], bytes32(uint256(0xFFFF) << 240), "First hash should be placeholder");
+        assertEq(xcd.hashList[1], otherChainHash, "Second hash should be otherChainHash");
 
-        (cdHash, hashList, listCount) = this.extractCallDataAndHashList(ops[1]);
-        assertEq(listCount, 2, "Hash list length should be 2");
-        assertEq(cdHash, keccak256(hex"cafebabe"), "Calldata Hash should match");
+        // (cdHash, xcd.hashList, listCount) = this.extractCallDataAndHashList(ops[1]);
+        xcd = this.parseXElems(ops[1]);
+        assertEq(xcd.hashCount, 2, "Hash list length should be 2");
+        assertEq(xcd.callDataHash, keccak256(hex"cafebabe"), "Calldata Hash should match");
 
         // Check hash list entries
-        assertEq(hashList[0], otherChainHash, "First hash should be otherChainHash");
-        assertEq(hashList[1], bytes32(uint256(0xFFFF) << 240), "Second hash should be placeholder");
+        assertEq(xcd.hashList[0], otherChainHash, "First hash should be otherChainHash");
+        assertEq(xcd.hashList[1], bytes32(uint256(0xFFFF) << 240), "Second hash should be placeholder");
+    }
+
+    function parseXElems(bytes calldata callData) external pure returns (XChainLib.xCallData memory) {
+        return XChainLib.parseXElems(callData);
     }
 
     // function testIdentifyUserOpType() public {
@@ -168,36 +166,28 @@ contract XChainLibTest is Test {
 
         // Measure gas cost for identifying UserOp type
         uint256 gasStart = gasleft();
-        // XChainLib.OpType opType = XChainLib.identifyUserOpType(sourceUserOpCallData);
-        // bool isXChainCallData = opType == XChainLib.OpType.CrossChain;
-        // assertEq(isXChainCallData, true, "Should be identified as cross-chain");
+        XChainLib.xCallData memory xcd = this.parseXElems(sourceUserOpCallData);
         uint256 gasUsed = gasStart - gasleft();
-        // console2.log("Gas used for identifyUserOpType:", gasUsed);
-
-        // Measure gas cost for extracting source call data
-        gasStart = gasleft();
-        (bytes32 cdHash, bytes32[3] memory hashList, uint256 listCount) =
-            this.extractCallDataAndHashList(sourceUserOpCallData);
-        gasUsed = gasStart - gasleft();
-        console2.log("Gas used for extractSourceUserOpData:", gasUsed);
-
-        assertEq(listCount, 2, "hashlist length should match");
-        assertEq(cdHash, keccak256(srcCallData), "Extracted source callData should match");
+        console2.log("Gas used for parseXElems:", gasUsed);
+        bool isXChainCallData = xcd.opType == XChainLib.OpType.CrossChain;
+        assertEq(isXChainCallData, true, "Should be identified as cross-chain");
+        assertEq(xcd.hashCount, 2, "hashlist length should match");
+        assertEq(xcd.callDataHash, keccak256(srcCallData), "Extracted source callData should match");
 
         // Check hash list entries
-        assertEq(hashList[0], bytes32(uint256(0xFFFF) << 240), "First hash should be placeholder");
-        assertEq(hashList[1], dummyHash1, "Second hash should be otherChainHash");
+        assertEq(xcd.hashList[0], bytes32(uint256(0xFFFF) << 240), "First hash should be placeholder");
+        assertEq(xcd.hashList[1], dummyHash1, "Second hash should be otherChainHash");
 
         // Measure gas cost for extracting destination call data
         gasStart = gasleft();
-        (cdHash, hashList, listCount) = this.extractCallDataAndHashList(destUserOpEncoded);
+        xcd = this.parseXElems(destUserOpEncoded);
         gasUsed = gasStart - gasleft();
         console2.log("Gas used for extractDestUserOpData:", gasUsed);
-        assertEq(listCount, 2, "Hash list length should be 2");
-        assertEq(cdHash, keccak256(destCallData), "Calldata Hash should match");
+        assertEq(xcd.hashCount, 2, "Hash list length should be 2");
+        assertEq(xcd.callDataHash, keccak256(destCallData), "Calldata Hash should match");
 
-        // Check hash list entries
-        assertEq(hashList[0], dummyHash1, "First hash should be otherChainHash");
-        assertEq(hashList[1], bytes32(uint256(0xFFFF) << 240), "Second hash should be placeholder");
+        // Check xcd.hash list entries
+        assertEq(xcd.hashList[0], dummyHash1, "First hash should be otherChainHash");
+        assertEq(xcd.hashList[1], bytes32(uint256(0xFFFF) << 240), "Second hash should be placeholder");
     }
 }
