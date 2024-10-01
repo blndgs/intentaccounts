@@ -49,90 +49,97 @@ contract XChainLibTest is Test {
         return XChainLib.parseXElems(callData);
     }
 
-    // function testIdentifyUserOpType() public {
-    //     // Test Conventional UserOp
-    //     assertEq(
-    //         uint256(XChainLib.identifyUserOpType(hex"")),
-    //         uint256(XChainLib.OpType.Conventional),
-    //         "Empty calldata should be Conventional"
-    //     );
-    //     assertEq(
-    //         uint256(XChainLib.identifyUserOpType(hex"00deadbeef")),
-    //         uint256(XChainLib.OpType.Conventional),
-    //         "Conventional UserOp should be identified"
-    //     );
-    //     assertEq(
-    //         uint256(XChainLib.identifyUserOpType(hex"03deadbeef")),
-    //         uint256(XChainLib.OpType.Conventional),
-    //         "Invalid opType should be Conventional"
-    //     );
+    function testIdentifyUserOpType() public {
+        // Test Conventional UserOp
+        XChainLib.xCallData memory xcd = this.parseXElems(hex"");
+        assertEq(
+            uint256(xcd.opType),
+            uint256(XChainLib.OpType.Conventional),
+            "Empty calldata should be Conventional"
+        );
+        xcd = this.parseXElems(hex"00deadbeef");
+        assertEq(
+            uint256(xcd.opType),
+            uint256(XChainLib.OpType.Conventional),
+            "Conventional UserOp should be identified"
+        );
+        xcd = this.parseXElems(hex"03deadbeef");
+        assertEq(
+            uint256(xcd.opType),
+            uint256(XChainLib.OpType.Conventional),
+            "Invalid opType should be Conventional"
+        );
 
-    //     bytes32 dummyHash = bytes32(uint256(0x123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0));
+        bytes32 dummyHash = bytes32(uint256(0x123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0));
 
-    //     // Test SourceUserOp
-    //     bytes memory sourceUserOp = abi.encodePacked(
-    //         uint16(XChainLib.XC_MARKER), // opType for cross-chain
-    //         uint16(8), // src-calldata-length
-    //         hex"1234567890abcdef", // src-calldata-value
-    //         dummyHash
-    //     );
-    //     assertEq(
-    //         uint256(XChainLib.identifyUserOpType(sourceUserOp)),
-    //         uint256(XChainLib.OpType.CrossChain),
-    //         "Should be identified as SourceUserOp"
-    //     );
+        bytes memory placeholder = abi.encodePacked(uint16(XChainLib.XC_MARKER));
+        bytes[] memory srcHashList = new bytes[](2);
+        srcHashList[0] = placeholder; // Placeholder in position 0 for source userOp hash1
+        srcHashList[1] = abi.encodePacked(dummyHash);
 
-    //     // Test DestUserOp
-    //     bytes32 dummyHash1 = bytes32(uint256(0x123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0));
-    //     bytes memory destUserOp = abi.encodePacked(
-    //         uint16(XChainLib.XC_MARKER), // opType for cross-chain
-    //         uint16(4), // dest-calldata-length
-    //         hex"deadbeef", // dest-calldata-value
-    //         dummyHash1 // hash1
-    //     );
-    //     assertEq(
-    //         uint256(XChainLib.identifyUserOpType(destUserOp)),
-    //         uint256(XChainLib.OpType.CrossChain),
-    //         "Should be identified as DestUserOp"
-    //     );
+        // Test SourceUserOp
+        bytes memory sourceUserOp = TestSimpleAccountHelper.createCrossChainCallData(hex"1234567890abcdef", srcHashList);
+        xcd = this.parseXElems(sourceUserOp);
+        assertEq(
+            uint256(xcd.opType),
+            uint256(XChainLib.OpType.CrossChain),
+            "sourceUserOp should be identified as cross-chain opType"
+        );
 
-    //     // Test invalid cases (should return Conventional)
-    //     assertEq(
-    //         uint256(XChainLib.identifyUserOpType(hex"0100")),
-    //         uint256(XChainLib.OpType.Conventional),
-    //         "Incomplete SourceUserOp should be Conventional"
-    //     );
-    //     assertEq(
-    //         uint256(XChainLib.identifyUserOpType(hex"0200")),
-    //         uint256(XChainLib.OpType.Conventional),
-    //         "Incomplete DestUserOp should be Conventional"
-    //     );
+        // Test DestUserOp
+        bytes32 dummyHash1 = bytes32(uint256(0x123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0));
+        bytes[] memory destHashList = new bytes[](2);
+        destHashList[0] = abi.encodePacked(dummyHash1);
+        destHashList[1] = placeholder; // Placeholder in position 1 for destination chain userOp hash2
+        bytes memory destUserOp = TestSimpleAccountHelper.createCrossChainCallData(hex"deadbeef", destHashList);
+        xcd = this.parseXElems(destUserOp);
+        assertEq(
+            uint256(xcd.opType),
+            uint256(XChainLib.OpType.CrossChain),
+            "DestUserOp should be identified as crosschain opType"
+        );
 
-    //     // Test edge cases
-    //     bytes memory edgeCaseSource = abi.encodePacked(
-    //         uint8(1), // opType for SourceUserOp
-    //         uint16(4), // src-calldata-length
-    //         hex"deadbeef" // src-calldata-value
-    //             // missing dest-userOp-encoded
-    //     );
-    //     assertEq(
-    //         uint256(XChainLib.identifyUserOpType(edgeCaseSource)),
-    //         uint256(XChainLib.OpType.Conventional),
-    //         "Invalid SourceUserOp structure should be Conventional"
-    //     );
+        // Test invalid cases (should return Conventional)
+        xcd = this.parseXElems(hex"0100");
+        assertEq(
+            uint256(xcd.opType),
+            uint256(XChainLib.OpType.Conventional),
+            "Incomplete SourceUserOp should be Conventional"
+        );
+        xcd = this.parseXElems(hex"0200");
+        assertEq(
+            uint256(xcd.opType),
+            uint256(XChainLib.OpType.Conventional),
+            "Incomplete DestUserOp should be Conventional"
+        );
 
-    //     bytes memory edgeCaseDest = abi.encodePacked(
-    //         uint8(2), // opType for DestUserOp
-    //         uint16(4), // dest-calldata-length
-    //         hex"deadbeef", // dest-calldata-value
-    //         bytes31(0) // incomplete hash1
-    //     );
-    //     assertEq(
-    //         uint256(XChainLib.identifyUserOpType(edgeCaseDest)),
-    //         uint256(XChainLib.OpType.Conventional),
-    //         "Invalid DestUserOp structure should be Conventional"
-    //     );
-    // }
+        // Test edge cases
+        bytes memory edgeCaseSource = abi.encodePacked(
+            uint8(1), // opType for SourceUserOp
+            uint16(4), // src-calldata-length
+            hex"deadbeef" // src-calldata-value
+                // missing dest-userOp-encoded
+        );
+        xcd = this.parseXElems(edgeCaseSource);
+        assertEq(
+            uint256(xcd.opType),
+            uint256(XChainLib.OpType.Conventional),
+            "Invalid SourceUserOp structure should be Conventional"
+        );
+
+        bytes memory edgeCaseDest = abi.encodePacked(
+            uint8(2), // opType for DestUserOp
+            uint16(4), // dest-calldata-length
+            hex"deadbeef", // dest-calldata-value
+            bytes31(0) // incomplete hash1
+        );
+        xcd = this.parseXElems(edgeCaseDest);
+        assertEq(
+            uint256(xcd.opType),
+            uint256(XChainLib.OpType.Conventional),
+            "Invalid DestUserOp structure should be Conventional"
+        );
+    }
 
     /**
      * @dev Test the gas cost of extracting cross-chain call data.
