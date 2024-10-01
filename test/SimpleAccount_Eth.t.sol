@@ -284,16 +284,16 @@ contract SimpleAccounEthereumTest is Test {
         chainUserOps[1] = TestSimpleAccountHelper.createCrossChainCallData(destPolygonOp.callData, destHashList);
 
         sourceEthOp.callData = chainUserOps[0];
-        require(
-            XChainLib.identifyUserOpType(sourceEthOp.callData) == XChainLib.OpType.CrossChain,
-            "Combined UserOp is not cross-chain"
-        );
+        XChainLib.xCallData memory xData = this.parseXElems(sourceEthOp.callData);
+        require(xData.opType == XChainLib.OpType.CrossChain, "Combined UserOp is not cross-chain");
 
         destPolygonOp.callData = chainUserOps[1];
-        require(
-            XChainLib.identifyUserOpType(destPolygonOp.callData) == XChainLib.OpType.CrossChain,
-            "Combined UserOp is not cross-chain"
-        );
+        xData = this.parseXElems(destPolygonOp.callData);
+        require(xData.opType == XChainLib.OpType.CrossChain, "Combined UserOp is not cross-chain");
+    }
+
+    function parseXElems(bytes calldata callData) external pure returns (XChainLib.xCallData memory) {
+        return XChainLib.parseXElems(callData);
     }
 
     /**

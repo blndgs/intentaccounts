@@ -80,23 +80,15 @@ contract AccountXChainTest is Test {
         uint256 validationResult = simpleAccount.validateSignature(userOp, bytes32(0));
         assertEq(validationResult, 0, "Signature validation failed");
 
-        // XChainLib.OpType opType = this.identifyUserOpType(userOp.callData);
-        // assertEq(uint256(opType), uint256(XChainLib.OpType.CrossChain), "OpType is not CrossChain");
+        XChainLib.xCallData memory xData = this.parseXElems(userOp.callData);
+        require(xData.opType == XChainLib.OpType.CrossChain, "OpType is not CrossChain");
 
-        (,, uint256 hashCount) = this.extractCallDataAndHashList(userOp.callData);
-        assertEq(hashCount, 2, "extracted calldata does not match");
+        XChainLib.xCallData memory xCallData = this.parseXElems(userOp.callData);
+        assertEq(xCallData.hashCount, 2, "extracted calldata does not match");
     }
 
-    function extractCallDataAndHashList(bytes calldata callData)
-        public
-        pure
-        returns (bytes32 callDataHash, bytes32[3] memory hashList, uint256 hashCount)
-    {
-        return XChainLib.extractCallDataAndHashList(callData);
-    }
-
-    function identifyUserOpType(bytes calldata callData) public pure returns (XChainLib.OpType) {
-        return XChainLib.identifyUserOpType(callData);
+    function parseXElems(bytes calldata callData) external pure returns (XChainLib.xCallData memory) {
+        return XChainLib.parseXElems(callData);
     }
 
     function generateSignature(UserOperation memory userOp, uint256 chainID) internal view returns (bytes memory) {
