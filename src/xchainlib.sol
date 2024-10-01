@@ -150,6 +150,11 @@ library XChainLib {
         uint256 hashCount;
     }
 
+    /**
+     * @dev Identifies the OpType and extracts the callDataHash, hashList, and hashCount from the cross-chain call data.
+     * @param extraData The cross-chain call data extracted from the signature.
+     * @return xElems the xCallData struct containing the parsed data: opType, callDataHash, hashList, hashCount.
+     */
     function parseXElems(bytes calldata extraData) internal pure returns (xCallData memory xElems) {
         // Initialize with default values
         xElems.opType = XChainLib.OpType.Conventional;
