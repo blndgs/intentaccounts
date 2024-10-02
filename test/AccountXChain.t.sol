@@ -83,8 +83,7 @@ contract AccountXChainTest is Test {
         XChainLib.xCallData memory xData = this.parseXElems(userOp.callData);
         require(xData.opType == XChainLib.OpType.CrossChain, "OpType is not CrossChain");
 
-        XChainLib.xCallData memory xCallData = this.parseXElems(userOp.callData);
-        assertEq(xCallData.hashCount, 2, "extracted calldata does not match");
+        assertEq(xData.hashCount, 2, "Extracted callData does not match expected hash count");
     }
 
     function parseXElems(bytes calldata callData) external pure returns (XChainLib.xCallData memory) {
