@@ -34,9 +34,22 @@ library XChainLib {
     }
 
     /**
-     * @dev Identifies the OpType and extracts the callDataHash, hashList, and hashCount from the cross-chain call data.
+     * @dev Parses cross-chain call data (xdata) to extract operation type, callDataHash, hashList, and hashCount.
+     * This function uses inline assembly for gas optimization.
+     *
      * @param xData The cross-chain call data extracted from the signature.
-     * @return xElems the xCallData struct containing the parsed data: opType, callDataHash, hashList, hashCount.
+     * @return xElems The xCallData struct containing the parsed data: opType, callDataHash, hashList, hashCount.
+     *
+     * The structure of xdata is as follows:
+     * - Marker (2 bytes): XC_MARKER
+     * - callDataLength (2 bytes): length of callData
+     * - callData (callDataLength bytes): original callData
+     * - hashListLength (1 byte): number of hashes in hashList
+     * - hashList: list of hashes or placeholders (variable length)
+     *
+     * This function checks for the marker to determine if the operation is cross-chain.
+     * It then reads the callDataLength and extracts the callDataHash.
+     * It reads the hashListLength and parses the hashList entries, which can be either a placeholder (2 bytes) or a hash (32 bytes).
      */
     function parseXElems(bytes calldata xData) internal pure returns (xCallData memory xElems) {
         // Initialize with default values
@@ -117,16 +130,17 @@ library XChainLib {
                                 break;
                             }
                         }
+
                         // Ensure all data is consumed and no extra data remains
                         if (parsingFailed || offset != xDataLength) {
                             xElems.opType = XChainLib.OpType.Conventional;
                         }
                     } else {
-                        // If hashListLength is invalid, set opType back to Conventional
+                        // Invalid hashListLength
                         xElems.opType = XChainLib.OpType.Conventional;
                     }
                 } else {
-                    // If not enough data, set opType back to Conventional
+                    // Not enough data for callData and hashList
                     xElems.opType = XChainLib.OpType.Conventional;
                 }
             }

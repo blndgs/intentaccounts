@@ -52,23 +52,13 @@ contract XChainLibTest is Test {
     function testIdentifyUserOpType() public {
         // Test Conventional UserOp
         XChainLib.xCallData memory xcd = this.parseXElems(hex"");
-        assertEq(
-            uint256(xcd.opType),
-            uint256(XChainLib.OpType.Conventional),
-            "Empty calldata should be Conventional"
-        );
+        assertEq(uint256(xcd.opType), uint256(XChainLib.OpType.Conventional), "Empty calldata should be Conventional");
         xcd = this.parseXElems(hex"00deadbeef");
         assertEq(
-            uint256(xcd.opType),
-            uint256(XChainLib.OpType.Conventional),
-            "Conventional UserOp should be identified"
+            uint256(xcd.opType), uint256(XChainLib.OpType.Conventional), "Conventional UserOp should be identified"
         );
         xcd = this.parseXElems(hex"03deadbeef");
-        assertEq(
-            uint256(xcd.opType),
-            uint256(XChainLib.OpType.Conventional),
-            "Invalid opType should be Conventional"
-        );
+        assertEq(uint256(xcd.opType), uint256(XChainLib.OpType.Conventional), "Invalid opType should be Conventional");
 
         bytes32 dummyHash = bytes32(uint256(0x123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0));
 
@@ -108,9 +98,7 @@ contract XChainLibTest is Test {
         );
         xcd = this.parseXElems(hex"0200");
         assertEq(
-            uint256(xcd.opType),
-            uint256(XChainLib.OpType.Conventional),
-            "Incomplete DestUserOp should be Conventional"
+            uint256(xcd.opType), uint256(XChainLib.OpType.Conventional), "Incomplete DestUserOp should be Conventional"
         );
 
         // Test edge cases
