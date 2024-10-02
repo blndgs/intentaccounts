@@ -43,19 +43,19 @@ contract IntentSimpleAccount is SimpleAccount {
     /// @param userOp The UserOperation to process
     /// @return opHash The computed operation hash
     function _getUserOpHash(UserOperation calldata userOp, uint256 chainId) internal view returns (bytes32 opHash) {
-        // Extract extraData from the signature if present
-        bytes calldata extraData = userOp.signature.length > SIGNATURE_LENGTH
+        // Extract xData from the signature if present
+        bytes calldata xData = userOp.signature.length > SIGNATURE_LENGTH
             ? userOp.signature[SIGNATURE_LENGTH:]
             : userOp.signature[userOp.signature.length:userOp.signature.length];
 
-        // Parse the extraData
-        XChainLib.xCallData memory parsedData = XChainLib.parseXElems(extraData);
+        // Parse the xData
+        XChainLib.xCallData memory parsedData = XChainLib.parseXElems(xData);
 
         // Compute callDataHash for conventional operations
         if (parsedData.opType == XChainLib.OpType.Conventional) {
-            if (extraData.length > 0) {
-                // Use extraData as the callDataHash
-                parsedData.callDataHash = keccak256(extraData);
+            if (xData.length > 0) {
+                // Use xData as the callDataHash
+                parsedData.callDataHash = keccak256(xData);
             } else {
                 parsedData.callDataHash = keccak256(userOp.callData);
             }
