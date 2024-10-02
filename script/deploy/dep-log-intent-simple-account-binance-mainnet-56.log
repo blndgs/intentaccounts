@@ -1,5 +1,5 @@
-forge script script/deploy/IntentSimpleAccount_Tenderly.s.sol \
-    --rpc-url https://bsc-mainnet.nodereal.io/v1/api-key \
+orge script script/deploy/IntentSimpleAccount.s.sol \
+    --rpc-url https://bsc-mainnet.nodereal.io/v1/ \
     --broadcast \
     --slow \
     --private-key prv-key \
@@ -7,47 +7,43 @@ forge script script/deploy/IntentSimpleAccount_Tenderly.s.sol \
     --verify \
     --verifier-url https://api.bscscan.com/api \
     --ffi -vvvv
-[⠆] Compiling...
+[⠢] Compiling...
 No files changed, compilation skipped
 EIP-3855 is not supported in one or more of the RPCs used.
 Unsupported Chain IDs: 56.
 Contracts deployed with a Solidity version equal or higher than 0.8.20 might not work properly.
 For more information, please see https://eips.ethereum.org/EIPS/eip-3855
 Traces:
-  [2615398] DeploySimpleAccountTenderly::run()
-    ├─ [0] VM::envString("POLYGON_PRIVATE_KEY") [staticcall]
-    │   └─ ← [Return] <env var value>
-    ├─ [0] VM::parseUint("0xa944258d572fc507c4d3a204fa19b92ae05d2b8cccf2f6b56b384bd2bc3cce49") [staticcall]
-    │   └─ ← [Return] 76561276186126081757877400438483740704663014710467991575474629628843089776201 [7.656e76]
+  [2623433] DeploySimpleAccount::run()
     ├─ [0] VM::addr(<pk>) [staticcall]
-    │   └─ ← [Return] 0x43B32D92d8A6b67104D621E9a9C3831A01A8c50c
-    ├─ [0] console::log("Deployer address:", 0x43B32D92d8A6b67104D621E9a9C3831A01A8c50c) [staticcall]
+    │   └─ ← [Return] 0xE381bAB2e0C5b678F2FBb8D4b0949e41a6487c8f
+    ├─ [0] console::log("Deployer address:", 0xE381bAB2e0C5b678F2FBb8D4b0949e41a6487c8f) [staticcall]
     │   └─ ← [Stop]
     ├─ [0] VM::startBroadcast(<pk>)
     │   └─ ← [Return]
-    ├─ [2441229] → new IntentSimpleAccountFactory@0x4a8a9D0977904F159bBC5C8Fa09E560a2d70d304
-    │   ├─ [1993591] → new IntentSimpleAccount@0x3AeA8E2D52EDfe37f3E4f636cFf4F657A1532Df2
+    ├─ [2449254] → new IntentSimpleAccountFactory@0xBd3e8f39712555F7Ce9A9339bd7DA88F4A1D7EE9
+    │   ├─ [2001598] → new IntentSimpleAccount@0xB9a65FBB3FB8AfB8CAce3e49A1b1BaeB968F345D
     │   │   ├─ emit Initialized(version: 255)
-    │   │   └─ ← [Return] 9838 bytes of code
+    │   │   └─ ← [Return] 9878 bytes of code
     │   └─ ← [Return] 2061 bytes of code
-    ├─ [0] console::log("IntentSimpleAccountFactory deployed at:", IntentSimpleAccountFactory: [0x4a8a9D0977904F159bBC5C8Fa09E560a2d70d304]) [staticcall]
+    ├─ [0] console::log("IntentSimpleAccountFactory deployed at:", IntentSimpleAccountFactory: [0xBd3e8f39712555F7Ce9A9339bd7DA88F4A1D7EE9]) [staticcall]
     │   └─ ← [Stop]
     ├─ [0] VM::envUint("POLYGON_SALT") [staticcall]
     │   └─ ← [Return] <env var value>
     ├─ [0] console::log("Salt:", 0) [staticcall]
     │   └─ ← [Stop]
     ├─ [0] VM::addr(<pk>) [staticcall]
-    │   └─ ← [Return] 0x43B32D92d8A6b67104D621E9a9C3831A01A8c50c
-    ├─ [123853] IntentSimpleAccountFactory::createAccount(0x43B32D92d8A6b67104D621E9a9C3831A01A8c50c, 0)
-    │   ├─ [85916] → new ERC1967Proxy@0x047595AA89C0756706c6841D11a61D7016e9102D
-    │   │   ├─ emit Upgraded(implementation: IntentSimpleAccount: [0x3AeA8E2D52EDfe37f3E4f636cFf4F657A1532Df2])
-    │   │   ├─ [26955] IntentSimpleAccount::initialize(0x43B32D92d8A6b67104D621E9a9C3831A01A8c50c) [delegatecall]
-    │   │   │   ├─ emit SimpleAccountInitialized(entryPoint: 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789, owner: 0x43B32D92d8A6b67104D621E9a9C3831A01A8c50c)
+    │   └─ ← [Return] 0xE381bAB2e0C5b678F2FBb8D4b0949e41a6487c8f
+    ├─ [123853] IntentSimpleAccountFactory::createAccount(0xE381bAB2e0C5b678F2FBb8D4b0949e41a6487c8f, 0)
+    │   ├─ [85916] → new ERC1967Proxy@0x2Ca8118226f3F56b4248180C91C7bfcf1B93a6eF
+    │   │   ├─ emit Upgraded(implementation: IntentSimpleAccount: [0xB9a65FBB3FB8AfB8CAce3e49A1b1BaeB968F345D])
+    │   │   ├─ [26955] IntentSimpleAccount::initialize(0xE381bAB2e0C5b678F2FBb8D4b0949e41a6487c8f) [delegatecall]
+    │   │   │   ├─ emit SimpleAccountInitialized(entryPoint: 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789, owner: 0xE381bAB2e0C5b678F2FBb8D4b0949e41a6487c8f)
     │   │   │   ├─ emit Initialized(version: 1)
     │   │   │   └─ ← [Stop]
     │   │   └─ ← [Return] 170 bytes of code
-    │   └─ ← [Return] ERC1967Proxy: [0x047595AA89C0756706c6841D11a61D7016e9102D]
-    ├─ [0] console::log("IntentSimpleAccount proxy deployed at:", ERC1967Proxy: [0x047595AA89C0756706c6841D11a61D7016e9102D]) [staticcall]
+    │   └─ ← [Return] ERC1967Proxy: [0x2Ca8118226f3F56b4248180C91C7bfcf1B93a6eF]
+    ├─ [0] console::log("IntentSimpleAccount proxy deployed at:", ERC1967Proxy: [0x2Ca8118226f3F56b4248180C91C7bfcf1B93a6eF]) [staticcall]
     │   └─ ← [Stop]
     ├─ [0] VM::stopBroadcast()
     │   └─ ← [Return]
@@ -57,35 +53,30 @@ Traces:
 Script ran successfully.
 
 == Logs ==
-  Deployer address: 0x43B32D92d8A6b67104D621E9a9C3831A01A8c50c
-  IntentSimpleAccountFactory deployed at: 0x4a8a9D0977904F159bBC5C8Fa09E560a2d70d304
+  Deployer address: 0xE381bAB2e0C5b678F2FBb8D4b0949e41a6487c8f
+  IntentSimpleAccountFactory deployed at: 0xBd3e8f39712555F7Ce9A9339bd7DA88F4A1D7EE9
   Salt: 0
-  IntentSimpleAccount proxy deployed at: 0x047595AA89C0756706c6841D11a61D7016e9102D
+  IntentSimpleAccount proxy deployed at: 0x2Ca8118226f3F56b4248180C91C7bfcf1B93a6eF
 
 ## Setting up 1 EVM.
 ==========================
 Simulated On-chain Traces:
 
-  [373459] Create2Deployer::create2()
-    ├─ [340603] → new XChainLib@0x0960230A1f7e80230c73494062E887DDd56c8cAA
-    │   └─ ← [Return] 1701 bytes of code
-    └─ ← [Return] 0x0960230a1f7e80230c73494062e887ddd56c8caa
-
-  [2441229] → new IntentSimpleAccountFactory@0x4a8a9D0977904F159bBC5C8Fa09E560a2d70d304
-    ├─ [1993591] → new IntentSimpleAccount@0x3AeA8E2D52EDfe37f3E4f636cFf4F657A1532Df2
+  [2449254] → new IntentSimpleAccountFactory@0xBd3e8f39712555F7Ce9A9339bd7DA88F4A1D7EE9
+    ├─ [2001598] → new IntentSimpleAccount@0xB9a65FBB3FB8AfB8CAce3e49A1b1BaeB968F345D
     │   ├─ emit Initialized(version: 255)
-    │   └─ ← [Return] 9838 bytes of code
+    │   └─ ← [Return] 9878 bytes of code
     └─ ← [Return] 2061 bytes of code
 
-  [126353] IntentSimpleAccountFactory::createAccount(0x43B32D92d8A6b67104D621E9a9C3831A01A8c50c, 0)
-    ├─ [88416] → new ERC1967Proxy@0x047595AA89C0756706c6841D11a61D7016e9102D
-    │   ├─ emit Upgraded(implementation: IntentSimpleAccount: [0x3AeA8E2D52EDfe37f3E4f636cFf4F657A1532Df2])
-    │   ├─ [26955] IntentSimpleAccount::initialize(0x43B32D92d8A6b67104D621E9a9C3831A01A8c50c) [delegatecall]
-    │   │   ├─ emit SimpleAccountInitialized(entryPoint: 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789, owner: 0x43B32D92d8A6b67104D621E9a9C3831A01A8c50c)
+  [126353] IntentSimpleAccountFactory::createAccount(0xE381bAB2e0C5b678F2FBb8D4b0949e41a6487c8f, 0)
+    ├─ [88416] → new ERC1967Proxy@0x2Ca8118226f3F56b4248180C91C7bfcf1B93a6eF
+    │   ├─ emit Upgraded(implementation: IntentSimpleAccount: [0xB9a65FBB3FB8AfB8CAce3e49A1b1BaeB968F345D])
+    │   ├─ [26955] IntentSimpleAccount::initialize(0xE381bAB2e0C5b678F2FBb8D4b0949e41a6487c8f) [delegatecall]
+    │   │   ├─ emit SimpleAccountInitialized(entryPoint: 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789, owner: 0xE381bAB2e0C5b678F2FBb8D4b0949e41a6487c8f)
     │   │   ├─ emit Initialized(version: 1)
     │   │   └─ ← [Stop]
     │   └─ ← [Return] 170 bytes of code
-    └─ ← [Return] ERC1967Proxy: [0x047595AA89C0756706c6841D11a61D7016e9102D]
+    └─ ← [Return] ERC1967Proxy: [0x2Ca8118226f3F56b4248180C91C7bfcf1B93a6eF]
 
 
 ==========================
@@ -94,47 +85,39 @@ Chain 56
 
 Estimated gas price: 1 gwei
 
-Estimated total gas used for script: 4328390
+Estimated total gas used for script: 3722143
 
-Estimated amount required: 0.00432839 ETH
+Estimated amount required: 0.003722143 ETH
 
 ==========================
 
 ##### bsc
-✅  [Success]Hash: 0x0792d4ba6566992e3a339184303b000e9a569188135db72d96fbb6adbbd2a71e
-Block: 41796352
-Paid: 0.000422179 ETH (422179 gas * 1 gwei)
+✅  [Success]Hash: 0x983996ae467db4b91d238fd04381d55b5e0e9ad41191fbc5eeb2908ad0207d00
+Contract Address: 0xBd3e8f39712555F7Ce9A9339bd7DA88F4A1D7EE9
+Block: 41937077
+Paid: 0.002696786 ETH (2696786 gas * 1 gwei)
 
 
 ##### bsc
-✅  [Success]Hash: 0xcf21220d1d6b0bc2aead665a9a9d721add2a2f637ed72bb58498b249dd0e0fe3
-Contract Address: 0x4a8a9D0977904F159bBC5C8Fa09E560a2d70d304
-Block: 41796355
-Paid: 0.002688179 ETH (2688179 gas * 1 gwei)
-
-
-##### bsc
-✅  [Success]Hash: 0x716acb65936001dada306c784ead22b55851494fc82413475065c94a1e9ee42c
-Block: 41796357
+✅  [Success]Hash: 0xebea5aa6ec7240389f1731f9915fb17c1ba768b5fa6a0030d6b2d4bb3a098bcb
+Block: 41937079
 Paid: 0.000147913 ETH (147913 gas * 1 gwei)
 
-✅ Sequence #1 on bsc | Total Paid: 0.003258271 ETH (3258271 gas * avg 1 gwei)
+✅ Sequence #1 on bsc | Total Paid: 0.002844699 ETH (2844699 gas * avg 1 gwei)
 
 
 ==========================
 
 ONCHAIN EXECUTION COMPLETE & SUCCESSFUL.
 ##
-Start verification for (4) contracts
-Start verifying contract `0x0960230A1f7e80230c73494062E887DDd56c8cAA` deployed on bsc
+Start verification for (3) contracts
+Start verifying contract `0xBd3e8f39712555F7Ce9A9339bd7DA88F4A1D7EE9` deployed on bsc
 
-Submitting verification for [src/xchainlib.sol:XChainLib] 0x0960230A1f7e80230c73494062E887DDd56c8cAA.
-
-Submitting verification for [src/xchainlib.sol:XChainLib] 0x0960230A1f7e80230c73494062E887DDd56c8cAA.
+Submitting verification for [src/IntentSimpleAccountFactory.sol:IntentSimpleAccountFactory] 0xBd3e8f39712555F7Ce9A9339bd7DA88F4A1D7EE9.
 Submitted contract for verification:
         Response: `OK`
-        GUID: `ckvqnh65ulthvcaajk1tlucdw94rrptzcetsuvm2btv8tve8gt`
-        URL: https://bscscan.com/address/0x0960230a1f7e80230c73494062e887ddd56c8caa
+        GUID: `9gk2v9zibadhyws2fmyrlnmiqwv7aehih3zzfhl8uuuwk16ejp`
+        URL: https://bscscan.com/address/0xbd3e8f39712555f7ce9a9339bd7da88f4a1d7ee9
 Contract verification status:
 Response: `NOTOK`
 Details: `Pending in queue`
@@ -142,13 +125,13 @@ Contract verification status:
 Response: `OK`
 Details: `Pass - Verified`
 Contract successfully verified
-Start verifying contract `0x4a8a9D0977904F159bBC5C8Fa09E560a2d70d304` deployed on bsc
+Start verifying contract `0xB9a65FBB3FB8AfB8CAce3e49A1b1BaeB968F345D` deployed on bsc
 
-Submitting verification for [src/IntentSimpleAccountFactory.sol:IntentSimpleAccountFactory] 0x4a8a9D0977904F159bBC5C8Fa09E560a2d70d304.
+Submitting verification for [src/IntentSimpleAccount.sol:IntentSimpleAccount] 0xB9a65FBB3FB8AfB8CAce3e49A1b1BaeB968F345D.
 Submitted contract for verification:
         Response: `OK`
-        GUID: `t7ik4hzttfeeffitfhkifepzrtq4a1wvaxvmrgakj1chnmdqqa`
-        URL: https://bscscan.com/address/0x4a8a9d0977904f159bbc5c8fa09e560a2d70d304
+        GUID: `fq9augqkstagwvuryfuqr5t9ismw69mzmz4kaqa5ewj2rsijkk`
+        URL: https://bscscan.com/address/0xb9a65fbb3fb8afb8cace3e49a1b1baeb968f345d
 Contract verification status:
 Response: `NOTOK`
 Details: `Pending in queue`
@@ -156,27 +139,13 @@ Contract verification status:
 Response: `OK`
 Details: `Pass - Verified`
 Contract successfully verified
-Start verifying contract `0x3AeA8E2D52EDfe37f3E4f636cFf4F657A1532Df2` deployed on bsc
+Start verifying contract `0x2Ca8118226f3F56b4248180C91C7bfcf1B93a6eF` deployed on bsc
 
-Submitting verification for [src/IntentSimpleAccount.sol:IntentSimpleAccount] 0x3AeA8E2D52EDfe37f3E4f636cFf4F657A1532Df2.
+Submitting verification for [lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy] 0x2Ca8118226f3F56b4248180C91C7bfcf1B93a6eF.
 Submitted contract for verification:
         Response: `OK`
-        GUID: `gxpzdfijubiwjsbif8jw3pyzqfchcvgzeakyy2jge8mztpgjxf`
-        URL: https://bscscan.com/address/0x3aea8e2d52edfe37f3e4f636cff4f657a1532df2
-Contract verification status:
-Response: `NOTOK`
-Details: `Pending in queue`
-Contract verification status:
-Response: `OK`
-Details: `Pass - Verified`
-Contract successfully verified
-Start verifying contract `0x047595AA89C0756706c6841D11a61D7016e9102D` deployed on bsc
-
-Submitting verification for [lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy] 0x047595AA89C0756706c6841D11a61D7016e9102D.
-Submitted contract for verification:
-        Response: `OK`
-        GUID: `fntjwpjimsemnkqid9cdgf8ys9wjntuwsdaw9iefzmhhzg5zt5`
-        URL: https://bscscan.com/address/0x047595aa89c0756706c6841d11a61d7016e9102d
+        GUID: `sdd5pbv1r2kvfi71jvsjri5qcvlsjha2akizmgbueayzjjh2uq`
+        URL: https://bscscan.com/address/0x2ca8118226f3f56b4248180c91c7bfcf1b93a6ef
 Contract verification status:
 Response: `NOTOK`
 Details: `Pending in queue`
@@ -184,6 +153,8 @@ Contract verification status:
 Response: `NOTOK`
 Details: `Already Verified`
 Contract source code already verified
-All (4) contracts were verified!
+All (3) contracts were verified!
 
-Transactions saved to: /Users/mar/go/src/github.com/blndgs/intentaccounts/broadcast/IntentSimpleAccount_Tenderly.s.sol/56/run-latest.json
+Transactions saved to: /Users/mar/go/src/github.com/blndgs/intentaccounts/broadcast/IntentSimpleAccount.s.sol/56/run-latest.json
+
+Sensitive values saved to: /Users/mar/go/src/github.com/blndgs/intentaccounts/cache/IntentSimpleAccount.s.sol/56/run-latest.json

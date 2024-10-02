@@ -1,0 +1,151 @@
+forge script script/deploy/IntentSimpleAccount.s.sol \
+    --rpc-url https://virtual.binance.rpc.tenderly.co/4e9d15b6-3c42-43b7-a254-359a7893e8e6 \
+    --broadcast \
+    --slow \
+    --private-key 0xa944258d572fc507c4d3a204fa19b92ae05d2b8cccf2f6b56b384bd2bc3cce49 \
+    --etherscan-api-key pKE9wI6zSTmsXXMOQKcecXT2IFitsc9R \
+    --verify \
+    --verifier-url https://virtual.binance.rpc.tenderly.co/4e9d15b6-3c42-43b7-a254-359a7893e8e6/verify/etherscan \
+    --ffi -vvvv
+[⠢] Compiling...
+No files changed, compilation skipped
+Traces:
+  [2449407] DeploySimpleAccount::run()
+    ├─ [0] VM::envString("ETHEREUM_PRIVATE_KEY") [staticcall]
+    │   └─ ← [Return] <env var value>
+    ├─ [0] VM::parseUint("0x4027cec6a8528e80b7d56cd0e12644b1e5611316854401ee445110f3b2dbf663") [staticcall]
+    │   └─ ← [Return] 29018356460398711633634973757124322879517115962043063477273052359183044441699 [2.901e76]
+    ├─ [0] VM::addr(<pk>) [staticcall]
+    │   └─ ← [Return] 0xE381bAB2e0C5b678F2FBb8D4b0949e41a6487c8f
+    ├─ [0] console::log("Deployer address:", 0xE381bAB2e0C5b678F2FBb8D4b0949e41a6487c8f) [staticcall]
+    │   └─ ← [Stop]
+    ├─ [0] VM::startBroadcast(<pk>)
+    │   └─ ← [Return]
+    ├─ [2275603] → new IntentSimpleAccountFactory@0x0C370C4aD0255F493bfa693F25bD0f9A36aEaD6A
+    │   ├─ [1827005] → new IntentSimpleAccount@0xCDb1e1A7fe9D425036461820Cf53D6436F528F29
+    │   │   ├─ emit Initialized(version: 255)
+    │   │   └─ ← [Return] 9006 bytes of code
+    │   └─ ← [Return] 2067 bytes of code
+    ├─ [0] console::log("IntentSimpleAccountFactory deployed at:", IntentSimpleAccountFactory: [0x0C370C4aD0255F493bfa693F25bD0f9A36aEaD6A]) [staticcall]
+    │   └─ ← [Stop]
+    ├─ [0] VM::envUint("ETHEREUM_SALT") [staticcall]
+    │   └─ ← [Return] <env var value>
+    ├─ [0] console::log("Salt:", 0) [staticcall]
+    │   └─ ← [Stop]
+    ├─ [0] VM::addr(<pk>) [staticcall]
+    │   └─ ← [Return] 0xE381bAB2e0C5b678F2FBb8D4b0949e41a6487c8f
+    ├─ [123763] IntentSimpleAccountFactory::createAccount(0xE381bAB2e0C5b678F2FBb8D4b0949e41a6487c8f, 0)
+    │   ├─ [85828] → new ERC1967Proxy@0xdA93d71254B7F5A860299Fd9260f1Dc821714724
+    │   │   ├─ emit Upgraded(implementation: IntentSimpleAccount: [0xCDb1e1A7fe9D425036461820Cf53D6436F528F29])
+    │   │   ├─ [26866] IntentSimpleAccount::initialize(0xE381bAB2e0C5b678F2FBb8D4b0949e41a6487c8f) [delegatecall]
+    │   │   │   ├─ emit SimpleAccountInitialized(entryPoint: 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789, owner: 0xE381bAB2e0C5b678F2FBb8D4b0949e41a6487c8f)
+    │   │   │   ├─ emit Initialized(version: 1)
+    │   │   │   └─ ← [Stop]
+    │   │   └─ ← [Return] 170 bytes of code
+    │   └─ ← [Return] ERC1967Proxy: [0xdA93d71254B7F5A860299Fd9260f1Dc821714724]
+    ├─ [0] console::log("IntentSimpleAccount proxy deployed at:", ERC1967Proxy: [0xdA93d71254B7F5A860299Fd9260f1Dc821714724]) [staticcall]
+    │   └─ ← [Stop]
+    ├─ [0] VM::stopBroadcast()
+    │   └─ ← [Return]
+    └─ ← [Stop]
+    
+    [129489] Create2Deployer::create2()
+      ├─ [97170] → new XChainLib@0xE991be2607DFB0Fa25DC6B31e44b6c5C046e9C14
+      │   └─ ← [Return] 485 bytes of code
+      └─ ← [Return] 0xe991be2607dfb0fa25dc6b31e44b6c5c046e9c14    
+
+Script ran successfully.
+
+== Logs ==
+  Deployer address: 0xE381bAB2e0C5b678F2FBb8D4b0949e41a6487c8f
+  IntentSimpleAccountFactory deployed at: 0x0C370C4aD0255F493bfa693F25bD0f9A36aEaD6A
+  Salt: 0
+  IntentSimpleAccount proxy deployed at: 0xdA93d71254B7F5A860299Fd9260f1Dc821714724
+
+## Setting up 1 EVM.
+==========================
+Simulated On-chain Traces:
+
+  [2275603] → new IntentSimpleAccountFactory@0x0C370C4aD0255F493bfa693F25bD0f9A36aEaD6A
+    ├─ [1827005] → new IntentSimpleAccount@0xCDb1e1A7fe9D425036461820Cf53D6436F528F29
+    │   ├─ emit Initialized(version: 255)
+    │   └─ ← [Return] 9006 bytes of code
+    └─ ← [Return] 2067 bytes of code
+
+  [126263] IntentSimpleAccountFactory::createAccount(0xE381bAB2e0C5b678F2FBb8D4b0949e41a6487c8f, 0)
+    ├─ [88328] → new ERC1967Proxy@0xdA93d71254B7F5A860299Fd9260f1Dc821714724
+    │   ├─ emit Upgraded(implementation: IntentSimpleAccount: [0xCDb1e1A7fe9D425036461820Cf53D6436F528F29])
+    │   ├─ [26866] IntentSimpleAccount::initialize(0xE381bAB2e0C5b678F2FBb8D4b0949e41a6487c8f) [delegatecall]
+    │   │   ├─ emit SimpleAccountInitialized(entryPoint: 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789, owner: 0xE381bAB2e0C5b678F2FBb8D4b0949e41a6487c8f)
+    │   │   ├─ emit Initialized(version: 1)
+    │   │   └─ ← [Stop]
+    │   └─ ← [Return] 170 bytes of code
+    └─ ← [Return] ERC1967Proxy: [0xdA93d71254B7F5A860299Fd9260f1Dc821714724]
+
+
+==========================
+
+Chain 890
+
+Estimated gas price: 0.000000003 gwei
+
+Estimated total gas used for script: 3466345
+
+Estimated amount required: 0.000000000010399035 ETH
+
+==========================
+
+##### 890
+✅  [Success]Hash: 0x547a423364886daa831f0fa9e1780ce809a8b417ae52a28f28601e9f95decfd9
+Contract Address: 0x0C370C4aD0255F493bfa693F25bD0f9A36aEaD6A
+Block: 41700917
+Paid: 0.000000000007528077 ETH (2509359 gas * 0.000000003 gwei)
+
+
+##### 890
+✅  [Success]Hash: 0xe64c7eb72987023ecf6662f3220d2940a6bbd826c0f6bb2cd5139cc2aa260632
+Block: 41700918
+Paid: 0.000000000000443469 ETH (147823 gas * 0.000000003 gwei)
+
+✅ Sequence #1 on 890 | Total Paid: 0.000000000007971546 ETH (2657182 gas * avg 0.000000003 gwei)
+
+
+==========================
+
+ONCHAIN EXECUTION COMPLETE & SUCCESSFUL.
+##
+Start verification for (3) contracts
+Start verifying contract `0x0C370C4aD0255F493bfa693F25bD0f9A36aEaD6A` deployed on 890
+
+Submitting verification for [src/IntentSimpleAccountFactory.sol:IntentSimpleAccountFactory] 0x0C370C4aD0255F493bfa693F25bD0f9A36aEaD6A.
+Submitted contract for verification:
+	Response: `OK`
+	GUID: `0x0c370c4ad0255f493bfa693f25bd0f9a36aead6a`
+	URL: https://virtual.binance.rpc.tenderly.co/************************************/verify/address/0x0c370c4ad0255f493bfa693f25bd0f9a36aead6a
+Contract verification status:
+Response: `OK`
+Details: `Pass - Verified`
+Contract successfully verified
+Start verifying contract `0xCDb1e1A7fe9D425036461820Cf53D6436F528F29` deployed on 890
+
+Submitting verification for [src/IntentSimpleAccount.sol:IntentSimpleAccount] 0xCDb1e1A7fe9D425036461820Cf53D6436F528F29.
+Submitted contract for verification:
+	Response: `OK`
+	GUID: `0xcdb1e1a7fe9d425036461820cf53d6436f528f29`
+	URL: https://virtual.binance.rpc.tenderly.co/************************************/verify/address/0xcdb1e1a7fe9d425036461820cf53d6436f528f29
+Contract verification status:
+Response: `OK`
+Details: `Pass - Verified`
+Contract successfully verified
+Start verifying contract `0xdA93d71254B7F5A860299Fd9260f1Dc821714724` deployed on 890
+
+Submitting verification for [lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy] 0xdA93d71254B7F5A860299Fd9260f1Dc821714724.
+Submitted contract for verification:
+	Response: `OK`
+	GUID: `0xda93d71254b7f5a860299fd9260f1dc821714724`
+	URL: https://virtual.binance.rpc.tenderly.co/************************************/verify/address/0xda93d71254b7f5a860299fd9260f1dc821714724
+Contract verification status:
+Response: `OK`
+Details: `Pass - Verified`
+Contract successfully verified
+All (3) contracts were verified!
