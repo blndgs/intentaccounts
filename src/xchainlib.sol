@@ -25,7 +25,7 @@ library XChainLib {
     // Custom errors
     error InvalidCallDataLength(uint256 length);
 
-    /// Struct to hold parsed data from extraData
+    /// Struct to hold parsed data from xData
     struct xCallData {
         OpType opType;
         bytes32 callDataHash;
@@ -35,94 +35,90 @@ library XChainLib {
 
     /**
      * @dev Identifies the OpType and extracts the callDataHash, hashList, and hashCount from the cross-chain call data.
-     * @param extraData The cross-chain call data extracted from the signature.
+     * @param xData The cross-chain call data extracted from the signature.
      * @return xElems the xCallData struct containing the parsed data: opType, callDataHash, hashList, hashCount.
      */
-    function parseXElems(bytes calldata extraData) internal pure returns (xCallData memory xElems) {
+    function parseXElems(bytes calldata xData) internal pure returns (xCallData memory xElems) {
         // Initialize with default values
         xElems.opType = XChainLib.OpType.Conventional;
         xElems.hashCount = 0;
 
-        uint256 extraDataLength = extraData.length;
+        uint256 xDataLength = xData.length;
 
-        if (extraDataLength >= OPTYPE_LENGTH + CALLDATA_LENGTH_SIZE + HASHLIST_LENGTH_SIZE + PLACEHOLDER_LENGTH) {
+        if (xDataLength >= OPTYPE_LENGTH + CALLDATA_LENGTH_SIZE + HASHLIST_LENGTH_SIZE + PLACEHOLDER_LENGTH) {
             uint256 offset = 0;
+            uint16 marker;
+            uint16 callDataLength;
 
-            // Read the marker (2 bytes)
-            uint16 marker = (uint16(uint8(extraData[offset])) << 8) | uint16(uint8(extraData[offset + 1]));
-            offset += OPTYPE_LENGTH;
+            assembly {
+                // Read the marker (2 bytes)
+                marker := shr(240, calldataload(xData.offset))
+            }
 
             if (marker == XC_MARKER) {
                 // Set opType to CrossChain
                 xElems.opType = XChainLib.OpType.CrossChain;
 
-                // Read callDataLength (2 bytes)
-                uint16 callDataLength = (uint16(uint8(extraData[offset])) << 8) | uint16(uint8(extraData[offset + 1]));
-                offset += CALLDATA_LENGTH_SIZE;
+                offset = OPTYPE_LENGTH + CALLDATA_LENGTH_SIZE;
 
-                if (extraDataLength >= offset + callDataLength + HASHLIST_LENGTH_SIZE + PLACEHOLDER_LENGTH) {
+                assembly {
+                    // Read callDataLength (2 bytes)
+                    callDataLength := shr(240, calldataload(add(xData.offset, OPTYPE_LENGTH)))
+                }
+
+                if (xDataLength >= offset + callDataLength + HASHLIST_LENGTH_SIZE + PLACEHOLDER_LENGTH) {
                     // Extract callDataHash
-                    xElems.callDataHash = keccak256(extraData[offset:offset + callDataLength]);
+                    xElems.callDataHash = keccak256(xData[offset:offset + callDataLength]);
                     offset += callDataLength;
 
                     // Read hashListLength
                     uint8 hashListLength;
                     assembly {
-                        // calldataload(add(extraData.offset, offset)) reads 32 bytes from calldata.
+                        // calldataload(add(xData.offset, offset)) reads 32 bytes from calldata.
                         // shr(248, ...) shifts the loaded data right by 248 bits, moving the byte we want to the least significant position.
-                        hashListLength := shr(248, calldataload(add(extraData.offset, offset)))
+                        hashListLength := shr(248, calldataload(add(xData.offset, offset)))
                     }
                     offset += HASHLIST_LENGTH_SIZE;
 
                     if (hashListLength >= MIN_OP_COUNT && hashListLength <= MAX_OP_COUNT) {
                         xElems.hashCount = hashListLength;
 
-                        uint256 expectedLength = offset;
+                        uint256 i;
+                        bool parsingFailed = false;
 
-                        // Pre-calculate expected length based on entry sizes
-                        for (uint256 i = 0; i < hashListLength; i++) {
-                            uint256 entryOffset = expectedLength;
+                        for (i = 0; i < hashListLength; i++) {
+                            uint256 entryOffset = offset;
 
-                            // Check if the next 2 bytes are the placeholder
-                            uint16 possiblePlaceholder;
-                            assembly {
-                                possiblePlaceholder := shr(240, calldataload(add(extraData.offset, entryOffset)))
-                            }
-
-                            if (possiblePlaceholder == XC_MARKER) {
-                                expectedLength += PLACEHOLDER_LENGTH;
-                            } else {
-                                expectedLength += HASH_LENGTH;
-                            }
-                        }
-
-                        if (extraDataLength >= expectedLength) {
-                            // Loop through hash list entries
-                            for (uint256 i = 0; i < hashListLength; i++) {
-                                uint256 entryOffset = offset;
-
-                                // Check if the next 2 bytes are the placeholder
-                                uint16 possiblePlaceholder;
-                                assembly {
-                                    possiblePlaceholder := shr(240, calldataload(add(extraData.offset, entryOffset)))
-                                }
+                            if (entryOffset + 2 <= xDataLength) {
+                                // Read possiblePlaceholder (2 bytes)
+                                uint16 possiblePlaceholder =
+                                    (uint16(uint8(xData[entryOffset])) << 8) | uint16(uint8(xData[entryOffset + 1]));
 
                                 if (possiblePlaceholder == XC_MARKER) {
                                     // It's a placeholder
                                     xElems.hashList[i] = bytes32(uint256(XC_MARKER) << 240);
-                                    offset += PLACEHOLDER_LENGTH;
-                                } else {
+                                    offset += PLACEHOLDER_LENGTH; // 2 bytes
+                                } else if (entryOffset + HASH_LENGTH <= xDataLength) {
                                     // It's a hash (32 bytes)
                                     bytes32 hashEntry;
                                     assembly {
-                                        hashEntry := calldataload(add(extraData.offset, offset))
+                                        hashEntry := calldataload(add(xData.offset, entryOffset))
                                     }
                                     xElems.hashList[i] = hashEntry;
-                                    offset += HASH_LENGTH;
+                                    offset += HASH_LENGTH; // 32 bytes
+                                } else {
+                                    // Not enough data for hash
+                                    parsingFailed = true;
+                                    break;
                                 }
+                            } else {
+                                // Not enough data for placeholder
+                                parsingFailed = true;
+                                break;
                             }
-                        } else {
-                            // If not enough data for all hashes, set opType back to Conventional
+                        }
+                        // Ensure all data is consumed and no extra data remains
+                        if (parsingFailed || offset != xDataLength) {
                             xElems.opType = XChainLib.OpType.Conventional;
                         }
                     } else {
