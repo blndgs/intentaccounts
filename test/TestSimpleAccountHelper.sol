@@ -6,7 +6,7 @@ import "./TestBytesHelper.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {IntentSimpleAccountFactory} from "../src/IntentSimpleAccountFactory.sol";
 import "../src/IntentSimpleAccount.sol";
-// import "forge-std/Test.sol";
+import "forge-std/Test.sol";
 
 library TestSimpleAccountHelper {
     using ECDSA for bytes32;
