@@ -1,0 +1,19 @@
+forge create --rpc-url $RPC_URL --private-key $PRIVATE_KEY src/IntentSimpleAccountFactory.sol:IntentSimpleAccountFactory --constructor-args "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789" --etherscan-api-key $TENDERLY_ACCESS_TOKEN --verify --verifier-url $TENDERLY_VERIFIER_URL
+[⠢] Compiling...
+No files changed, compilation skipped
+Deployer: 0x43B32D92d8A6b67104D621E9a9C3831A01A8c50c
+Deployed to: 0x9dC8A5b1DF417e082C271bfFCbf15048a2ed307b
+Transaction hash: 0xe20095afd1c90de6776f1b5f93c0716174c82ad5e43251312f0a50135031de38
+Starting contract verification...
+Waiting for etherscan to detect contract deployment...
+Start verifying contract `0x9dC8A5b1DF417e082C271bfFCbf15048a2ed307b` deployed on 8888
+
+Submitting verification for [src/IntentSimpleAccountFactory.sol:IntentSimpleAccountFactory] 0x9dC8A5b1DF417e082C271bfFCbf15048a2ed307b.
+Submitted contract for verification:
+	Response: `OK`
+	GUID: `0x9dc8a5b1df417e082c271bffcbf15048a2ed307b`
+	URL: https://virtual.polygon.rpc.tenderly.co/440ed29a-d7b7-4fa5-ae3c-682631c9b0c4/verify/address/0x9dc8a5b1df417e082c271bffcbf15048a2ed307b
+Contract verification status:
+Response: `OK`
+Details: `Pass - Verified`
+Contract successfully verified

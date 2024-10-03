@@ -16,6 +16,10 @@ fmt:
 build:
 	forge build
 
+# Build the project using Forge
+build-f:
+	forge clean && forge build --force
+
 # Run tests with low verbosity
 test:
 	forge test

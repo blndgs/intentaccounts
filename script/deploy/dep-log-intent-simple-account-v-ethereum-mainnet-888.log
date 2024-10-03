@@ -1,0 +1,87 @@
+forge script script/deploy/IntentSimpleAccount.s.sol \
+    --rpc-url $RPC_URL \
+     --broadcast \
+     --slow \
+     --private-key $PRIVATE_KEY \
+     --etherscan-api-key $TENDERLY_ACCESS_TOKEN \
+     --verify \
+     --verifier-url $TENDERLY_VERIFIER_URL \
+     --ffi
+[⠢] Compiling...
+No files changed, compilation skipped
+Script ran successfully.
+
+== Logs ==
+  Deployer address: 0x43B32D92d8A6b67104D621E9a9C3831A01A8c50c
+  IntentSimpleAccountFactory deployed at: 0x1BdFA435546bc83cf24b32F62cE67F09246696E1
+  Salt: 0
+  IntentSimpleAccount proxy deployed at: 0xA3E07E5b247ebcAfe6A6E1f30D9C2D9596B41422
+
+## Setting up 1 EVM.
+
+==========================
+
+Chain 888
+
+Estimated gas price: 0.000000003 gwei
+
+Estimated total gas used for script: 3614933
+
+Estimated amount required: 0.000000000010844799 ETH
+
+==========================
+
+##### 888
+✅  [Success]Hash: 0x3b2c03fac3988d4c36091ea552b5a504433022620c83f91170fadfef36853ac1
+Contract Address: 0x1BdFA435546bc83cf24b32F62cE67F09246696E1
+Block: 20348824
+Paid: 0.000000000007870968 ETH (2623656 gas * 0.000000003 gwei)
+
+
+##### 888
+✅  [Success]Hash: 0xadb68d6b1b50ebed557272a40c5d42642a2d5f38a0a59da5f2a973d26ddce53f
+Block: 20348825
+Paid: 0.000000000000443472 ETH (147824 gas * 0.000000003 gwei)
+
+✅ Sequence #1 on 888 | Total Paid: 0.00000000000831444 ETH (2771480 gas * avg 0.000000003 gwei)
+
+
+==========================
+
+ONCHAIN EXECUTION COMPLETE & SUCCESSFUL.
+##
+Start verification for (3) contracts
+Start verifying contract `0x1BdFA435546bc83cf24b32F62cE67F09246696E1` deployed on 888
+
+Submitting verification for [src/IntentSimpleAccountFactory.sol:IntentSimpleAccountFactory] 0x1BdFA435546bc83cf24b32F62cE67F09246696E1.
+Submitted contract for verification:
+	Response: `OK`
+	GUID: `0x1bdfa435546bc83cf24b32f62ce67f09246696e1`
+	URL: https://virtual.mainnet.rpc.tenderly.co/13d45a24-2474-431e-8f19-31f251f6cd2a/verify/address/0x1bdfa435546bc83cf24b32f62ce67f09246696e1
+Contract verification status:
+Response: `OK`
+Details: `Pass - Verified`
+Contract successfully verified
+Start verifying contract `0xF2cfaa42E47CfdfF01Deaf1326290341806525E7` deployed on 888
+
+Submitting verification for [src/IntentSimpleAccount.sol:IntentSimpleAccount] 0xF2cfaa42E47CfdfF01Deaf1326290341806525E7.
+Submitted contract for verification:
+	Response: `OK`
+	GUID: `0xf2cfaa42e47cfdff01deaf1326290341806525e7`
+	URL: https://virtual.mainnet.rpc.tenderly.co/13d45a24-2474-431e-8f19-31f251f6cd2a/verify/address/0xf2cfaa42e47cfdff01deaf1326290341806525e7
+Contract verification status:
+Response: `OK`
+Details: `Pass - Verified`
+Contract successfully verified
+Start verifying contract `0xA3E07E5b247ebcAfe6A6E1f30D9C2D9596B41422` deployed on 888
+
+Submitting verification for [lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy] 0xA3E07E5b247ebcAfe6A6E1f30D9C2D9596B41422.
+Submitted contract for verification:
+	Response: `OK`
+	GUID: `0xa3e07e5b247ebcafe6a6e1f30d9c2d9596b41422`
+	URL: https://virtual.mainnet.rpc.tenderly.co/13d45a24-2474-431e-8f19-31f251f6cd2a/verify/address/0xa3e07e5b247ebcafe6a6e1f30d9c2d9596b41422
+Contract verification status:
+Response: `OK`
+Details: `Pass - Verified`
+Contract successfully verified
+All (3) contracts were verified!

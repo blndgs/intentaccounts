@@ -22,7 +22,7 @@ import "forge-std/Script.sol";
  * PRIVATE_KEY=
  * TENDERLY_ACCESS_TOKEN=
  *
- * forge script script/deploy/IntentSimpleAccount_Tenderly.s.sol \
+ * forge script script/deploy/IntentSimpleAccount.s.sol \
  *   --rpc-url $RPC_URL \
  *    --broadcast \
  *    --slow \
@@ -32,7 +32,7 @@ import "forge-std/Script.sol";
  *    --verifier-url $TENDERLY_VERIFIER_URL \
  *    --ffi
  */
-contract DeploySimpleAccountTenderly is Script {
+contract DeploySimpleAccount is Script {
     string internal _network;
 
     function setUp() public {
@@ -71,8 +71,3 @@ contract DeploySimpleAccountTenderly is Script {
         vm.stopBroadcast();
     }
 }
-
-
-
-
-

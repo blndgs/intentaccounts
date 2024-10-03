@@ -2,7 +2,6 @@
 pragma solidity ^0.8.24;
 
 import "forge-std/Test.sol";
-import "../src/IntentSimpleAccount.sol";
 import "@account-abstraction/interfaces/IEntryPoint.sol";
 import "@account-abstraction/core/EntryPoint.sol";
 import "../src/IntentSimpleAccountFactory.sol";
@@ -65,8 +64,10 @@ contract SimpleAccounEthereumTest is Test {
         address factoryAddress = vm.envAddress(factoryAddressEnv);
         console2.log("factory Address", factoryAddress);
 
-        _factory = IntentSimpleAccountFactory(factoryAddress);
-        console2.log("IntentSimpleAccountFactory synced at:", address(_factory));
+        _factory = new IntentSimpleAccountFactory(_entryPoint);
+        console2.log("IntentSimpleAccountFactory created at:", address(_factory));
+        //        _factory = IntentSimpleAccountFactory(factoryAddress);
+        //        console2.log("IntentSimpleAccountFactory synced at:", address(_factory));
         uint256 endGas = gasleft();
         console2.log("Gas used for Factory sync: ", startGas - endGas);
         startGas = endGas;
@@ -90,16 +91,6 @@ contract SimpleAccounEthereumTest is Test {
         console2.log("Expected SimpleAccount address:", generatedAddress);
         console2.log("Actual SimpleAccount address:", address(_simpleAccount));
         assertEq(address(_simpleAccount), generatedAddress, "Account address does not match expected address");
-    }
-
-    // Original function from the SimpleAccount contract
-    function getUserOpHash(UserOperation calldata userOp, uint256 chainID) public pure returns (bytes32) {
-        return keccak256(abi.encode(userOp.hash(), ENTRYPOINT_V06, chainID));
-    }
-
-    // Wrapper around the original function to create a call context
-    function getOrigUserOpHash(UserOperation memory userOp, uint256 chainID) internal view returns (bytes32) {
-        return this.getUserOpHash(userOp, chainID);
     }
 
     function generateSignature(UserOperation memory userOp, uint256 chainID) internal view returns (bytes memory) {
@@ -187,7 +178,7 @@ contract SimpleAccounEthereumTest is Test {
         });
 
         userOp.nonce = _simpleAccount.getNonce();
-        console2.log("nonce:", userOp.nonce);
+        console2.log("current nonce:", userOp.nonce);
 
         // 2. SDK signs the intent userOp
         userOp.signature = generateSignature(userOp, block.chainid);
@@ -241,6 +232,68 @@ contract SimpleAccounEthereumTest is Test {
         assertLt(usdcBalanceAfter, usdcBalanceBefore, "USDC balance should decrease");
         assertGt(usdtBalanceAfter, usdtBalanceBefore, "USDT balance should increase");
         assertEq(usdcBalanceBefore - usdcBalanceAfter, 1 * 1e6, "Should have spent 1000 USDC");
+    }
+
+    function testCrossChainUserOp() public view {
+        UserOperation memory sourceEthOp = UserOperation({
+            sender: address(payable(_simpleAccount)),
+            nonce: 161,
+            initCode: new bytes(0),
+            callData: hex"18dfb3c7000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000000a00000000000000000000000000000000000000000000000000000000000000002000000000000000000000000a0b86991c6218b36c1d19d4a2e9eb0ce3606eb48000000000000000000000000def1c0ded9bec7f1a1670819833240f027b25eff0000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000000c00000000000000000000000000000000000000000000000000000000000000044095ea7b3000000000000000000000000def1c0ded9bec7f1a1670819833240f027b25eff00000000000000000000000000000000000000000000000000000000000f4240000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000128d9627aa4000000000000000000000000000000000000000000000000000000000000008000000000000000000000000000000000000000000000000000000000000f4240000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002000000000000000000000000a0b86991c6218b36c1d19d4a2e9eb0ce3606eb48000000000000000000000000dac17f958d2ee523a2206206994597c13d831ec7869584cd00000000000000000000000010000000000000000000000000000000000000110000000000000000000000000000000015b9ca29df2cd4b929d481fcb4ab9642000000000000000000000000000000000000000000000000",
+            callGasLimit: 800000,
+            verificationGasLimit: 500000,
+            preVerificationGas: 500000,
+            maxFeePerGas: 0,
+            maxPriorityFeePerGas: 0,
+            paymasterAndData: new bytes(0),
+            signature: hex"fe050651afae2c8d5b87a4f2995bbc77c6efba4eb0a801bca371bfccd7dc551009f829eb0c17836968f49210a3e3a5cc955f40e3b66f512d956302d9a963bb081b7b2266726f6d223a7b2274797065223a22544f4b454e222c2261646472657373223a22307845656565654565656545654565654565456545656545454565656565456565656565656545456545222c22616d6f756e74223a22302e38222c22636861696e4964223a2231227d2c22746f223a7b2274797065223a22544f4b454e222c2261646472657373223a22307864616331376639353864326565353233613232303632303639393435393763313364383331656337222c22636861696e4964223a2231227d7d"
+        });
+        bytes32 uoHash = _simpleAccount.getUserOpHash(sourceEthOp, block.chainid);
+        console2.log("UserOp hash:");
+        console2.logBytes32(uoHash);
+
+        UserOperation memory destPolygonOp = UserOperation({
+            sender: address(payable(_simpleAccount)),
+            nonce: 1,
+            initCode: new bytes(0),
+            callData: hex"18dfb3c7000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000000a00000000000000000000000000000000000000000000000000000000000000002000000000000000000000000a0b86991c6218b36c1d19d4a2e9eb0ce3606eb48000000000000000000000000def1c0ded9bec7f1a1670819833240f027b25eff0000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000000c00000000000000000000000000000000000000000000000000000000000000044095ea7b3000000000000000000000000def1c0ded9bec7f1a1670819833240f027b25eff00000000000000000000000000000000000000000000000000000000000f4240000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000128d9627aa4000000000000000000000000000000000000000000000000000000000000008000000000000000000000000000000000000000000000000000000000000f4240000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002000000000000000000000000a0b86991c6218b36c1d19d4a2e9eb0ce3606eb48000000000000000000000000dac17f958d2ee523a2206206994597c13d831ec7869584cd00000000000000000000000010000000000000000000000000000000000000110000000000000000000000000000000015b9ca29df2cd4b929d481fcb4ab9642000000000000000000000000000000000000000000000000",
+            callGasLimit: 800000,
+            verificationGasLimit: 500000,
+            preVerificationGas: 500000,
+            maxFeePerGas: 0,
+            maxPriorityFeePerGas: 0,
+            paymasterAndData: new bytes(0),
+            signature: hex"fe050651afae2c8d5b87a4f2995bbc77c6efba4eb0a801bca371bfccd7dc551009f829eb0c17836968f49210a3e3a5cc955f40e3b66f512d956302d9a963bb081b7b2266726f6d223a7b2274797065223a22544f4b454e222c2261646472657373223a22307845656565654565656545654565654565456545656545454565656565456565656565656545456545222c22616d6f756e74223a22302e38222c22636861696e4964223a2231227d2c22746f223a7b2274797065223a22544f4b454e222c2261646472657373223a22307864616331376639353864326565353233613232303632303639393435393763313364383331656337222c22636861696e4964223a2231227d7d"
+        });
+
+        bytes memory placeholder = abi.encodePacked(uint16(0xFFFF));
+        bytes32 otherChainHash = keccak256("deadbeef");
+
+        // Build the hash lists
+        // define a bytes slice of length 2
+        bytes[] memory srcHashList = new bytes[](2);
+        bytes[] memory destHashList = new bytes[](2);
+        srcHashList[0] = placeholder; // Placeholder in position 0
+        srcHashList[1] = abi.encodePacked(otherChainHash);
+
+        destHashList[0] = abi.encodePacked(otherChainHash);
+        destHashList[1] = placeholder; // Placeholder in position 1
+
+        bytes[] memory chainUserOps = new bytes[](2);
+        chainUserOps[0] = TestSimpleAccountHelper.createCrossChainCallData(sourceEthOp.callData, srcHashList);
+        chainUserOps[1] = TestSimpleAccountHelper.createCrossChainCallData(destPolygonOp.callData, destHashList);
+
+        sourceEthOp.callData = chainUserOps[0];
+        XChainLib.xCallData memory xData = this.parseXElems(sourceEthOp.callData);
+        require(xData.opType == XChainLib.OpType.CrossChain, "Combined UserOp is not cross-chain");
+
+        destPolygonOp.callData = chainUserOps[1];
+        xData = this.parseXElems(destPolygonOp.callData);
+        require(xData.opType == XChainLib.OpType.CrossChain, "Combined UserOp is not cross-chain");
+    }
+
+    function parseXElems(bytes calldata callData) external pure returns (XChainLib.xCallData memory) {
+        return XChainLib.parseXElems(callData);
     }
 
     /**

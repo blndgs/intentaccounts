@@ -1,0 +1,122 @@
+forge script script/deploy/IntentSimpleAccount_Tenderly.s.sol \
+    --rpc-url $RPC_URL \
+    --broadcast \
+    --slow \
+    --private-key $PRIVATE_KEY \
+    --etherscan-api-key $ETHEREUMSCAN_API_KEY \
+    --verify \
+    --verifier-url https://api.polygonscan.com/api \
+    --ffi
+[⠒] Compiling...
+[⠰] Compiling 1 files with Solc 0.8.25
+[⠔] Solc 0.8.25 finished in 1.29s
+Compiler run successful!
+Script ran successfully.
+
+== Logs ==
+  Deployer address: 0x43B32D92d8A6b67104D621E9a9C3831A01A8c50c
+  IntentSimpleAccountFactory deployed at: 0xad11121e42A12B4735F50CF68cf1a1E9Ee0DD713
+  Salt: 0
+  IntentSimpleAccount proxy deployed at: 0xf557A76d0DF75B07555D5b40d8DAE5144048573D
+
+## Setting up 1 EVM.
+
+==========================
+
+Chain 137
+
+Estimated gas price: 30.000000102 gwei
+
+Estimated total gas used for script: 4328390
+
+Estimated amount required: 0.12985170044149578 ETH
+
+==========================
+
+##### polygon
+✅  [Success]Hash: 0x539543cf490e31f1b7e9b6af23119eda699456e2c166bc3c6fffda82233e3af1
+Block: 61173799
+Paid: 0.012665370023642024 ETH (422179 gas * 30.000000056 gwei)
+
+
+##### polygon
+✅  [Success]Hash: 0xcd918d5afe215d95f69a4398fa0172dd4fc93c4fd5f0611523bae462b055b4fd
+Contract Address: 0xad11121e42A12B4735F50CF68cf1a1E9Ee0DD713
+Block: 61173803
+Paid: 0.080645370145161666 ETH (2688179 gas * 30.000000054 gwei)
+
+
+##### polygon
+✅  [Success]Hash: 0xd8ed1e4f22a73bc19e77f8bdb984f12365cb8cfaac53341d718769685d849378
+Block: 61173809
+Paid: 0.004437390007987302 ETH (147913 gas * 30.000000054 gwei)
+
+✅ Sequence #1 on polygon | Total Paid: 0.097748130176790992 ETH (3258271 gas * avg 30.000000054 gwei)
+
+
+==========================
+
+ONCHAIN EXECUTION COMPLETE & SUCCESSFUL.
+##
+Start verification for (4) contracts
+Start verifying contract `0x0960230A1f7e80230c73494062E887DDd56c8cAA` deployed on polygon
+
+Submitting verification for [src/xchainlib.sol:XChainLib] 0x0960230A1f7e80230c73494062E887DDd56c8cAA.
+Submitted contract for verification:
+        Response: `OK`
+        GUID: `6ziwuufep68q7xfcbi7hf6tqxszlm1zw8nnqjbk4djhwepwngu`
+        URL: https://polygonscan.com/address/0x0960230a1f7e80230c73494062e887ddd56c8caa
+Contract verification status:
+Response: `NOTOK`
+Details: `Pending in queue`
+Contract verification status:
+Response: `OK`
+Details: `Pass - Verified`
+Contract successfully verified
+Start verifying contract `0xad11121e42A12B4735F50CF68cf1a1E9Ee0DD713` deployed on polygon
+
+Submitting verification for [src/IntentSimpleAccountFactory.sol:IntentSimpleAccountFactory] 0xad11121e42A12B4735F50CF68cf1a1E9Ee0DD713.
+Submitted contract for verification:
+        Response: `OK`
+        GUID: `b42snz7tr3mwtp6bhkaruzy3uxpxchwl6sqvuhznirliijgtq3`
+        URL: https://polygonscan.com/address/0xad11121e42a12b4735f50cf68cf1a1e9ee0dd713
+Contract verification status:
+Response: `NOTOK`
+Details: `Pending in queue`
+Contract verification status:
+Response: `OK`
+Details: `Pass - Verified`
+Contract successfully verified
+Start verifying contract `0x56AaC4ae1a06eFcD096a995543C8d540b17e4fb0` deployed on polygon
+
+Submitting verification for [src/IntentSimpleAccount.sol:IntentSimpleAccount] 0x56AaC4ae1a06eFcD096a995543C8d540b17e4fb0.
+Submitted contract for verification:
+        Response: `OK`
+        GUID: `7kepsbvzxgc9gi7apbybg1bczdeqkjfv8zacygrfrvjhl9a3c8`
+        URL: https://polygonscan.com/address/0x56aac4ae1a06efcd096a995543c8d540b17e4fb0
+Contract verification status:
+Response: `NOTOK`
+Details: `Pending in queue`
+Contract verification status:
+Response: `OK`
+Details: `Pass - Verified`
+Contract successfully verified
+Start verifying contract `0xf557A76d0DF75B07555D5b40d8DAE5144048573D` deployed on polygon
+
+Submitting verification for [lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy] 0xf557A76d0DF75B07555D5b40d8DAE5144048573D.
+Submitted contract for verification:
+        Response: `OK`
+        GUID: `mgufm7z2gpwfed162i9u38bjkmgtrr3cedpactmudvzbikhxhg`
+        URL: https://polygonscan.com/address/0xf557a76d0df75b07555d5b40d8dae5144048573d
+Contract verification status:
+Response: `NOTOK`
+Details: `Pending in queue`
+Contract verification status:
+Response: `NOTOK`
+Details: `Already Verified`
+Contract source code already verified
+All (4) contracts were verified!
+
+Transactions saved to: /Users/mar/go/src/github.com/blndgs/intentaccounts/broadcast/IntentSimpleAccount_Tenderly.s.sol/137/run-latest.json
+
+Sensitive values saved to: /Users/mar/go/src/github.com/blndgs/intentaccounts/cache/IntentSimpleAccount_Tenderly.s.sol/137/run-latest.json

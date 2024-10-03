@@ -5,13 +5,18 @@ import "../src/IntentUserOperation.sol";
 import "./TestBytesHelper.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {IntentSimpleAccountFactory} from "../src/IntentSimpleAccountFactory.sol";
-import {IntentSimpleAccount} from "../src/IntentSimpleAccount.sol";
+import "../src/IntentSimpleAccount.sol";
 import "forge-std/Test.sol";
-import "forge-std/Vm.sol";
 
 library TestSimpleAccountHelper {
-    address constant ENTRYPOINT_V06 = 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789;
+    using ECDSA for bytes32;
+
     uint256 private constant SIGNATURE_LENGTH = 65;
+
+    // Custom errors
+    error EndLessThanStart();
+    error EndOutOfBounds(uint256 dataLength, uint256 end);
+    error StartOutOfBounds(uint256 dataLength, uint256 start);
 
     /**
      * @notice Generates the initCode for creating a new account using a wallet factory
@@ -45,6 +50,128 @@ library TestSimpleAccountHelper {
         returns (bytes memory)
     {
         return abi.encodePacked(address(factory), abi.encodeWithSelector(factory.createAccount.selector, owner, salt));
+    }
+
+    /**
+     * @notice Creates cross-chain call data according to the linked hash specification.
+     * @param intent The call data for the operation.
+     * @param hashList The array of hash list entries (including the placeholder).
+     * @return bytes The encoded cross-chain call data.
+     */
+    function createCrossChainCallData(bytes memory intent, bytes[] memory hashList)
+        internal
+        pure
+        returns (bytes memory)
+    {
+        bytes memory result = abi.encodePacked(
+            uint16(XChainLib.XC_MARKER), // Marker (2 bytes)
+            uint16(intent.length), // callDataLength (2 bytes)
+            intent, // callData
+            uint8(hashList.length) // hashListLength (1 byte)
+        );
+
+        for (uint256 i = 0; i < hashList.length; i++) {
+            result = abi.encodePacked(result, hashList[i]);
+        }
+
+        return result;
+    }
+
+    /**
+     * @notice Creates a cross-chain UserOperation for testing
+     * @param sender The address of the account initiating the operation
+     * @param nonce The nonce of the account
+     * @param callData The call data for the operation
+     * @param callGasLimit The gas limit for the call
+     * @param verificationGasLimit The gas limit for verification
+     * @param preVerificationGas The gas cost before verification
+     * @param maxFeePerGas The max fee per gas
+     * @param maxPriorityFeePerGas The max priority fee per gas
+     * @param hashListEntries The array of hash list entries (including the placeholder)
+     * @return UserOperation The generated cross-chain UserOperation
+     */
+    function createCrossChainUserOp(
+        address sender,
+        uint256 nonce,
+        bytes memory callData,
+        uint256 callGasLimit,
+        uint256 verificationGasLimit,
+        uint256 preVerificationGas,
+        uint256 maxFeePerGas,
+        uint256 maxPriorityFeePerGas,
+        bytes[] memory hashListEntries
+    ) internal pure returns (UserOperation memory) {
+        bytes memory crossChainCallData = createCrossChainCallData(callData, hashListEntries);
+
+        return createBaseUserOp(
+            sender,
+            nonce,
+            crossChainCallData,
+            callGasLimit,
+            verificationGasLimit,
+            preVerificationGas,
+            maxFeePerGas,
+            maxPriorityFeePerGas
+        );
+    }
+
+    /**
+     * @notice Creates a conventional UserOperation for testing
+     * @param sender The address of the account initiating the operation
+     * @param nonce The nonce of the account
+     * @param callData The call data for the operation
+     * @param callGasLimit The gas limit for the call
+     * @param verificationGasLimit The gas limit for verification
+     * @param preVerificationGas The gas cost before verification
+     * @param maxFeePerGas The max fee per gas
+     * @param maxPriorityFeePerGas The max priority fee per gas
+     * @return UserOperation The generated conventional UserOperation
+     */
+    function createConventionalUserOp(
+        address sender,
+        uint256 nonce,
+        bytes memory callData,
+        uint256 callGasLimit,
+        uint256 verificationGasLimit,
+        uint256 preVerificationGas,
+        uint256 maxFeePerGas,
+        uint256 maxPriorityFeePerGas
+    ) internal pure returns (UserOperation memory) {
+        return UserOperation({
+            sender: sender,
+            nonce: nonce,
+            initCode: "",
+            callData: callData,
+            callGasLimit: callGasLimit,
+            verificationGasLimit: verificationGasLimit,
+            preVerificationGas: preVerificationGas,
+            maxFeePerGas: maxFeePerGas,
+            maxPriorityFeePerGas: maxPriorityFeePerGas,
+            paymasterAndData: "",
+            signature: ""
+        });
+    }
+
+    function createBaseUserOp(
+        address sender,
+        uint256 nonce,
+        bytes memory callData,
+        uint256 callGasLimit,
+        uint256 verificationGasLimit,
+        uint256 preVerificationGas,
+        uint256 maxFeePerGas,
+        uint256 maxPriorityFeePerGas
+    ) internal pure returns (UserOperation memory) {
+        return createBaseUserOp(
+            sender,
+            nonce,
+            callData,
+            callGasLimit,
+            verificationGasLimit,
+            preVerificationGas,
+            maxFeePerGas,
+            maxPriorityFeePerGas
+        );
     }
 
     function printUserOperation(UserOperation memory userOp) internal pure {
