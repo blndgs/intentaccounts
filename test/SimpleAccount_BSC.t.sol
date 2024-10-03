@@ -57,6 +57,18 @@ contract SimpleAccountBscTest is Test {
 
         console2.log("SimpleAccount wallet created at:", address(simpleAccount));
     }
+    
+    function debugCrossChainOperation(UserOperation memory sourceUserOp) private {
+        // slice post signature to retrieve the x-chain encoded Intent
+        bytes memory sourceSigXChainCalldata = sourceUserOp.signature._slice(65, sourceUserOp.signature.length);
+        XChainLib.xCallData memory xcd = this.parseXElems(sourceSigXChainCalldata);
+        assertEq(uint(xcd.opType), uint(XChainLib.OpType.CrossChain), "OpType should be CrossChain");
+        // Add more debugging logic here
+    }
+    
+    function parseXElems(bytes calldata callData) external pure returns (XChainLib.xCallData memory) {
+        return XChainLib.parseXElems(callData);
+    }    
 
     function createIntent() internal pure returns (bytes memory) {
         return bytes(
@@ -104,12 +116,7 @@ contract SimpleAccountBscTest is Test {
          * Uncomment for debugging
          * And compile with '--via-ir' flag to avoid stack too deep error
          *
-         * slice post signature to retrieve the x-chain encoded Intent
-         * bytes memory sourceSigXChainCalldata = sourceUserOp.signature._slice(65, sourceUserOp.signature.length);
-         * XChainLib.OpType opType = XChainLib.identifyUserOpType(sourceSigXChainCalldata);
-         * assertEq(uint(opType), uint(XChainLib.OpType.CrossChain), "OpType should be CrossChain");
-         *
-         * extract the source Intent bytes
+         * debugCrossChainOperation()
          */
 
         // Bundler submits cross-chain userOps on-chain
