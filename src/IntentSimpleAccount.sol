@@ -65,7 +65,7 @@ contract IntentSimpleAccount is SimpleAccount {
         opHash = keccak256(abi.encode(userOp.hashIntentOp(parsedData.callDataHash), address(entryPoint()), chainId));
 
         // For cross-chain operations, compute the combined hash
-        if (parsedData.opType == XChainLib.OpType.CrossChain && parsedData.hashCount > 0) {
+        if (parsedData.opType == XChainLib.OpType.CrossChain && parsedData.hashCount > 1) {
             opHash = XChainLib.computeCrossChainHash(opHash, parsedData.hashList, parsedData.hashCount);
         }
 
