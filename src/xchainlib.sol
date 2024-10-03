@@ -42,7 +42,7 @@ library XChainLib {
      * The structure of xdata is as follows:
      * - Marker (2 bytes): XC_MARKER
      * - callDataLength (2 bytes): length of callData
-     * - callData (callDataLength bytes): original callData
+     * - callData (callDataLength bytes): Intent JSON
      * - hashListLength (1 byte): number of hashes in hashList
      * - hashList: list of hashes or placeholders (variable length)
      *
@@ -144,8 +144,6 @@ library XChainLib {
                 }
             }
         }
-
-        // Do NOT set callDataHash for conventional operations here
     }
 
     /// Computes the final hash for cross-chain operations

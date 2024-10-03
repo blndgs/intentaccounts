@@ -57,6 +57,7 @@ contract IntentSimpleAccount is SimpleAccount {
                 // Use xData as the callDataHash
                 parsedData.callDataHash = keccak256(xData);
             } else {
+                // Vanilla eip4337 operation
                 parsedData.callDataHash = keccak256(userOp.callData);
             }
         }
