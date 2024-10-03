@@ -19,7 +19,6 @@ contract SimpleAccountBscTest is Test {
     using TestBytesHelper for bytes;
 
     address constant ENTRYPOINT_V06 = 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789;
-    uint256 public constant CHAIN_ID = 56;
     uint256 bscFork;
 
     IntentSimpleAccountFactory factory;
@@ -44,8 +43,7 @@ contract SimpleAccountBscTest is Test {
         // Create BSC Fork instance
         string memory urlEnv = string(abi.encodePacked(network, "_RPC_URL"));
         bscFork = vm.createSelectFork(vm.envString(urlEnv));
-        require(CHAIN_ID == block.chainid, "Chain ID should match");
-
+        require(890 == block.chainid || 56 == block.chainid, "Chain ID should match");
         vm.startPrank(ownerAddress);
 
         // Deploy the EntryPoint contract or use an existing one
