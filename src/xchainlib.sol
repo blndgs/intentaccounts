@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.27;
 
-
 /**
  * @title XChainLib
  * @dev Library for handling cross-chain UserOperations in ERC-4337 compatible wallets with packed callData
@@ -51,28 +50,20 @@ library XChainLib {
      * It reads the hashListLength and parses the hashList entries, which can be either a placeholder (2 bytes) or a hash (32 bytes).
      */
     function parseXElems(bytes calldata xData) internal pure returns (xCallData memory xElems) {
-        // Initialize with default values
-        xElems.opType = XChainLib.OpType.Conventional;
-        xElems.hashCount = 0;
-
         uint256 xDataLength = xData.length;
-
         if (xDataLength >= OPTYPE_LENGTH + CALLDATA_LENGTH_SIZE + HASHLIST_LENGTH_SIZE + PLACEHOLDER_LENGTH) {
-            uint256 offset = 0;
             uint16 marker;
-            uint16 callDataLength;
-
             assembly {
-                // Read the marker (2 bytes)
+                // Read the x-chain marker (2 bytes)
                 marker := shr(240, calldataload(xData.offset))
             }
 
             if (marker == XC_MARKER) {
-                // Set opType to CrossChain
                 xElems.opType = XChainLib.OpType.CrossChain;
 
-                offset = OPTYPE_LENGTH + CALLDATA_LENGTH_SIZE;
+                uint256 offset = OPTYPE_LENGTH + CALLDATA_LENGTH_SIZE;
 
+                uint16 callDataLength;
                 assembly {
                     // Read callDataLength (2 bytes)
                     callDataLength := shr(240, calldataload(add(xData.offset, OPTYPE_LENGTH)))
@@ -103,8 +94,12 @@ library XChainLib {
 
                             if (entryOffset + 2 <= xDataLength) {
                                 // Read possiblePlaceholder (2 bytes)
-                                uint16 possiblePlaceholder =
-                                    (uint16(uint8(xData[entryOffset])) << 8) | uint16(uint8(xData[entryOffset + 1]));
+                                uint16 possiblePlaceholder;
+                                assembly {
+                                    let byte1 := byte(0, calldataload(add(xData.offset, entryOffset)))
+                                    let byte2 := byte(0, calldataload(add(xData.offset, add(entryOffset, 1))))
+                                    possiblePlaceholder := or(shl(8, byte1), byte2)
+                                }
 
                                 if (possiblePlaceholder == XC_MARKER) {
                                     // It's a placeholder
@@ -156,28 +151,26 @@ library XChainLib {
         pure
         returns (bytes32)
     {
-        bool placeholderReplaced = false;
-        for (uint256 i = 0; i < hashCount; i++) {
-            if (hashList[i] == bytes32(uint256(XC_MARKER) << 240)) {
-                hashList[i] = initialOpHash;
-                placeholderReplaced = true;
-                break;
+        // Replace placeholder with initialOpHash
+        bytes32 placeholder = bytes32(uint256(XC_MARKER) << 240);
+        if (hashCount > 1) {
+            if (hashList[0] == placeholder) {
+                hashList[0] = initialOpHash;
+            } else if (hashList[1] == placeholder) {
+                hashList[1] = initialOpHash;
+            } else if (hashCount == MAX_OP_COUNT && hashList[2] == placeholder) {
+                hashList[2] = initialOpHash;
             }
         }
 
-        // If placeholder wasn't found, return the initial hash
-        if (!placeholderReplaced) {
-            return initialOpHash;
-        }
-
-        // Compute combined hash based on hashCount
+        // Compute combined hash
         if (hashCount == MIN_OP_COUNT) {
             return keccak256(abi.encodePacked(hashList[0], hashList[1]));
         } else if (hashCount == MAX_OP_COUNT) {
             return keccak256(abi.encodePacked(hashList[0], hashList[1], hashList[2]));
         } else {
-            // For hashCount == 1, use the single hash
-            return keccak256(abi.encodePacked(hashList[0]));
+            // For hashCount == 1 or default case use the single hash
+            return initialOpHash;
         }
     }
 }

@@ -46,7 +46,7 @@ contract IntentSimpleAccount is SimpleAccount {
         // Extract xData from the signature if present
         bytes calldata xData = userOp.signature.length > SIGNATURE_LENGTH
             ? userOp.signature[SIGNATURE_LENGTH:]
-            : userOp.signature[userOp.signature.length:userOp.signature.length];
+            : userOp.signature[0:0];
 
         // Parse the xData
         XChainLib.xCallData memory parsedData = XChainLib.parseXElems(xData);
@@ -66,7 +66,7 @@ contract IntentSimpleAccount is SimpleAccount {
         opHash = keccak256(abi.encode(userOp.hashIntentOp(parsedData.callDataHash), address(entryPoint()), chainId));
 
         // For cross-chain operations, compute the combined hash
-        if (parsedData.opType == XChainLib.OpType.CrossChain && parsedData.hashCount > 1) {
+        if (parsedData.opType == XChainLib.OpType.CrossChain) {
             opHash = XChainLib.computeCrossChainHash(opHash, parsedData.hashList, parsedData.hashCount);
         }
 
