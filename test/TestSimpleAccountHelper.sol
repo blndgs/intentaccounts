@@ -103,19 +103,16 @@ library TestSimpleAccountHelper {
     ) internal pure returns (UserOperation memory) {
         bytes memory crossChainCallData = createCrossChainCallData(callData, hashListEntries);
 
-        return UserOperation({
-            sender: sender,
-            nonce: nonce,
-            initCode: "",
-            callData: crossChainCallData,
-            callGasLimit: callGasLimit,
-            verificationGasLimit: verificationGasLimit,
-            preVerificationGas: preVerificationGas,
-            maxFeePerGas: maxFeePerGas,
-            maxPriorityFeePerGas: maxPriorityFeePerGas,
-            paymasterAndData: "",
-            signature: ""
-        });
+        return createBaseUserOp(
+            sender,
+            nonce,
+            crossChainCallData,
+            callGasLimit,
+            verificationGasLimit,
+            preVerificationGas,
+            maxFeePerGas,
+            maxPriorityFeePerGas
+        );
     }
 
     /**
@@ -155,129 +152,26 @@ library TestSimpleAccountHelper {
         });
     }
 
-    function parseXElems(bytes calldata extraData) internal pure returns (XChainLib.xCallData memory xElems) {
-        console2.log("parseXElems, extraData length:", extraData.length);
-        console2.log("parseXElems, initial opType:", uint256(xElems.opType));
-        console2.log("parseXElems, initial hashCount:", xElems.hashCount);
-
-        // Initialize with default values
-        xElems.opType = XChainLib.OpType.Conventional;
-        xElems.hashCount = 0;
-
-        uint256 extraDataLength = extraData.length;
-
-        if (
-            extraDataLength
-                >= XChainLib.OPTYPE_LENGTH + XChainLib.CALLDATA_LENGTH_SIZE + XChainLib.HASHLIST_LENGTH_SIZE
-                    + XChainLib.PLACEHOLDER_LENGTH
-        ) {
-            uint256 offset = 0;
-
-            // Read the marker (2 bytes)
-            uint16 marker = (uint16(uint8(extraData[offset])) << 8) | uint16(uint8(extraData[offset + 1]));
-            offset += XChainLib.OPTYPE_LENGTH;
-
-            if (marker == XChainLib.XC_MARKER) {
-                // Set opType to CrossChain
-                xElems.opType = XChainLib.OpType.CrossChain;
-                console2.log("parseXElems, opType set to CrossChain");
-
-                // Read callDataLength (2 bytes)
-                uint16 callDataLength = (uint16(uint8(extraData[offset])) << 8) | uint16(uint8(extraData[offset + 1]));
-                console2.log("parseXElems, callDataLength:", callDataLength);
-                offset += XChainLib.CALLDATA_LENGTH_SIZE;
-
-                if (
-                    extraDataLength
-                        >= offset + callDataLength + XChainLib.HASHLIST_LENGTH_SIZE + XChainLib.PLACEHOLDER_LENGTH
-                ) {
-                    // Extract callDataHash
-                    xElems.callDataHash = keccak256(extraData[offset:offset + callDataLength]);
-                    console2.log("parseXElems, callDataHash:");
-                    console2.logBytes32(xElems.callDataHash);
-                    offset += callDataLength;
-
-                    // Read hashListLength
-                    uint8 hashListLength = uint8(extraData[offset]);
-                    console2.log("parseXElems, hashListLength:", hashListLength);
-                    offset += XChainLib.HASHLIST_LENGTH_SIZE;
-
-                    if (hashListLength >= XChainLib.MIN_OP_COUNT && hashListLength <= XChainLib.MAX_OP_COUNT) {
-                        xElems.hashCount = hashListLength;
-                        console2.log("parseXElems, hashCount set to:", xElems.hashCount);
-
-                        uint256 expectedLength = offset;
-
-                        // Pre-calculate expected length based on entry sizes
-                        for (uint256 i = 0; i < hashListLength; i++) {
-                            uint256 entryOffset = expectedLength;
-
-                            // Check if the next 2 bytes are the placeholder
-                            uint16 possiblePlaceholder;
-                            assembly {
-                                possiblePlaceholder := shr(240, calldataload(add(extraData.offset, entryOffset)))
-                            }
-                            console2.log("parseXElems, possiblePlaceholder at index", i);
-                            console2.log("parseXElems, possiblePlaceholder :", possiblePlaceholder);
-
-                            if (possiblePlaceholder == XChainLib.XC_MARKER) {
-                                console2.log("parseXElems, placeholder found at index", i);
-                                expectedLength += XChainLib.PLACEHOLDER_LENGTH;
-                            } else {
-                                console2.log("parseXElems, hash found at index", i);
-                                expectedLength += XChainLib.HASH_LENGTH;
-                            }
-                        }
-
-                        console2.log("parseXElems, expectedLength:", expectedLength);
-                        if (extraDataLength >= expectedLength) {
-                            // Loop through hash list entries
-                            for (uint256 i = 0; i < hashListLength; i++) {
-                                uint256 entryOffset = offset;
-
-                                // Check if the next 2 bytes are the placeholder
-                                uint16 possiblePlaceholder;
-                                assembly {
-                                    possiblePlaceholder := shr(240, calldataload(add(extraData.offset, entryOffset)))
-                                }
-                                console2.log("parseXElems, possiblePlaceholder at index", i, ":", possiblePlaceholder);
-
-                                if (possiblePlaceholder == XChainLib.XC_MARKER) {
-                                    // It's a placeholder
-                                    xElems.hashList[i] = bytes32(uint256(XChainLib.XC_MARKER) << 240);
-                                    console2.log("parseXElems, placeholder stored in hashList[", i, "]");
-                                    offset += XChainLib.PLACEHOLDER_LENGTH;
-                                } else {
-                                    // It's a hash (32 bytes)
-                                    bytes32 hashEntry;
-                                    assembly {
-                                        hashEntry := calldataload(add(extraData.offset, offset))
-                                    }
-                                    xElems.hashList[i] = hashEntry;
-                                    console2.log("parseXElems, hashList[", i, "]:");
-                                    console2.logBytes32(xElems.hashList[i]);
-                                    offset += XChainLib.HASH_LENGTH;
-                                }
-                            }
-                        } else {
-                            // If not enough data for all hashes, set opType back to Conventional
-                            xElems.opType = XChainLib.OpType.Conventional;
-                            console2.log("parseXElems, not enough data for all hashes, opType set to Conventional");
-                        }
-                    } else {
-                        // If hashListLength is invalid, set opType back to Conventional
-                        xElems.opType = XChainLib.OpType.Conventional;
-                        console2.log("parseXElems, invalid hashListLength, opType set to Conventional");
-                    }
-                } else {
-                    // If not enough data, set opType back to Conventional
-                    xElems.opType = XChainLib.OpType.Conventional;
-                    console2.log("parseXElems, not enough data, opType set to Conventional");
-                }
-            }
-        }
-
-        // Do NOT set callDataHash for conventional operations here
+    function createBaseUserOp(
+        address sender,
+        uint256 nonce,
+        bytes memory callData,
+        uint256 callGasLimit,
+        uint256 verificationGasLimit,
+        uint256 preVerificationGas,
+        uint256 maxFeePerGas,
+        uint256 maxPriorityFeePerGas
+    ) internal pure returns (UserOperation memory) {
+        return createBaseUserOp(
+            sender,
+            nonce,
+            callData,
+            callGasLimit,
+            verificationGasLimit,
+            preVerificationGas,
+            maxFeePerGas,
+            maxPriorityFeePerGas
+        );
     }
 
     function printUserOperation(UserOperation memory userOp) internal pure {
