@@ -20,9 +20,6 @@ library XChainLib {
         CrossChain
     }
 
-    // Custom errors
-    error InvalidCallDataLength(uint256 length);
-
     /// Struct to hold parsed data from xData
     struct xCallData {
         OpType opType; // Operation type: a 2-byte 0xFFFF marker indicates CrossChain
