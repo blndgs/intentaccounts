@@ -1,0 +1,91 @@
+forge script script/deploy/IntentSimpleAccount.s.sol \
+    --rpc-url $RPC_URL \
+     --broadcast \
+     --slow \
+     --private-key $PRIVATE_KEY \
+     --etherscan-api-key $TENDERLY_ACCESS_TOKEN \
+     --verify \
+     --verifier-url $TENDERLY_VERIFIER_URL \
+     --ffi
+[⠢] Compiling...
+No files changed, compilation skipped
+Script ran successfully.
+
+== Logs ==
+  Deployer address: 0x43B32D92d8A6b67104D621E9a9C3831A01A8c50c
+  IntentSimpleAccountFactory deployed at: 0x228d08c6378cF852a18Fc5fC18cEFbf51ADE4E9f
+  Salt: 0
+  IntentSimpleAccount proxy deployed at: 0xF9b0410902ee9599C6B15f0F54bd86b75E62DcDc
+
+## Setting up 1 EVM.
+
+==========================
+
+Chain 8889
+
+Estimated gas price: 0.000000003 gwei
+
+Estimated total gas used for script: 3555516
+
+Estimated amount required: 0.000000000010666548 ETH
+
+==========================
+
+##### 8889
+✅  [Success]Hash: 0x68ae64797dc12f175da8d343b379352cf3bbe9e430bc05195c884782a16c0e0f
+Contract Address: 0x228d08c6378cF852a18Fc5fC18cEFbf51ADE4E9f
+Block: 62752351
+Paid: 0.000000000007733856 ETH (2577952 gas * 0.000000003 gwei)
+
+
+##### 8889
+✅  [Success]Hash: 0x42446c8c1194ecf5ae06a70f9e714cb52910a65100e8bef5afbcde63ea48a6a7
+Block: 62752352
+Paid: 0.000000000000443469 ETH (147823 gas * 0.000000003 gwei)
+
+✅ Sequence #1 on 8889 | Total Paid: 0.000000000008177325 ETH (2725775 gas * avg 0.000000003 gwei)
+
+
+==========================
+
+ONCHAIN EXECUTION COMPLETE & SUCCESSFUL.
+##
+Start verification for (3) contracts
+Start verifying contract `0x228d08c6378cF852a18Fc5fC18cEFbf51ADE4E9f` deployed on 8889
+
+Submitting verification for [src/IntentSimpleAccountFactory.sol:IntentSimpleAccountFactory] 0x228d08c6378cF852a18Fc5fC18cEFbf51ADE4E9f.
+Submitted contract for verification:
+	Response: `OK`
+	GUID: `0x228d08c6378cf852a18fc5fc18cefbf51ade4e9f`
+	URL: https://virtual.polygon.rpc.tenderly.co/f359f5fb-6bf7-4a0b-a1c9-61f72e6dc0a7/verify/address/0x228d08c6378cf852a18fc5fc18cefbf51ade4e9f
+Contract verification status:
+Response: `OK`
+Details: `Pass - Verified`
+Contract successfully verified
+Start verifying contract `0x0E721B7d29f79392D3D622899BC810B6C4cE4e13` deployed on 8889
+
+Submitting verification for [src/IntentSimpleAccount.sol:IntentSimpleAccount] 0x0E721B7d29f79392D3D622899BC810B6C4cE4e13.
+Submitted contract for verification:
+	Response: `OK`
+	GUID: `0x0e721b7d29f79392d3d622899bc810b6c4ce4e13`
+	URL: https://virtual.polygon.rpc.tenderly.co/f359f5fb-6bf7-4a0b-a1c9-61f72e6dc0a7/verify/address/0x0e721b7d29f79392d3d622899bc810b6c4ce4e13
+Contract verification status:
+Response: `OK`
+Details: `Pass - Verified`
+Contract successfully verified
+Start verifying contract `0xF9b0410902ee9599C6B15f0F54bd86b75E62DcDc` deployed on 8889
+
+Submitting verification for [lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy] 0xF9b0410902ee9599C6B15f0F54bd86b75E62DcDc.
+Submitted contract for verification:
+	Response: `OK`
+	GUID: `0xf9b0410902ee9599c6b15f0f54bd86b75e62dcdc`
+	URL: https://virtual.polygon.rpc.tenderly.co/f359f5fb-6bf7-4a0b-a1c9-61f72e6dc0a7/verify/address/0xf9b0410902ee9599c6b15f0f54bd86b75e62dcdc
+Contract verification status:
+Response: `OK`
+Details: `Pass - Verified`
+Contract successfully verified
+All (3) contracts were verified!
+
+Transactions saved to: /Users/mar/go/src/github.com/blndgs/intentaccounts/broadcast/IntentSimpleAccount.s.sol/8889/run-latest.json
+
+Sensitive values saved to: /Users/mar/go/src/github.com/blndgs/intentaccounts/cache/IntentSimpleAccount.s.sol/8889/run-latest.json
