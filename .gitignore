@@ -27,3 +27,5 @@ broadcast
 lcov.info
 
 .DS_Store
+
+script/deploy_mainnet.sh

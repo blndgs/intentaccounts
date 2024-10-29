@@ -65,8 +65,8 @@ library TestSimpleAccountHelper {
     {
         bytes memory result = abi.encodePacked(
             uint16(XChainLib.XC_MARKER), // Marker (2 bytes)
-            uint16(intent.length), // callDataLength (2 bytes)
-            intent, // callData
+            uint16(intent.length), // intentLength (2 bytes)
+            intent,
             uint8(hashList.length) // hashListLength (1 byte)
         );
 

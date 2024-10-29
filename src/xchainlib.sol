@@ -20,15 +20,12 @@ library XChainLib {
         CrossChain
     }
 
-    // Custom errors
-    error InvalidCallDataLength(uint256 length);
-
     /// Struct to hold parsed data from xData
     struct xCallData {
-        OpType opType;
-        bytes32 callDataHash;
+        OpType opType; // Operation type: a 2-byte 0xFFFF marker indicates CrossChain
+        bytes32 callDataHash; // Cash the callData hash for the computation of the operation hash
         bytes32[MAX_OP_COUNT] hashList;
-        uint256 hashCount;
+        uint256 hashCount; // Number of hashes in the hashList
     }
 
     /**
@@ -40,13 +37,19 @@ library XChainLib {
      *
      * The structure of xdata is as follows:
      * - Marker (2 bytes): XC_MARKER
-     * - callDataLength (2 bytes): length of callData
-     * - callData (callDataLength bytes): Intent JSON
+     * - intentLength (2 bytes): length of Intent JSON
+     * - intent (intentLength bytes): Intent JSON
      * - hashListLength (1 byte): number of hashes in hashList
      * - hashList: list of hashes or placeholders (variable length)
      *
+     * - +----------------------+---------------------------+---------------+
+     * - | 0xffff 2-byte marker | 2 bytes (Intent JSON Len) | Intent JSON.  |
+     * - +----------------------+------+--------------------+---------------+
+     * - | 1 byte hash list length (N) | Hash List Entries (variable length |
+     * - +-----------------------------+------------------------------------+
+     *
      * This function checks for the marker to determine if the operation is cross-chain.
-     * It then reads the callDataLength and extracts the callDataHash.
+     * It then reads the intentLength and extracts the callDataHash.
      * It reads the hashListLength and parses the hashList entries, which can be either a placeholder (2 bytes) or a hash (32 bytes).
      */
     function parseXElems(bytes calldata xData) internal pure returns (xCallData memory xElems) {
@@ -63,16 +66,16 @@ library XChainLib {
 
                 uint256 offset = OPTYPE_LENGTH + CALLDATA_LENGTH_SIZE;
 
-                uint16 callDataLength;
+                uint16 intentLength;
                 assembly {
-                    // Read callDataLength (2 bytes)
-                    callDataLength := shr(240, calldataload(add(xData.offset, OPTYPE_LENGTH)))
+                    // Read intentLength (2 bytes)
+                    intentLength := shr(240, calldataload(add(xData.offset, OPTYPE_LENGTH)))
                 }
 
-                if (xDataLength >= offset + callDataLength + HASHLIST_LENGTH_SIZE + PLACEHOLDER_LENGTH) {
+                if (xDataLength >= offset + intentLength + HASHLIST_LENGTH_SIZE + PLACEHOLDER_LENGTH) {
                     // Extract callDataHash
-                    xElems.callDataHash = keccak256(xData[offset:offset + callDataLength]);
-                    offset += callDataLength;
+                    xElems.callDataHash = keccak256(xData[offset:offset + intentLength]);
+                    offset += intentLength;
 
                     // Read hashListLength
                     uint8 hashListLength;

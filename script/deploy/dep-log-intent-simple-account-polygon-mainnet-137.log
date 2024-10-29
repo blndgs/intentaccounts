@@ -1,4 +1,4 @@
-forge script script/deploy/IntentSimpleAccount_Tenderly.s.sol \
+forge script script/deploy/IntentSimpleAccount.s.sol \
     --rpc-url $RPC_URL \
     --broadcast \
     --slow \

@@ -16,8 +16,6 @@ contract SimpleAccounPolygonTest is Test {
     using UserOperationLib for UserOperation;
     using TestSimpleAccountHelper for UserOperation;
 
-    uint256 constant POLYGON_CUSTOM_CHAIN_ID = 8888;
-    uint256 constant POLYGON_MAINNET_CHAIN_ID = 137;
     address constant ENTRYPOINT_V06 = 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789;
     uint256 polyFork;
 
@@ -44,10 +42,6 @@ contract SimpleAccounPolygonTest is Test {
         string memory urlEnv = "POLYGON_RPC_URL";
         polyFork = vm.createSelectFork(vm.envString(urlEnv));
         
-        require(POLYGON_CUSTOM_CHAIN_ID == block.chainid || POLYGON_MAINNET_CHAIN_ID == block.chainid,
-            "Chain ID should match"
-        );
-
         vm.startPrank(ownerAddress);
 
         // Deploy the EntryPoint contract or use an existing one
