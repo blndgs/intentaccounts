@@ -5,14 +5,14 @@ ethereum = "${ETHEREUM_RPC_URL}"
 bsc = "${BSC_RPC_URL}"
 
 [etherscan]
-polygon = { key = "${POLYGONSCAN_API_KEY}", chain = "137" }
+etherscan = { key = "${ETHEREUMSCAN_API_KEY}", chain = "1", url = "https://api.ethereumscan.com/api" }
+polygon = { key = "${POLYGONSCAN_API_KEY}", chain = "137", url = "https://api.polygonscan.com/api" }
 v-bsc-890 = { key = "${TENDERLY_ACCESS_TOKEN}", chain = "890", url = "${BSC_RPC_URL}/verify/etherscan" }
-etherscan = { key = "${ETHEREUMSCAN_API_KEY}", chain = "1" }
 v-mainnet888scan = { key = "${TENDERLY_ACCESS_TOKEN}", chain = "888", url = "${ETHEREUM_RPC_URL}/verify/etherscan" }
 v-polygon = { key = "${TENDERLY_ACCESS_TOKEN}", chain = "8889", url = "${POLYGON_RPC_URL}/verify/etherscan" }
 
 [profile.default]
-solc = "0.8.27"
+solc = "0.8.28"
 src = "src"
 out = "out"
 libs = ["lib"]
@@ -20,5 +20,9 @@ cbor_metadata = true
 evmVersion = "cancun"
 build_info = true
 extra_output = ["storageLayout"]
+# gas_price = "30000000000" # 30 gwei
+# gas_limit = "3600000"
+optimizer = true
+optimizer_runs = 200
 
 # See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options
