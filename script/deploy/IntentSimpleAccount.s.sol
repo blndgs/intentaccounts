@@ -3,70 +3,135 @@ pragma solidity ^0.8.25;
 
 import "src/IntentSimpleAccountFactory.sol";
 import "src/IntentSimpleAccount.sol";
+import "src/IntentSimpleAccountFactoryDeployer.sol";
 import "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import "forge-std/Script.sol";
 
 /**
- * @title DeploySimpleAccountTenderly
- * @dev This contract deploys a SimpleAccount and its factory
- * and verifies the contracts (proxy and implementation).
- * Make sure you have installed and logged-in to Tenderly CLI if you are deploying at Tenderly.
+ * @title DeploySimpleAccount
+ * @dev This contract deploys a SimpleAccount and its factory with deterministic addresses
+ * across EVM networks. It uses a dedicated private key with zero nonce for factory deployment
+ * to ensure same addresses across chains.
  *
- * Script arguments:
- * NETWORK=ETHEREUM (.env)
- * ETHEREUM_PRIVATE_KEY (.env)
+ * Environment Variables Required:
+ * - NETWORK: The network to deploy to (e.g., ETHEREUM, POLYGON, BSC)
+ * - DEPLOYER_KEY: Dedicated private key for factory deployment (MUST have 0 nonce)
+ * - OPERATOR_KEY: Private key for account creation and operations
+ * - {NETWORK}_SALT: The salt value for deterministic deployment
  *
- * CLI arguments below:
- * export TENDERLY_VERIFIER_URL=https://virtual.mainnet.rpc.tenderly.co/c5ed9a3b-7ad5-4d6a-8e4b-76a4b00ba6ea/verify/etherscan
- * RPC_URL=https://virtual.mainnet.rpc.tenderly.co/c5ed9a3b-7ad5-4d6a-8e4b-76a4b00ba6ea
- * PRIVATE_KEY=
- * TENDERLY_ACCESS_TOKEN=
+ * CLI examples:
+ * MAINNET
+ * export VERIFIER_URL=https://api.polygonscan.com/api
+ * TENDERLY
+ * export VERIFIER_URL=https://virtual.mainnet.rpc.tenderly.co/c5ed9a3b-7ad5-4d6a-8e4b-76a4b00ba6ea/verify/etherscan
+ * RPC_URL=https://bsc-mainnet.nodereal.io/v1/12445b762b994082bb3b7b7c8788b085
+ * DEPLOYER_KEY=   # Must have 0 nonce for deterministic addresses
+ * OPERATOR_KEY=   # For account operations
+ * ETHEREUMSCAN_API_KEY=
  *
+ * Deploy command:
  * forge script script/deploy/IntentSimpleAccount.s.sol \
- *   --rpc-url $RPC_URL \
+ *    --rpc-url $RPC_URL \
  *    --broadcast \
  *    --slow \
- *    --private-key $PRIVATE_KEY \
- *    --etherscan-api-key $TENDERLY_ACCESS_TOKEN \
+ *    --private-key $OPERATOR_KEY \
+ *    --etherscan-api-key $ETHEREUMSCAN_API_KEY \
  *    --verify \
- *    --verifier-url $TENDERLY_VERIFIER_URL \
- *    --ffi
+ *    --verifier-url $VERIFIER_URL \
+ *    --ffi -vvvv
  */
 contract DeploySimpleAccount is Script {
+    address internal constant ENTRYPOINT = 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789;
     string internal _network;
+
+    error NonZeroNonce(uint256 nonce);
 
     function setUp() public {
         _network = vm.envString("NETWORK");
     }
 
-    /**
-     * @dev Deploys a SimpleAccount and its factory on a blockchain network.
-     * Make sure you have installed and logged-in to Tenderly CLI.
-     */
+    function predictFactoryAddress(address deployer, bytes32 salt) public view returns (address) {
+        bytes memory creationCode = abi.encodePacked(
+            type(IntentSimpleAccountFactory).creationCode,
+            abi.encode(IEntryPoint(ENTRYPOINT), salt)
+        );
+        bytes32 hash = keccak256(
+            abi.encodePacked(
+                bytes1(0xff),
+                deployer,
+                salt,
+                keccak256(creationCode)
+            )
+        );
+        return address(uint160(uint256(hash)));
+    }
+
     function run() public {
-        address entryPointAddress = 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789;
-
-        string memory privateKeyEnv = string(abi.encodePacked(_network, "_PRIVATE_KEY"));
-        string memory privateKeyString = vm.envString(privateKeyEnv);
-        uint256 deployerPrivateKey = vm.parseUint(privateKeyString);
-        address deployer = vm.addr(deployerPrivateKey);
-        console2.log("Deployer address:", deployer);
-
-        vm.startBroadcast(deployerPrivateKey);
-
-        // Deploy IntentSimpleAccountFactory
-        IntentSimpleAccountFactory factory = new IntentSimpleAccountFactory(IEntryPoint(entryPointAddress));
-        console2.log("IntentSimpleAccountFactory deployed at:", address(factory));
-
-        // Use salt
+        // Get network-specific salt
         string memory saltEnv = string(abi.encodePacked(_network, "_SALT"));
-        uint256 salt = vm.envUint(saltEnv);
-        console2.log("Salt:", salt);
+        uint256 saltUint = vm.envUint(saltEnv);
+        bytes32 salt = bytes32(saltUint);
 
-        // Deploy a IntentSimpleAccount instance using the factory
-        address owner = vm.addr(deployerPrivateKey);
-        IntentSimpleAccount simpleAccountProxy = factory.createAccount(owner, salt);
-        console2.log("IntentSimpleAccount proxy deployed at:", address(simpleAccountProxy));
+        // Get factory deployer key and address
+        uint256 deployerKey = vm.envUint("DEPLOYER_KEY");
+        address factoryDeployer = vm.addr(deployerKey);
+        
+        // Get operator key and address (for account creation and general operations)
+        uint256 operatorKey = vm.envUint("OPERATOR_KEY");
+        address operator = vm.addr(operatorKey);
+
+        // Log initial state
+        console2.log("Network:", _network);
+        console2.log("Factory Deployer:", factoryDeployer);
+        console2.log("Operator:", operator);
+        console2.log("Salt:", uint256(salt));
+
+        // Check deployer nonce - HALT if not 0
+        uint256 deployerNonce = vm.getNonce(factoryDeployer);
+        if (deployerNonce != 0) {
+            revert NonZeroNonce(deployerNonce);
+        }
+
+        // Predict factory address
+        address predictedFactoryAddress = predictFactoryAddress(factoryDeployer, salt);
+        console2.log("Predicted factory address:", predictedFactoryAddress);
+
+        // Deploy or get factory
+        IntentSimpleAccountFactory factory;
+        if (predictedFactoryAddress.code.length > 0) {
+            factory = IntentSimpleAccountFactory(predictedFactoryAddress);
+            console2.log("Using existing factory at:", address(factory));
+        } else {
+            // Deploy factory using dedicated deployer key
+            vm.broadcast(deployerKey);
+            factory = new IntentSimpleAccountFactory{salt: salt}(IEntryPoint(ENTRYPOINT));
+            console2.log("Deployed new factory at:", address(factory));
+            
+            require(
+                address(factory) == predictedFactoryAddress,
+                "Factory address mismatch"
+            );
+        }
+
+        // Switch to operator for account creation
+        vm.startBroadcast(operatorKey);
+
+        // Predict account address
+        address predictedAccountAddress = factory.getAddress(operator, saltUint);
+        console2.log("Predicted account address:", predictedAccountAddress);
+
+        // Create or get account
+        if (predictedAccountAddress.code.length > 0) {
+            console2.log("Account already exists at:", predictedAccountAddress);
+        } else {
+            IntentSimpleAccount account = factory.createAccount(operator, saltUint);
+            console2.log("Deployed new account at:", address(account));
+            
+            require(
+                address(account) == predictedAccountAddress,
+                "Account address mismatch"
+            );
+        }
 
         vm.stopBroadcast();
     }
