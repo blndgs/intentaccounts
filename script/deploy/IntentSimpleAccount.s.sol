@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.25;
+pragma solidity ^0.8.28;
 
 import "src/IntentSimpleAccountFactory.sol";
 import "src/IntentSimpleAccount.sol";
-import "src/IntentSimpleAccountFactoryDeployer.sol";
 import "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import "forge-std/Script.sol";
 
@@ -14,19 +13,33 @@ import "forge-std/Script.sol";
  * to ensure same addresses across chains.
  *
  * Environment Variables Required:
- * - NETWORK: The network to deploy to (e.g., ETHEREUM, POLYGON, BSC)
- * - DEPLOYER_KEY: Dedicated private key for factory deployment (MUST have 0 nonce)
- * - OPERATOR_KEY: Private key for account creation and operations
- * - {NETWORK}_SALT: The salt value for deterministic deployment
+ * - FACTORY_DEPLOYER_KEY: Dedicated private key for factory deployment (MUST have 0 nonce)
+ * - WALLET_DEPLOYER_KEY: Private key for account creation and operations
+ * - FACTORY_SALT: The salt value for deterministic factory deployment
+ * - WALLET_SALT: Salt for deterministic account creation
+ *
+ * - Different use cases for salts:
+ * - Factory salt - for infrastructure/deployment coordination
+ * - bytes32 factorySalt = keccak256("INTENT_SIMPLE_ACCOUNT_FACTORY_V1");
+ * - Wallet salts - for user account management
+ * - uint256 primaryWalletSalt = 0;  // User's main account
+ * - uint256 backupWalletSalt = 1;   // Backup account
+ * - uint256 gameWalletSalt = 100;   // Gaming specific account
+ * -
+ * - All these accounts will be deterministic across chains because:
+ * - 1. Factory address is same (due to factorySalt)
+ * - 2. Owner address is same
+ * - 3. Wallet salt is same
  *
  * CLI examples:
- * MAINNET
- * export VERIFIER_URL=https://api.polygonscan.com/api
- * TENDERLY
- * export VERIFIER_URL=https://virtual.mainnet.rpc.tenderly.co/c5ed9a3b-7ad5-4d6a-8e4b-76a4b00ba6ea/verify/etherscan
+ *  MAINNET
+ *  export VERIFIER_URL=https://api.polygonscan.com/api
+ *  -- OR --
+ *  TENDERLY
+ *  export VERIFIER_URL=https://virtual.mainnet.rpc.tenderly.co/c5ed9a3b-7ad5-4d6a-8e4b-76a4b00ba6ea/verify/etherscan
  * RPC_URL=https://bsc-mainnet.nodereal.io/v1/12445b762b994082bb3b7b7c8788b085
- * DEPLOYER_KEY=   # Must have 0 nonce for deterministic addresses
- * OPERATOR_KEY=   # For account operations
+ * FACTORY_DEPLOYER_KEY=   # Must have 0 nonce for deterministic addresses
+ * WALLET_DEPLOYER_KEY=   # For account wallet deployment
  * ETHEREUMSCAN_API_KEY=
  *
  * Deploy command:
@@ -34,7 +47,6 @@ import "forge-std/Script.sol";
  *    --rpc-url $RPC_URL \
  *    --broadcast \
  *    --slow \
- *    --private-key $OPERATOR_KEY \
  *    --etherscan-api-key $ETHEREUMSCAN_API_KEY \
  *    --verify \
  *    --verifier-url $VERIFIER_URL \
@@ -42,59 +54,38 @@ import "forge-std/Script.sol";
  */
 contract DeploySimpleAccount is Script {
     address internal constant ENTRYPOINT = 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789;
-    string internal _network;
+    address internal constant FORGE_CREATE2_DEPLOYER = 0x4e59b44847b379578588920cA78FbF26c0B4956C;
 
-    error NonZeroNonce(uint256 nonce);
+    error PreviouslyDeployed(address at);
 
-    function setUp() public {
-        _network = vm.envString("NETWORK");
-    }
+    // CREATE2 address computation for factory
+    function predictFactoryAddress(bytes32 salt) public pure returns (address) {
+        bytes memory creationCode =
+            abi.encodePacked(type(IntentSimpleAccountFactory).creationCode, abi.encode(IEntryPoint(ENTRYPOINT)));
 
-    function predictFactoryAddress(address deployer, bytes32 salt) public view returns (address) {
-        bytes memory creationCode = abi.encodePacked(
-            type(IntentSimpleAccountFactory).creationCode,
-            abi.encode(IEntryPoint(ENTRYPOINT), salt)
-        );
-        bytes32 hash = keccak256(
-            abi.encodePacked(
-                bytes1(0xff),
-                deployer,
-                salt,
-                keccak256(creationCode)
-            )
-        );
+        bytes32 hash = keccak256(abi.encodePacked(bytes1(0xff), FORGE_CREATE2_DEPLOYER, salt, keccak256(creationCode)));
         return address(uint160(uint256(hash)));
     }
 
     function run() public {
-        // Get network-specific salt
-        string memory saltEnv = string(abi.encodePacked(_network, "_SALT"));
-        uint256 saltUint = vm.envUint(saltEnv);
-        bytes32 salt = bytes32(saltUint);
+        // Load factory deployment parameters
+        bytes32 factorySalt = bytes32(vm.envUint("FACTORY_SALT"));
+        uint256 factoryDeployerKey = vm.envUint("FACTORY_DEPLOYER_KEY");
+        address factoryDeployer = vm.addr(factoryDeployerKey);
 
-        // Get factory deployer key and address
-        uint256 deployerKey = vm.envUint("DEPLOYER_KEY");
-        address factoryDeployer = vm.addr(deployerKey);
-        
-        // Get operator key and address (for account creation and general operations)
-        uint256 operatorKey = vm.envUint("OPERATOR_KEY");
-        address operator = vm.addr(operatorKey);
+        // Load wallet creation parameters
+        uint256 walletSalt = vm.envUint("WALLET_SALT");
+        uint256 walletDeployerKey = vm.envUint("WALLET_DEPLOYER_KEY");
+        address walletDeployer = vm.addr(walletDeployerKey);
 
         // Log initial state
-        console2.log("Network:", _network);
         console2.log("Factory Deployer:", factoryDeployer);
-        console2.log("Operator:", operator);
-        console2.log("Salt:", uint256(salt));
+        console2.log("Factory Salt:", uint256(factorySalt));
+        console2.log("Waller deployer:", walletDeployer);
+        console2.log("Wallet Salt:", walletSalt);
 
-        // Check deployer nonce - HALT if not 0
-        uint256 deployerNonce = vm.getNonce(factoryDeployer);
-        if (deployerNonce != 0) {
-            revert NonZeroNonce(deployerNonce);
-        }
-
-        // Predict factory address
-        address predictedFactoryAddress = predictFactoryAddress(factoryDeployer, salt);
-        console2.log("Predicted factory address:", predictedFactoryAddress);
+        // Predict factory address using the Create2Deployer address
+        address predictedFactoryAddress = predictFactoryAddress(factorySalt);
 
         // Deploy or get factory
         IntentSimpleAccountFactory factory;
@@ -102,35 +93,41 @@ contract DeploySimpleAccount is Script {
             factory = IntentSimpleAccountFactory(predictedFactoryAddress);
             console2.log("Using existing factory at:", address(factory));
         } else {
+            // Check if address was previously used and self-destructed
+            uint256 nonce = vm.getNonce(predictedFactoryAddress);
+            if (nonce > 0) {
+                revert PreviouslyDeployed(predictedFactoryAddress);
+            }
+
             // Deploy factory using dedicated deployer key
-            vm.broadcast(deployerKey);
-            factory = new IntentSimpleAccountFactory{salt: salt}(IEntryPoint(ENTRYPOINT));
+            vm.broadcast(factoryDeployerKey);
+            factory = new IntentSimpleAccountFactory{salt: factorySalt}(IEntryPoint(ENTRYPOINT));
             console2.log("Deployed new factory at:", address(factory));
-            
-            require(
-                address(factory) == predictedFactoryAddress,
-                "Factory address mismatch"
-            );
+
+            require(address(factory) == predictedFactoryAddress, "Factory address mismatch");
         }
 
-        // Switch to operator for account creation
-        vm.startBroadcast(operatorKey);
+        // Switch to walletDeployer for account creation
+        vm.startBroadcast(walletDeployerKey);
 
-        // Predict account address
-        address predictedAccountAddress = factory.getAddress(operator, saltUint);
+        // Predict account address using factory's createAccount salt mechanism
+        address predictedAccountAddress = factory.getAddress(walletDeployer, walletSalt);
         console2.log("Predicted account address:", predictedAccountAddress);
 
         // Create or get account
         if (predictedAccountAddress.code.length > 0) {
             console2.log("Account already exists at:", predictedAccountAddress);
         } else {
-            IntentSimpleAccount account = factory.createAccount(operator, saltUint);
+            // Check if account address was previously used and self-destructed
+            uint256 nonce = vm.getNonce(predictedAccountAddress);
+            if (nonce > 0) {
+                revert PreviouslyDeployed(predictedAccountAddress);
+            }
+
+            IntentSimpleAccount account = factory.createAccount(walletDeployer, walletSalt);
             console2.log("Deployed new account at:", address(account));
-            
-            require(
-                address(account) == predictedAccountAddress,
-                "Account address mismatch"
-            );
+
+            require(address(account) == predictedAccountAddress, "Account address mismatch");
         }
 
         vm.stopBroadcast();
