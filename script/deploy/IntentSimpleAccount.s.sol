@@ -58,7 +58,9 @@ contract DeploySimpleAccount is Script {
 
     error PreviouslyDeployed(address at);
 
-    // CREATE2 address computation for factory
+    event Deployed(address indexed implementation, address indexed factory, address indexed proxy, bytes initData);
+
+    // Function to predict factory address
     function predictFactoryAddress(bytes32 salt) public pure returns (address) {
         bytes memory creationCode =
             abi.encodePacked(type(IntentSimpleAccountFactory).creationCode, abi.encode(IEntryPoint(ENTRYPOINT)));
@@ -68,12 +70,10 @@ contract DeploySimpleAccount is Script {
     }
 
     function run() public {
-        // Load factory deployment parameters
+        // Load deployment parameters
         bytes32 factorySalt = bytes32(vm.envUint("FACTORY_SALT"));
         uint256 factoryDeployerKey = vm.envUint("FACTORY_DEPLOYER_KEY");
         address factoryDeployer = vm.addr(factoryDeployerKey);
-
-        // Load wallet creation parameters
         uint256 walletSalt = vm.envUint("WALLET_SALT");
         uint256 walletDeployerKey = vm.envUint("WALLET_DEPLOYER_KEY");
         address walletDeployer = vm.addr(walletDeployerKey);
@@ -81,55 +81,55 @@ contract DeploySimpleAccount is Script {
         // Log initial state
         console2.log("Factory Deployer:", factoryDeployer);
         console2.log("Factory Salt:", uint256(factorySalt));
-        console2.log("Waller deployer:", walletDeployer);
+        console2.log("Wallet Deployer:", walletDeployer);
         console2.log("Wallet Salt:", walletSalt);
 
-        // Predict factory address using the Create2Deployer address
+        // Deploy factory and implementation
         address predictedFactoryAddress = predictFactoryAddress(factorySalt);
 
-        // Deploy or get factory
+        vm.startBroadcast(factoryDeployerKey);
+
+        // Deploy implementation and factory if needed
         IntentSimpleAccountFactory factory;
+        address implementation;
+
         if (predictedFactoryAddress.code.length > 0) {
             factory = IntentSimpleAccountFactory(predictedFactoryAddress);
+            implementation = address(factory.accountImplementation());
             console2.log("Using existing factory at:", address(factory));
+            console2.log("Using existing implementation at:", implementation);
         } else {
-            // Check if address was previously used and self-destructed
-            uint256 nonce = vm.getNonce(predictedFactoryAddress);
-            if (nonce > 0) {
-                revert PreviouslyDeployed(predictedFactoryAddress);
-            }
-
-            // Deploy factory using dedicated deployer key
-            vm.broadcast(factoryDeployerKey);
             factory = new IntentSimpleAccountFactory{salt: factorySalt}(IEntryPoint(ENTRYPOINT));
+            implementation = address(factory.accountImplementation());
             console2.log("Deployed new factory at:", address(factory));
-
-            require(address(factory) == predictedFactoryAddress, "Factory address mismatch");
-        }
-
-        // Switch to walletDeployer for account creation
-        vm.startBroadcast(walletDeployerKey);
-
-        // Predict account address using factory's createAccount salt mechanism
-        address predictedAccountAddress = factory.getAddress(walletDeployer, walletSalt);
-        console2.log("Predicted account address:", predictedAccountAddress);
-
-        // Create or get account
-        if (predictedAccountAddress.code.length > 0) {
-            console2.log("Account already exists at:", predictedAccountAddress);
-        } else {
-            // Check if account address was previously used and self-destructed
-            uint256 nonce = vm.getNonce(predictedAccountAddress);
-            if (nonce > 0) {
-                revert PreviouslyDeployed(predictedAccountAddress);
-            }
-
-            IntentSimpleAccount account = factory.createAccount(walletDeployer, walletSalt);
-            console2.log("Deployed new account at:", address(account));
-
-            require(address(account) == predictedAccountAddress, "Account address mismatch");
+            console2.log("Deployed new implementation at:", implementation);
         }
 
         vm.stopBroadcast();
+
+        // Deploy or get account proxy
+        vm.startBroadcast(walletDeployerKey);
+
+        address predictedAccountAddress = factory.getAddress(walletDeployer, walletSalt);
+        console2.log("Predicted account address:", predictedAccountAddress);
+
+        address proxyAddress;
+        bytes memory initData;
+
+        if (predictedAccountAddress.code.length > 0) {
+            console2.log("Account proxy exists at:", predictedAccountAddress);
+            proxyAddress = predictedAccountAddress;
+        } else {
+            IntentSimpleAccount account = factory.createAccount(walletDeployer, walletSalt);
+            proxyAddress = address(account);
+            // Create initialization data for verification
+            initData = abi.encodeCall(IntentSimpleAccount.initialize, (walletDeployer));
+            console2.log("Deployed new account proxy at:", proxyAddress);
+        }
+
+        vm.stopBroadcast();
+
+        // Emit event with all addresses and data needed for verification
+        emit Deployed(implementation, address(factory), proxyAddress, initData);
     }
 }
