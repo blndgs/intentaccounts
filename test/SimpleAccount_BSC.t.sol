@@ -51,7 +51,7 @@ contract SimpleAccountBscTest is Test {
         salt = 0;
 
         // Sync the factory with the deployed contract at Mainnet
-        factory = new IntentSimpleAccountFactory(entryPoint);
+        factory = new IntentSimpleAccountFactory{salt: 0}(entryPoint);
         simpleAccount = factory.createAccount(ownerAddress, salt);
 
         console2.log("SimpleAccount wallet created at:", address(simpleAccount));

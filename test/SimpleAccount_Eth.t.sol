@@ -60,14 +60,8 @@ contract SimpleAccounEthereumTest is Test {
         uint256 startGas = gasleft();
 
         // Sync the _factory with the chain factory address
-        string memory factoryAddressEnv = string(abi.encodePacked(_network, "_SIMPLE_INTENT_FACTORY_ADDRESS"));
-        address factoryAddress = vm.envAddress(factoryAddressEnv);
-        console2.log("factory Address", factoryAddress);
-
-        _factory = new IntentSimpleAccountFactory(_entryPoint);
+        _factory = new IntentSimpleAccountFactory{salt: 0}(_entryPoint);
         console2.log("IntentSimpleAccountFactory created at:", address(_factory));
-        //        _factory = IntentSimpleAccountFactory(factoryAddress);
-        //        console2.log("IntentSimpleAccountFactory synced at:", address(_factory));
         uint256 endGas = gasleft();
         console2.log("Gas used for Factory sync: ", startGas - endGas);
         startGas = endGas;
