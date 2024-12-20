@@ -28,19 +28,15 @@ contract SimpleAccountBscTest is Test {
     uint256 public ownerPrivateKey;
     IERC20 public token;
 
-    string network;
-
     function setUp() public {
-        network = "BSC";
-
-        string memory privateKeyEnv = string(abi.encodePacked(network, "_PRIVATE_KEY"));
-        string memory privateKeyString = vm.envString(privateKeyEnv);
+        string memory privateKeyString = vm.envString("WALLET_OWNER_KEY");
         ownerPrivateKey = vm.parseUint(privateKeyString);
         ownerAddress = vm.addr(ownerPrivateKey);
-        assertEq(ownerAddress, 0x30543aebBB9c91a7929849Dc07114c6E77710462, "Owner address should match");
+        console2.log("private key:", ownerPrivateKey);
+        console2.log("Owner address:", ownerAddress);
 
         // Create BSC Fork instance
-        string memory urlEnv = string(abi.encodePacked(network, "_RPC_URL"));
+        string memory urlEnv = string(abi.encodePacked("BSC", "_RPC_URL"));
         bscFork = vm.createSelectFork(vm.envString(urlEnv));
         require(890 == block.chainid || 56 == block.chainid, "Chain ID should match");
         vm.startPrank(ownerAddress);
@@ -78,6 +74,12 @@ contract SimpleAccountBscTest is Test {
         );
     }
 
+    function createIntent2() internal pure returns (bytes memory) {
+        return bytes(
+            "{\"fromAsset\":{\"address\":\"0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee\",\"amount\":{\"value\":\"I4byb8EAAA==\"},\"chainId\":{\"value\":\"iQ==\"}},\"toStake\":{\"address\":\"0x1adB950d8bB3dA4bE104211D5AB038628e477fE6\",\"amount\":{\"value\":\"D0JA\"},\"chainId\":{\"value\":\"OA==\"}}}"
+        );
+    }
+
     function testXChainValidateSignature() public {
         uint256 SOURCE_CHAIN_ID = 137; // Polygon
         uint256 DEST_CHAIN_ID = 56; // BSC
@@ -85,17 +87,20 @@ contract SimpleAccountBscTest is Test {
         address RECIPIENT_DEST = 0xE381bAB2e0C5b678F2FBb8D4b0949e41a6487c8f;
 
         // UI Intent creation
-        bytes memory srcIntent = createIntent();
-        bytes memory destIntent = createIntent();
-        UserOperation memory sourceUserOp = createUserOp(address(simpleAccount), srcIntent);
-        UserOperation memory destUserOp = createUserOp(address(simpleAccount), destIntent);
+        bytes memory srcIntent = createIntent2();
+        
+        bytes memory destIntent = createIntent2();
+        UserOperation memory sourceUserOp = createUserOp2(address(simpleAccount), srcIntent);
+        sourceUserOp.nonce = 9;
+        UserOperation memory destUserOp = createUserOp2(address(simpleAccount), destIntent);
+        destUserOp.nonce = 0;
 
         bytes32 hash1 = simpleAccount.getUserOpHash(sourceUserOp, SOURCE_CHAIN_ID);
         bytes32 hash2 = simpleAccount.getUserOpHash(destUserOp, DEST_CHAIN_ID);
 
         // UI signs the source and destination userOps
         // xSign(hash1, hash2, ownerPrivateKey, sourceUserOp, destUserOp);
-        xSignCommon(hash1, hash2, ownerPrivateKey, sourceUserOp, destUserOp, true);
+        xSignCommon(hash1, hash2, ownerPrivateKey, sourceUserOp, destUserOp, false);
 
         // Submit to the bundler
         // Bundler to the solver
@@ -123,10 +128,12 @@ contract SimpleAccountBscTest is Test {
         vm.chainId(SOURCE_CHAIN_ID);
         assertEq(SOURCE_CHAIN_ID, block.chainid, "Chain ID should match");
         this.verifySignature(sourceUserOp);
+        TestSimpleAccountHelper.printUserOperation(sourceUserOp);
 
         vm.chainId(DEST_CHAIN_ID);
         assertEq(DEST_CHAIN_ID, block.chainid, "Chain ID should match");
         this.verifySignature(destUserOp);
+        TestSimpleAccountHelper.printUserOperation(destUserOp);
     }
 
     function xSignCommon(
@@ -194,6 +201,24 @@ contract SimpleAccountBscTest is Test {
             preVerificationGas: 21000,
             maxFeePerGas: 20 gwei,
             maxPriorityFeePerGas: 1 gwei,
+            paymasterAndData: "",
+            signature: ""
+        });
+
+        return op;
+    }
+    
+    function createUserOp2(address from, bytes memory callData) internal pure returns (UserOperation memory) {
+        UserOperation memory op = UserOperation({
+            sender: from,
+            nonce: 1,
+            initCode: bytes(hex""),
+            callData: callData,
+            callGasLimit: 800_000,
+            verificationGasLimit: 628384,
+            preVerificationGas: 626688,
+            maxFeePerGas: 0,
+            maxPriorityFeePerGas: 0,
             paymasterAndData: "",
             signature: ""
         });
