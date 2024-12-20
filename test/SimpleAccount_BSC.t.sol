@@ -32,7 +32,6 @@ contract SimpleAccountBscTest is Test {
         string memory privateKeyString = vm.envString("WALLET_OWNER_KEY");
         ownerPrivateKey = vm.parseUint(privateKeyString);
         ownerAddress = vm.addr(ownerPrivateKey);
-        console2.log("private key:", ownerPrivateKey);
         console2.log("Owner address:", ownerAddress);
 
         // Create BSC Fork instance
