@@ -40,7 +40,7 @@ contract SimpleAccounPolygonTest is Test {
         // Create a VM instance for the MUMBAI fork
         string memory urlEnv = "POLYGON_RPC_URL";
         polyFork = vm.createSelectFork(vm.envString(urlEnv));
-        
+
         vm.startPrank(ownerAddress);
 
         // Deploy the EntryPoint contract or use an existing one

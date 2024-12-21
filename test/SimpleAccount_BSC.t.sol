@@ -51,31 +51,31 @@ contract SimpleAccountBscTest is Test {
 
         console2.log("SimpleAccount wallet created at:", address(simpleAccount));
     }
-    
+
     function debugCrossChainOperation(UserOperation memory sourceUserOp) private {
         // slice post signature to retrieve the x-chain encoded Intent
         bytes memory sourceSigXChainCalldata = sourceUserOp.signature._slice(65, sourceUserOp.signature.length);
         XChainLib.xCallData memory xcd = this.parseXElems(sourceSigXChainCalldata);
-        assertEq(uint(xcd.opType), uint(XChainLib.OpType.CrossChain), "OpType should be CrossChain");
+        assertEq(uint256(xcd.opType), uint256(XChainLib.OpType.CrossChain), "OpType should be CrossChain");
         // Add more debugging logic here
     }
-    
+
     function parseXElems(bytes calldata callData) external pure returns (XChainLib.xCallData memory) {
         return XChainLib.parseXElems(callData);
-    }    
+    }
 
     function createIntent() internal pure returns (bytes memory) {
         return bytes(
-            "{\"chainId\":137, \"sender\":\"0x18Dd70639de2ca9146C32f9c84B90A68bBDaAA96\","
-            "\"kind\":\"swap\",\"hash\":\"\",\"sellToken\":\"0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE\","
-            "\"buyToken\":\"0xc2132D05D31c914a87C6611C10748AEb04B58e8F\",\"sellAmount\":10,"
-            "\"buyAmount\":5,\"partiallyFillable\":false,\"status\":\"Received\"," "\"createdAt\":0,\"expirationAt\":0}"
+            '{"chainId":137, "sender":"0x18Dd70639de2ca9146C32f9c84B90A68bBDaAA96",'
+            '"kind":"swap","hash":"","sellToken":"0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE",'
+            '"buyToken":"0xc2132D05D31c914a87C6611C10748AEb04B58e8F","sellAmount":10,'
+            '"buyAmount":5,"partiallyFillable":false,"status":"Received",' '"createdAt":0,"expirationAt":0}'
         );
     }
 
     function createIntent2() internal pure returns (bytes memory) {
         return bytes(
-            "{\"fromAsset\":{\"address\":\"0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee\",\"amount\":{\"value\":\"I4byb8EAAA==\"},\"chainId\":{\"value\":\"iQ==\"}},\"toStake\":{\"address\":\"0x1adB950d8bB3dA4bE104211D5AB038628e477fE6\",\"amount\":{\"value\":\"D0JA\"},\"chainId\":{\"value\":\"OA==\"}}}"
+            '{"fromAsset":{"address":"0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee","amount":{"value":"I4byb8EAAA=="},"chainId":{"value":"iQ=="}},"toStake":{"address":"0x1adB950d8bB3dA4bE104211D5AB038628e477fE6","amount":{"value":"D0JA"},"chainId":{"value":"OA=="}}}'
         );
     }
 
@@ -87,7 +87,7 @@ contract SimpleAccountBscTest is Test {
 
         // UI Intent creation
         bytes memory srcIntent = createIntent2();
-        
+
         bytes memory destIntent = createIntent2();
         UserOperation memory sourceUserOp = createUserOp2(address(simpleAccount), srcIntent);
         sourceUserOp.nonce = 9;
@@ -206,7 +206,7 @@ contract SimpleAccountBscTest is Test {
 
         return op;
     }
-    
+
     function createUserOp2(address from, bytes memory callData) internal pure returns (UserOperation memory) {
         UserOperation memory op = UserOperation({
             sender: from,
