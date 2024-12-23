@@ -8,7 +8,7 @@ bsc = "${BSC_RPC_URL}"
 polygon = { key = "${POLYGONSCAN_API_KEY}", chain = 137, url = "https://api.polygonscan.com/api" }
 bsc = { key = "${BSCSCAN_API_KEY}", chain = 56, url = "https://api.bscscan.com/api" }
 v-bsc-890 = { key = "${BSC_TENDERLY_ACCESS_TOKEN}", chain = 890, url = "${V_BSC_RPC_URL}/verify/etherscan" }
-etherscan = { key = "${ETHEREUMSCAN_API_KEY}", chain = 1, url = "https://api.ethereumscan.com/api" }
+etherscan = { key = "${ETHEREUMSCAN_API_KEY}", chain = 1, url = "https://api.etherscan.com/api" }
 v-mainnet888scan = { key = "${ETH_TENDERLY_ACCESS_TOKEN}", chain = 888, url = "${V_ETHEREUM_RPC_URL}/verify/etherscan" }
 v-polygon = { key = "${POL_TENDERLY_ACCESS_TOKEN}", chain = 8889, url = "${V_POLYGON_RPC_URL}/verify/etherscan" }
 
