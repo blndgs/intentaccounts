@@ -28,19 +28,14 @@ contract SimpleAccountBscTest is Test {
     uint256 public ownerPrivateKey;
     IERC20 public token;
 
-    string network;
-
     function setUp() public {
-        network = "BSC";
-
-        string memory privateKeyEnv = string(abi.encodePacked(network, "_PRIVATE_KEY"));
-        string memory privateKeyString = vm.envString(privateKeyEnv);
+        string memory privateKeyString = vm.envString("WALLET_OWNER_KEY");
         ownerPrivateKey = vm.parseUint(privateKeyString);
         ownerAddress = vm.addr(ownerPrivateKey);
-        assertEq(ownerAddress, 0x30543aebBB9c91a7929849Dc07114c6E77710462, "Owner address should match");
+        console2.log("Owner address:", ownerAddress);
 
         // Create BSC Fork instance
-        string memory urlEnv = string(abi.encodePacked(network, "_RPC_URL"));
+        string memory urlEnv = string(abi.encodePacked("BSC", "_RPC_URL"));
         bscFork = vm.createSelectFork(vm.envString(urlEnv));
         require(890 == block.chainid || 56 == block.chainid, "Chain ID should match");
         vm.startPrank(ownerAddress);
@@ -51,30 +46,30 @@ contract SimpleAccountBscTest is Test {
         salt = 0;
 
         // Sync the factory with the deployed contract at Mainnet
-        factory = new IntentSimpleAccountFactory(entryPoint);
+        factory = new IntentSimpleAccountFactory{salt: 0}(entryPoint);
         simpleAccount = factory.createAccount(ownerAddress, salt);
 
         console2.log("SimpleAccount wallet created at:", address(simpleAccount));
     }
-    
+
     function debugCrossChainOperation(UserOperation memory sourceUserOp) private {
         // slice post signature to retrieve the x-chain encoded Intent
         bytes memory sourceSigXChainCalldata = sourceUserOp.signature._slice(65, sourceUserOp.signature.length);
         XChainLib.xCallData memory xcd = this.parseXElems(sourceSigXChainCalldata);
-        assertEq(uint(xcd.opType), uint(XChainLib.OpType.CrossChain), "OpType should be CrossChain");
+        assertEq(uint256(xcd.opType), uint256(XChainLib.OpType.CrossChain), "OpType should be CrossChain");
         // Add more debugging logic here
     }
-    
+
     function parseXElems(bytes calldata callData) external pure returns (XChainLib.xCallData memory) {
         return XChainLib.parseXElems(callData);
-    }    
+    }
 
     function createIntent() internal pure returns (bytes memory) {
         return bytes(
-            "{\"chainId\":137, \"sender\":\"0x18Dd70639de2ca9146C32f9c84B90A68bBDaAA96\","
-            "\"kind\":\"swap\",\"hash\":\"\",\"sellToken\":\"0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE\","
-            "\"buyToken\":\"0xc2132D05D31c914a87C6611C10748AEb04B58e8F\",\"sellAmount\":10,"
-            "\"buyAmount\":5,\"partiallyFillable\":false,\"status\":\"Received\"," "\"createdAt\":0,\"expirationAt\":0}"
+            '{"fromAsset":{"address":"0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",'
+            '"amount":{"value":"I4byb8EAAA=="},"chainId":{"value":"iQ=="}},'
+            '"toStake":{"address":"0x1adB950d8bB3dA4bE104211D5AB038628e477fE6",'
+            '"amount":{"value":"D0JA"},"chainId":{"value":"OA=="}}}'
         );
     }
 
@@ -86,16 +81,19 @@ contract SimpleAccountBscTest is Test {
 
         // UI Intent creation
         bytes memory srcIntent = createIntent();
+
         bytes memory destIntent = createIntent();
-        UserOperation memory sourceUserOp = createUserOp(address(simpleAccount), srcIntent);
-        UserOperation memory destUserOp = createUserOp(address(simpleAccount), destIntent);
+        UserOperation memory sourceUserOp = createUserOp2(address(simpleAccount), srcIntent);
+        sourceUserOp.nonce = 9;
+        UserOperation memory destUserOp = createUserOp2(address(simpleAccount), destIntent);
+        destUserOp.nonce = 0;
 
         bytes32 hash1 = simpleAccount.getUserOpHash(sourceUserOp, SOURCE_CHAIN_ID);
         bytes32 hash2 = simpleAccount.getUserOpHash(destUserOp, DEST_CHAIN_ID);
 
         // UI signs the source and destination userOps
         // xSign(hash1, hash2, ownerPrivateKey, sourceUserOp, destUserOp);
-        xSignCommon(hash1, hash2, ownerPrivateKey, sourceUserOp, destUserOp, true);
+        xSignCommon(hash1, hash2, ownerPrivateKey, sourceUserOp, destUserOp, false);
 
         // Submit to the bundler
         // Bundler to the solver
@@ -123,10 +121,12 @@ contract SimpleAccountBscTest is Test {
         vm.chainId(SOURCE_CHAIN_ID);
         assertEq(SOURCE_CHAIN_ID, block.chainid, "Chain ID should match");
         this.verifySignature(sourceUserOp);
+        TestSimpleAccountHelper.printUserOperation(sourceUserOp);
 
         vm.chainId(DEST_CHAIN_ID);
         assertEq(DEST_CHAIN_ID, block.chainid, "Chain ID should match");
         this.verifySignature(destUserOp);
+        TestSimpleAccountHelper.printUserOperation(destUserOp);
     }
 
     function xSignCommon(
@@ -194,6 +194,24 @@ contract SimpleAccountBscTest is Test {
             preVerificationGas: 21000,
             maxFeePerGas: 20 gwei,
             maxPriorityFeePerGas: 1 gwei,
+            paymasterAndData: "",
+            signature: ""
+        });
+
+        return op;
+    }
+
+    function createUserOp2(address from, bytes memory callData) internal pure returns (UserOperation memory) {
+        UserOperation memory op = UserOperation({
+            sender: from,
+            nonce: 1,
+            initCode: bytes(hex""),
+            callData: callData,
+            callGasLimit: 800_000,
+            verificationGasLimit: 628384,
+            preVerificationGas: 626688,
+            maxFeePerGas: 0,
+            maxPriorityFeePerGas: 0,
             paymasterAndData: "",
             signature: ""
         });

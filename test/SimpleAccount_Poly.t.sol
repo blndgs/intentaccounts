@@ -36,12 +36,11 @@ contract SimpleAccounPolygonTest is Test {
         // Derive the Ethereum address from the private key
         ownerPrivateKey = vm.parseUint(privateKeyString);
         ownerAddress = vm.addr(ownerPrivateKey);
-        assertEq(ownerAddress, 0xE381bAB2e0C5b678F2FBb8D4b0949e41a6487c8f, "Owner address should match");
 
         // Create a VM instance for the MUMBAI fork
         string memory urlEnv = "POLYGON_RPC_URL";
         polyFork = vm.createSelectFork(vm.envString(urlEnv));
-        
+
         vm.startPrank(ownerAddress);
 
         // Deploy the EntryPoint contract or use an existing one

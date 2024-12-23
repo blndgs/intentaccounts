@@ -30,7 +30,7 @@ contract AccountXChainTest is Test {
 
         // Deploy EntryPoint and SimpleAccountFactory
         entryPoint = new EntryPoint();
-        factory = new IntentSimpleAccountFactory(entryPoint);
+        factory = new IntentSimpleAccountFactory{salt: 0}(entryPoint);
         simpleAccount = factory.createAccount(ownerAddress, 0);
 
         // Fund the account with some Ether

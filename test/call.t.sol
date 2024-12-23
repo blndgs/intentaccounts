@@ -166,7 +166,7 @@ contract callsTest is Test {
         b = new ContractB();
 
         // Create a 4337 wallet
-        IntentSimpleAccountFactory factory = new IntentSimpleAccountFactory(_entryPoint);
+        IntentSimpleAccountFactory factory = new IntentSimpleAccountFactory{salt: 0}(_entryPoint);
         _simpleAccount = factory.createAccount(_ownerAddress, salt);
         console2.log("_SimpleAccount deployed at:", address(_simpleAccount));
 

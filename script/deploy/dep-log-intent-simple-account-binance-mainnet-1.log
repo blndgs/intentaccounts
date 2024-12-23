@@ -1,0 +1,211 @@
+forge script script/deploy/IntentSimpleAccount.s.sol \
+    --rpc-url $RPC_URL \
+     --broadcast \
+     --verify \
+     --slow \
+     --etherscan-api-key $ETHEREUMSCAN_API_KEY \
+     --verifier-url $VERIFY_URL \
+     --ffi -vvvv
+[⠒] Compiling...
+No files changed, compilation skipped
+Traces:
+  [2580786] DeploySimpleAccount::run()
+    ├─ [0] VM::envUint("FACTORY_SALT") [staticcall]
+    │   └─ ← [Return] <env var value>
+    ├─ [0] VM::envUint("WALLET_OWNER_KEY") [staticcall]
+    │   └─ ← [Return] <env var value>
+    ├─ [0] VM::addr(<pk>) [staticcall]
+    │   └─ ← [Return] 0x1E13289c8d59947b5959E74415F68Ef56805ffeC
+    ├─ [0] VM::envUint("WALLET_SALT") [staticcall]
+    │   └─ ← [Return] <env var value>
+    ├─ [0] console::log("=== Deployment Configuration ===") [staticcall]
+    │   └─ ← [Stop]
+    ├─ [0] console::log("Wallet Owner (Deployer):", 0x1E13289c8d59947b5959E74415F68Ef56805ffeC) [staticcall]
+    │   └─ ← [Stop]
+    ├─ [0] console::log("Factory Salt:", 0) [staticcall]
+    │   └─ ← [Stop]
+    ├─ [0] console::log("Wallet Salt:", 0) [staticcall]
+    │   └─ ← [Stop]
+    ├─ [0] console::log("EntryPoint:", 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789) [staticcall]
+    │   └─ ← [Stop]
+    ├─ [0] console::log("Create2 Deployer:", Create2Deployer: [0x4e59b44847b379578588920cA78FbF26c0B4956C]) [staticcall]
+    │   └─ ← [Stop]
+    ├─ [0] console::log("============================\n") [staticcall]
+    │   └─ ← [Stop]
+    ├─ [0] console::log("Creation Code Hash:") [staticcall]
+    │   └─ ← [Stop]
+    ├─ [0] console::log(0x02623b6777cd448c7e00b073f00f8dce6e0b1adfd97309f1c2a99f645837cf43) [staticcall]
+    │   └─ ← [Stop]
+    ├─ [0] console::log("Predicted Factory Address:", IntentSimpleAccountFactory: [0xF097097A6c950927Bdb1cA9e5Cb5f454713861A6]) [staticcall]
+    │   └─ ← [Stop]
+    ├─ [0] console::log("\n=== Starting Deployment ===") [staticcall]
+    │   └─ ← [Stop]
+    ├─ [0] VM::startBroadcast(<pk>)
+    │   └─ ← [Return]
+    ├─ [0] console::log("Deploying new factory...") [staticcall]
+    │   └─ ← [Stop]
+    ├─ [2376802] Create2Deployer::create2()
+    │   ├─ [2339166] → new IntentSimpleAccountFactory@0xF097097A6c950927Bdb1cA9e5Cb5f454713861A6
+    │   │   ├─ [1890476] → new IntentSimpleAccount@0xB65fBA9825b8c5A974b7aF6f6209592fAeb849eC
+    │   │   │   ├─ emit Initialized(version: 255)
+    │   │   │   └─ ← [Return] 9323 bytes of code
+    │   │   └─ ← [Return] 2067 bytes of code
+    │   └─ ← [Return] 0xf097097a6c950927bdb1ca9e5cb5f454713861a6
+    ├─ [181] IntentSimpleAccountFactory::accountImplementation() [staticcall]
+    │   └─ ← [Return] IntentSimpleAccount: [0xB65fBA9825b8c5A974b7aF6f6209592fAeb849eC]
+    ├─ [0] console::log("Factory deployed at:", IntentSimpleAccountFactory: [0xF097097A6c950927Bdb1cA9e5Cb5f454713861A6]) [staticcall]
+    │   └─ ← [Stop]
+    ├─ [0] console::log("Implementation deployed at:", IntentSimpleAccount: [0xB65fBA9825b8c5A974b7aF6f6209592fAeb849eC]) [staticcall]
+    │   └─ ← [Stop]
+    ├─ [0] console::log("\nCreating account for owner:", 0x1E13289c8d59947b5959E74415F68Ef56805ffeC) [staticcall]
+    │   └─ ← [Stop]
+    ├─ [123763] IntentSimpleAccountFactory::createAccount(0x1E13289c8d59947b5959E74415F68Ef56805ffeC, 0)
+    │   ├─ [85828] → new ERC1967Proxy@0x388b635c58Ee82a6748A2033f4520E6976064CE3
+    │   │   ├─ emit Upgraded(implementation: IntentSimpleAccount: [0xB65fBA9825b8c5A974b7aF6f6209592fAeb849eC])
+    │   │   ├─ [26866] IntentSimpleAccount::initialize(0x1E13289c8d59947b5959E74415F68Ef56805ffeC) [delegatecall]
+    │   │   │   ├─ emit SimpleAccountInitialized(entryPoint: 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789, owner: 0x1E13289c8d59947b5959E74415F68Ef56805ffeC)
+    │   │   │   ├─ emit Initialized(version: 1)
+    │   │   │   └─ ← [Stop]
+    │   │   └─ ← [Return] 170 bytes of code
+    │   └─ ← [Return] ERC1967Proxy: [0x388b635c58Ee82a6748A2033f4520E6976064CE3]
+    ├─ [0] console::log("Account proxy deployed at:", ERC1967Proxy: [0x388b635c58Ee82a6748A2033f4520E6976064CE3]) [staticcall]
+    │   └─ ← [Stop]
+    ├─ [0] console::log("\nAccount deployment verified successfully") [staticcall]
+    │   └─ ← [Stop]
+    ├─ [0] VM::stopBroadcast()
+    │   └─ ← [Return]
+    ├─ [0] console::log("\n=== Deployment Results ===") [staticcall]
+    │   └─ ← [Stop]
+    ├─ [0] console::log("Implementation:", IntentSimpleAccount: [0xB65fBA9825b8c5A974b7aF6f6209592fAeb849eC]) [staticcall]
+    │   └─ ← [Stop]
+    ├─ [0] console::log("Factory:", IntentSimpleAccountFactory: [0xF097097A6c950927Bdb1cA9e5Cb5f454713861A6]) [staticcall]
+    │   └─ ← [Stop]
+    ├─ [0] console::log("Account Proxy:", ERC1967Proxy: [0x388b635c58Ee82a6748A2033f4520E6976064CE3]) [staticcall]
+    │   └─ ← [Stop]
+    ├─ [0] console::log("Gas Used:", 2549049 [2.549e6]) [staticcall]
+    │   └─ ← [Stop]
+    ├─ [0] console::log("\n=== Contract Sizes ===") [staticcall]
+    │   └─ ← [Stop]
+    ├─ [0] console::log("Implementation Size:", 9323) [staticcall]
+    │   └─ ← [Stop]
+    ├─ [0] console::log("Factory Size:", 2067) [staticcall]
+    │   └─ ← [Stop]
+    ├─ [0] console::log("Proxy Size:", 170) [staticcall]
+    │   └─ ← [Stop]
+    ├─ emit Deployed(implementation: IntentSimpleAccount: [0xB65fBA9825b8c5A974b7aF6f6209592fAeb849eC], factory: IntentSimpleAccountFactory: [0xF097097A6c950927Bdb1cA9e5Cb5f454713861A6], proxy: ERC1967Proxy: [0x388b635c58Ee82a6748A2033f4520E6976064CE3], initData: 0xc4d66de80000000000000000000000001e13289c8d59947b5959e74415f68ef56805ffec, gasUsed: 2549049 [2.549e6])
+    ├─ [0] console::log("\n=== Deployment Successful ===") [staticcall]
+    │   └─ ← [Stop]
+    └─ ← [Stop]
+
+
+Script ran successfully.
+
+== Logs ==
+  === Deployment Configuration ===
+  Wallet Owner (Deployer): 0x1E13289c8d59947b5959E74415F68Ef56805ffeC
+  Factory Salt: 0
+  Wallet Salt: 0
+  EntryPoint: 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789
+  Create2 Deployer: 0x4e59b44847b379578588920cA78FbF26c0B4956C
+  ============================
+
+  Creation Code Hash:
+  0x02623b6777cd448c7e00b073f00f8dce6e0b1adfd97309f1c2a99f645837cf43
+  Predicted Factory Address: 0xF097097A6c950927Bdb1cA9e5Cb5f454713861A6
+
+=== Starting Deployment ===
+  Deploying new factory...
+  Factory deployed at: 0xF097097A6c950927Bdb1cA9e5Cb5f454713861A6
+  Implementation deployed at: 0xB65fBA9825b8c5A974b7aF6f6209592fAeb849eC
+
+Creating account for owner: 0x1E13289c8d59947b5959E74415F68Ef56805ffeC
+  Account proxy deployed at: 0x388b635c58Ee82a6748A2033f4520E6976064CE3
+
+Account deployment verified successfully
+
+=== Deployment Results ===
+  Implementation: 0xB65fBA9825b8c5A974b7aF6f6209592fAeb849eC
+  Factory: 0xF097097A6c950927Bdb1cA9e5Cb5f454713861A6
+  Account Proxy: 0x388b635c58Ee82a6748A2033f4520E6976064CE3
+  Gas Used: 2549049
+
+=== Contract Sizes ===
+  Implementation Size: 9323
+  Factory Size: 2067
+  Proxy Size: 170
+
+=== Deployment Successful ===
+
+## Setting up 1 EVM.
+==========================
+Simulated On-chain Traces:
+
+  [2376802] Create2Deployer::create2()
+    ├─ [2339166] → new IntentSimpleAccountFactory@0xF097097A6c950927Bdb1cA9e5Cb5f454713861A6
+    │   ├─ [1890476] → new IntentSimpleAccount@0xB65fBA9825b8c5A974b7aF6f6209592fAeb849eC
+    │   │   ├─ emit Initialized(version: 255)
+    │   │   └─ ← [Return] 9323 bytes of code
+    │   └─ ← [Return] 2067 bytes of code
+    └─ ← [Return] 0xf097097a6c950927bdb1ca9e5cb5f454713861a6
+
+  [126263] IntentSimpleAccountFactory::createAccount(0x1E13289c8d59947b5959E74415F68Ef56805ffeC, 0)
+    ├─ [88328] → new ERC1967Proxy@0x388b635c58Ee82a6748A2033f4520E6976064CE3
+    │   ├─ emit Upgraded(implementation: IntentSimpleAccount: [0xB65fBA9825b8c5A974b7aF6f6209592fAeb849eC])
+    │   ├─ [26866] IntentSimpleAccount::initialize(0x1E13289c8d59947b5959E74415F68Ef56805ffeC) [delegatecall]
+    │   │   ├─ emit SimpleAccountInitialized(entryPoint: 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789, owner: 0x1E13289c8d59947b5959E74415F68Ef56805ffeC)
+    │   │   ├─ emit Initialized(version: 1)
+    │   │   └─ ← [Stop]
+    │   └─ ← [Return] 170 bytes of code
+    └─ ← [Return] ERC1967Proxy: [0x388b635c58Ee82a6748A2033f4520E6976064CE3]
+
+
+==========================
+
+Chain 1
+
+Estimated gas price: 7.776914794 gwei
+
+Estimated total gas used for script: 3771910
+
+Estimated amount required: 0.02933382268063654 ETH
+
+==========================
+
+##### mainnet
+✅  [Success]Hash: 0x5a6a3b51983bd68f1d0471a90e071ba1f5b09fbcaf8048c910896ba81bd4c6fc
+Block: 21108870
+Paid: 0.010666220982170724 ETH (2582974 gas * 4.129434126 gwei)
+
+
+##### mainnet
+✅  [Success]Hash: 0xdebfddced15380384017c35985ff8e393b7e6f23a40c6de14810a7e3316edc23
+Block: 21108871
+Paid: 0.000617456259904237 ETH (147823 gas * 4.176997219 gwei)
+
+✅ Sequence #1 on mainnet | Total Paid: 0.011283677242074961 ETH (2730797 gas * avg 4.153215672 gwei)
+
+
+==========================
+
+ONCHAIN EXECUTION COMPLETE & SUCCESSFUL.
+##
+Start verification for (1) contracts
+Start verifying contract `0xF097097A6c950927Bdb1cA9e5Cb5f454713861A6` deployed on mainnet
+
+Submitting verification for [src/IntentSimpleAccountFactory.sol:IntentSimpleAccountFactory] 0xF097097A6c950927Bdb1cA9e5Cb5f454713861A6.
+^[Submitted contract for verification:
+	Response: `OK`
+	GUID: `zdcetax9q4yht3wxhiey2b1cbvmwqibyrwzph3ct4vgqs1itnp`
+	URL: https://etherscan.io/address/0xf097097a6c950927bdb1ca9e5cb5f454713861a6
+Contract verification status:
+Response: `NOTOK`
+Details: `Pending in queue`
+Contract verification status:
+Response: `OK`
+Details: `Pass - Verified`
+Contract successfully verified
+All (1) contracts were verified!
+
+Transactions saved to: /Users/mar/go/src/github.com/blndgs/intentaccounts/broadcast/IntentSimpleAccount.s.sol/1/run-latest.json
+
+Sensitive values saved to: /Users/mar/go/src/github.com/blndgs/intentaccounts/cache/IntentSimpleAccount.s.sol/1/run-latest.json
