@@ -66,16 +66,10 @@ contract SimpleAccountBscTest is Test {
 
     function createIntent() internal pure returns (bytes memory) {
         return bytes(
-            '{"chainId":137, "sender":"0x18Dd70639de2ca9146C32f9c84B90A68bBDaAA96",'
-            '"kind":"swap","hash":"","sellToken":"0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE",'
-            '"buyToken":"0xc2132D05D31c914a87C6611C10748AEb04B58e8F","sellAmount":10,'
-            '"buyAmount":5,"partiallyFillable":false,"status":"Received",' '"createdAt":0,"expirationAt":0}'
-        );
-    }
-
-    function createIntent2() internal pure returns (bytes memory) {
-        return bytes(
-            '{"fromAsset":{"address":"0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee","amount":{"value":"I4byb8EAAA=="},"chainId":{"value":"iQ=="}},"toStake":{"address":"0x1adB950d8bB3dA4bE104211D5AB038628e477fE6","amount":{"value":"D0JA"},"chainId":{"value":"OA=="}}}'
+            '{"fromAsset":{"address":"0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",'
+            '"amount":{"value":"I4byb8EAAA=="},"chainId":{"value":"iQ=="}},'
+            '"toStake":{"address":"0x1adB950d8bB3dA4bE104211D5AB038628e477fE6",'
+            '"amount":{"value":"D0JA"},"chainId":{"value":"OA=="}}}'
         );
     }
 
@@ -86,9 +80,9 @@ contract SimpleAccountBscTest is Test {
         address RECIPIENT_DEST = 0xE381bAB2e0C5b678F2FBb8D4b0949e41a6487c8f;
 
         // UI Intent creation
-        bytes memory srcIntent = createIntent2();
+        bytes memory srcIntent = createIntent();
 
-        bytes memory destIntent = createIntent2();
+        bytes memory destIntent = createIntent();
         UserOperation memory sourceUserOp = createUserOp2(address(simpleAccount), srcIntent);
         sourceUserOp.nonce = 9;
         UserOperation memory destUserOp = createUserOp2(address(simpleAccount), destIntent);
