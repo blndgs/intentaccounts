@@ -47,16 +47,16 @@ contract IntentSimpleAccount is SimpleAccount {
         bytes calldata xData =
             userOp.signature.length > SIGNATURE_LENGTH ? userOp.signature[SIGNATURE_LENGTH:] : userOp.signature[0:0];
 
-        // Parse the xData
+        // Parse the cross-chain data structure
         XChainLib.xCallData memory parsedData = XChainLib.parseXElems(xData);
 
-        // Compute callDataHash for conventional operations
+        // Handle callData hash computation per operation type
         if (parsedData.opType == XChainLib.OpType.Conventional) {
             if (xData.length > 0) {
-                // Use xData as the callDataHash
+                // Intent operation: use post-signature data as callData hash
                 parsedData.callDataHash = keccak256(xData);
             } else {
-                // Vanilla eip4337 operation
+                // Vanilla operation: use original callData
                 parsedData.callDataHash = keccak256(userOp.callData);
             }
         }
