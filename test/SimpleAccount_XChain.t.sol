@@ -10,7 +10,7 @@ import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "./TestSimpleAccountHelper.sol";
 import "./TestBytesHelper.sol";
 
-contract SimpleAccountBscTest is Test {
+contract SimpleAccountXChainTest is Test {
     using Strings for bytes32;
     using ECDSA for bytes32;
     using UserOperationLib for UserOperation;
