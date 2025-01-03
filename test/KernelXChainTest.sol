@@ -111,7 +111,7 @@ contract KernelXChainTest is Test {
 
         // UI signs the source and destination userOps
         // xSign(hash1, hash2, ownerPrivateKey, sourceUserOp, destUserOp);
-        xSignCommon(srcHash, destHash, ownerPrivateKey, srcUserOp, destUserOp, false);
+        xSignCommon(srcHash, destHash, ownerPrivateKey, srcUserOp, destUserOp);
 
         // Submit to the bundler
         // Bundler to the solver
@@ -158,7 +158,7 @@ contract KernelXChainTest is Test {
 
         // 4. Cross-chain sign (just like in testKernelCrossChainValidationBasic)
         //    This sets userOp.signature and userOp.callData with XChainLib placeholders
-        xSignCommon(srcHash, destHash, ownerPrivateKey, srcUserOp, destUserOp, false);
+        xSignCommon(srcHash, destHash, ownerPrivateKey, srcUserOp, destUserOp);
 
         // 5. Simulate "solver" step, appending the final solver callData to each signature
         //    (So the cross-chain data parser can read them from `signature[65:]` in `validateUserOp`)
@@ -275,12 +275,18 @@ contract KernelXChainTest is Test {
         bytes32 hash2,
         uint256 privateKey,
         UserOperation memory sourceUserOp,
-        UserOperation memory destUserOp,
-        bool reverseOrder
+        UserOperation memory destUserOp
     ) internal pure {
-        bytes32 xChainHash =
-            reverseOrder ? keccak256(abi.encodePacked(hash2, hash1)) : keccak256(abi.encodePacked(hash1, hash2));
+        // Compare hash values to determine order
+        // If hash1 is greater than hash2, we'll use reverse order (equivalent to reverseOrder = true)
+        bool shouldReverse = uint256(hash1) > uint256(hash2);
 
+        // Create xChainHash based on the comparison result
+        // When hash1 > hash2, we put hash2 first (reverse order)
+        bytes32 xChainHash =
+            shouldReverse ? keccak256(abi.encodePacked(hash2, hash1)) : keccak256(abi.encodePacked(hash1, hash2));
+
+        // Sign the hash using the provided private key
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, xChainHash.toEthSignedMessageHash());
         bytes memory signature = abi.encodePacked(r, s, v);
 
@@ -289,13 +295,16 @@ contract KernelXChainTest is Test {
         bytes[] memory srcHashList = new bytes[](2);
         bytes[] memory destHashList = new bytes[](2);
 
-        if (reverseOrder) {
+        // Organize hash lists based on the comparison result
+        if (shouldReverse) {
+            // When hash1 > hash2, use the reverse order logic
             srcHashList[0] = abi.encodePacked(hash2);
             srcHashList[1] = placeholder;
 
             destHashList[0] = placeholder;
             destHashList[1] = abi.encodePacked(hash1);
         } else {
+            // When hash1 < hash2, use the normal order logic
             srcHashList[0] = placeholder;
             srcHashList[1] = abi.encodePacked(hash2);
 
