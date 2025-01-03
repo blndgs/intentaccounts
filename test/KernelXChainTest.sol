@@ -180,6 +180,11 @@ contract KernelXChainTest is Test {
         assertEq(ValidationData.unwrap(destResult), 0, "Destination chain validation failed");
 
         // 7. Execute on the source chain
+
+        // Add validation plugin mode prefix to route through our validator
+        srcUserOp.signature = prefixSignature(srcUserOp.signature, VALIDATION_PLUGIN_1);
+        destUserOp.signature = prefixSignature(destUserOp.signature, VALIDATION_PLUGIN_1);
+
         vm.chainId(SOURCE_CHAIN_ID);
         UserOperation[] memory srcOps = new UserOperation[](1);
         srcOps[0] = srcUserOp;
@@ -346,4 +351,47 @@ contract KernelXChainTest is Test {
 
         return result;
     }
-}
+}    // default validation mode
+    uint256 constant VALIDATION_DEF_0 = 0;
+    // plugin validation mode
+    uint256 constant VALIDATION_PLUGIN_1 = 1;
+    // enable validator mode
+    uint256 constant VALIATION_ENABLED_2 = 2;
+
+    function prefixSignature(bytes memory signature, uint256 prefixValue) internal pure returns (bytes memory) {
+        require(prefixValue <= 2, "Invalid prefix value");
+        require(signature.length > 4, "Invalid signature length");
+
+        // Check if signature already has a prefix
+        bytes4 existingPrefix = bytes4(bytes.concat(signature[0], signature[1], signature[2], signature[3]));
+        bool hasPrefix = (existingPrefix == 0x00000000 || existingPrefix == 0x00000001 || existingPrefix == 0x00000002);
+
+        // Get the actual signature without prefix
+        bytes memory sigWithoutPrefix = hasPrefix ? slice(signature, 4, signature.length) : signature;
+
+        // Create new prefix based on prefixValue
+        bytes4 newPrefix;
+        if (prefixValue == 0) {
+            newPrefix = 0x00000000;
+        } else if (prefixValue == 1) {
+            newPrefix = 0x00000001;
+        } else if (prefixValue == 2) {
+            newPrefix = 0x00000002;
+        }
+
+        // Create new signature with desired prefix
+        bytes memory prefixedSignature = new bytes(sigWithoutPrefix.length + 4);
+
+        // Add new prefix
+        for (uint256 i = 0; i < 4; i++) {
+            prefixedSignature[i] = newPrefix[i];
+        }
+
+        // Add signature
+        for (uint256 i = 0; i < sigWithoutPrefix.length; i++) {
+            prefixedSignature[i + 4] = sigWithoutPrefix[i];
+        }
+
+        return prefixedSignature;
+    }
+
