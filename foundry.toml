@@ -13,7 +13,7 @@ v-mainnet888scan = { key = "${ETH_TENDERLY_ACCESS_TOKEN}", chain = 888, url = "$
 v-polygon = { key = "${POL_TENDERLY_ACCESS_TOKEN}", chain = 8889, url = "${V_POLYGON_RPC_URL}/verify/etherscan" }
 
 [profile.default]
-solc = "0.8.27"
+solc = "0.8.28"
 src = "src"
 out = "out"
 libs = ["lib"]
