@@ -64,11 +64,8 @@ contract KernelXChainTest is Test {
         intentValidator = new KernelIntentValidator();
 
         // Create account with intent validator
-        bytes memory initData = abi.encodeWithSelector(
-            kernelImpl.initialize.selector,
-            intentValidator,
-            abi.encodePacked(ownerAddress)
-        );
+        bytes memory initData =
+            abi.encodeWithSelector(kernelImpl.initialize.selector, intentValidator, abi.encodePacked(ownerAddress));
         account = Kernel(payable(address(factory.createAccount(address(kernelImpl), initData, 0))));
         vm.deal(address(account), 1e30);
 
@@ -101,14 +98,8 @@ contract KernelXChainTest is Test {
         bytes memory destIntent = createIntent();
 
         // Create UserOperations
-        UserOperation memory srcUserOp = createUserOp(
-            address(account),
-            srcIntent
-        );
-        UserOperation memory destUserOp = createUserOp(
-            address(account),
-            destIntent
-        );
+        UserOperation memory srcUserOp = createUserOp(address(account), srcIntent);
+        UserOperation memory destUserOp = createUserOp(address(account), destIntent);
 
         // Compute hashes
         bytes32 srcHash = intentValidator.getUserOpHash(srcUserOp, SOURCE_CHAIN_ID);
@@ -195,9 +186,7 @@ contract KernelXChainTest is Test {
 
         // Expect the UserOperationEvent for the source chain
         vm.expectEmit(false, true, true, false);
-        emit IEntryPoint.UserOperationEvent(
-            0, address(account), address(0), srcUserOp.nonce, true, 0, 0
-        );
+        emit IEntryPoint.UserOperationEvent(0, address(account), address(0), srcUserOp.nonce, true, 0, 0);
 
         entryPoint.handleOps(srcOps, payable(ownerAddress));
 
@@ -208,9 +197,7 @@ contract KernelXChainTest is Test {
 
         // Expect the UserOperationEvent for the destination chain
         vm.expectEmit(false, true, true, false);
-        emit IEntryPoint.UserOperationEvent(
-            0, address(account), address(0), destUserOp.nonce, true, 0, 0
-        );
+        emit IEntryPoint.UserOperationEvent(0, address(account), address(0), destUserOp.nonce, true, 0, 0);
 
         entryPoint.handleOps(destOps, payable(ownerAddress));
     }
@@ -245,10 +232,7 @@ contract KernelXChainTest is Test {
         // Validation should fail
         vm.chainId(SOURCE_CHAIN_ID);
         ValidationData result = intentValidator.validateUserOp(srcUserOp, bytes32(0), 0);
-        assertTrue(
-            ValidationData.unwrap(result) != 0,
-            "Validation should fail with invalid hash"
-        );
+        assertTrue(ValidationData.unwrap(result) != 0, "Validation should fail with invalid hash");
     }
 
     // Helper functions
@@ -262,10 +246,7 @@ contract KernelXChainTest is Test {
         );
     }
 
-    function createUserOp(
-        address sender,
-        bytes memory callData
-    ) internal view returns (UserOperation memory) {
+    function createUserOp(address sender, bytes memory callData) internal view returns (UserOperation memory) {
         return UserOperation({
             sender: sender,
             nonce: IKernel(sender).getNonce(),
@@ -281,11 +262,9 @@ contract KernelXChainTest is Test {
         });
     }
 
-    function _encodeHashList(
-        bytes[] memory hashList
-    ) internal pure returns (bytes memory) {
+    function _encodeHashList(bytes[] memory hashList) internal pure returns (bytes memory) {
         bytes memory encoded;
-        for(uint i = 0; i < hashList.length; i++) {
+        for (uint256 i = 0; i < hashList.length; i++) {
             encoded = abi.encodePacked(encoded, hashList[i]);
         }
         return encoded;
