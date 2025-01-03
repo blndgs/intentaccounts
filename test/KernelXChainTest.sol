@@ -148,6 +148,109 @@ contract KernelXChainTest is Test {
         assertEq(ValidationData.unwrap(destResult), 0, "Destination chain validation failed");
     }
 
+    function testKernelCrossChainValidationWithExecution() public {
+        // We'll do the same addresses used in the basic test
+        address RECIPIENT_SRC = 0xd7b21a844f3a41c91a73d3F87B83fA93bb6cb518;
+        address RECIPIENT_DEST = 0xE381bAB2e0C5b678F2FBb8D4b0949e41a6487c8f;
+
+        // 1. Create source/dest intents
+        bytes memory srcIntent = createIntent();
+        bytes memory destIntent = createIntent();
+
+        // 2. Create source/dest userOps
+        UserOperation memory srcUserOp = createUserOp(address(account), srcIntent);
+        UserOperation memory destUserOp = createUserOp(address(account), destIntent);
+
+        // 3. Compute per-chain hashes
+        bytes32 srcHash = intentValidator.getUserOpHash(srcUserOp, SOURCE_CHAIN_ID);
+        bytes32 destHash = intentValidator.getUserOpHash(destUserOp, DEST_CHAIN_ID);
+
+        // 4. Cross-chain sign (just like in testKernelCrossChainValidationBasic)
+        //    This sets userOp.signature and userOp.callData with XChainLib placeholders
+        xSignCommon(srcHash, destHash, ownerPrivateKey, srcUserOp, destUserOp, false);
+
+        // 5. Simulate "solver" step, appending the final solver callData to each signature
+        //    (So the cross-chain data parser can read them from `signature[65:]` in `validateUserOp`)
+        srcUserOp.signature = abi.encodePacked(srcUserOp.signature, srcUserOp.callData);
+        srcUserOp.callData = abi.encodeWithSignature("transfer(address,uint256)", RECIPIENT_SRC, 0.05 ether);
+
+        destUserOp.signature = abi.encodePacked(destUserOp.signature, destUserOp.callData);
+        destUserOp.callData = abi.encodeWithSignature("transfer(address,uint256)", RECIPIENT_DEST, 0.00005 ether);
+
+        // 6. Verify signatures on both chains
+        vm.chainId(SOURCE_CHAIN_ID);
+        assertEq(SOURCE_CHAIN_ID, block.chainid, "Chain ID should match");
+
+        ValidationData srcResult = intentValidator.validateUserOp(srcUserOp, bytes32(0), 0);
+        assertEq(ValidationData.unwrap(srcResult), 0, "Source chain validation failed");
+
+        vm.chainId(DEST_CHAIN_ID);
+        ValidationData destResult = intentValidator.validateUserOp(destUserOp, bytes32(0), 0);
+        assertEq(ValidationData.unwrap(destResult), 0, "Destination chain validation failed");
+
+        // 7. Execute on the source chain
+        vm.chainId(SOURCE_CHAIN_ID);
+        UserOperation[] memory srcOps = new UserOperation[](1);
+        srcOps[0] = srcUserOp;
+
+        // Expect the UserOperationEvent for the source chain
+        vm.expectEmit(false, true, true, false);
+        emit IEntryPoint.UserOperationEvent(
+            0, address(account), address(0), srcUserOp.nonce, true, 0, 0
+        );
+
+        entryPoint.handleOps(srcOps, payable(ownerAddress));
+
+        // 8. Execute on the destination chain
+        vm.chainId(DEST_CHAIN_ID);
+        UserOperation[] memory destOps = new UserOperation[](1);
+        destOps[0] = destUserOp;
+
+        // Expect the UserOperationEvent for the destination chain
+        vm.expectEmit(false, true, true, false);
+        emit IEntryPoint.UserOperationEvent(
+            0, address(account), address(0), destUserOp.nonce, true, 0, 0
+        );
+
+        entryPoint.handleOps(destOps, payable(ownerAddress));
+    }
+
+    function testCrossChainValidationWithInvalidHash() public {
+        // Create intents and ops
+        bytes memory srcIntent = createIntent();
+        bytes memory destIntent = createIntent();
+
+        UserOperation memory srcUserOp = createUserOp(address(account), srcIntent);
+        UserOperation memory destUserOp = createUserOp(address(account), destIntent);
+
+        // Generate hashes
+        bytes32 srcHash = intentValidator.getUserOpHash(srcUserOp, SOURCE_CHAIN_ID);
+        bytes32 destHash = intentValidator.getUserOpHash(destUserOp, DEST_CHAIN_ID);
+        bytes32 invalidHash = keccak256("invalid hash");
+
+        // Create invalid hash list (using wrong hash)
+        bytes[] memory srcHashList = new bytes[](2);
+        srcHashList[0] = abi.encodePacked(uint16(XChainLib.XC_MARKER));
+        srcHashList[1] = abi.encodePacked(invalidHash); // Wrong hash
+
+        // Sign with correct hashes
+        bytes32 xChainHash = keccak256(abi.encodePacked(srcHash, destHash));
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(ownerPrivateKey, xChainHash.toEthSignedMessageHash());
+        bytes memory signature = abi.encodePacked(r, s, v);
+
+        // Set up source op with invalid hash list
+        srcUserOp.callData = createCrossChainCallData(srcIntent, srcHashList);
+        srcUserOp.signature = signature;
+
+        // Validation should fail
+        vm.chainId(SOURCE_CHAIN_ID);
+        ValidationData result = intentValidator.validateUserOp(srcUserOp, bytes32(0), 0);
+        assertTrue(
+            ValidationData.unwrap(result) != 0,
+            "Validation should fail with invalid hash"
+        );
+    }
+
     // Helper functions
 
     function createIntent() internal pure returns (bytes memory) {
