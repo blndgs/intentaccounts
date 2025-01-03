@@ -162,11 +162,35 @@ contract KernelXChainTest is Test {
 
         // 5. Simulate "solver" step, appending the final solver callData to each signature
         //    (So the cross-chain data parser can read them from `signature[65:]` in `validateUserOp`)
-        srcUserOp.signature = abi.encodePacked(srcUserOp.signature, srcUserOp.callData);
-        srcUserOp.callData = abi.encodeWithSignature("transfer(address,uint256)", RECIPIENT_SRC, 0.05 ether);
 
+        srcUserOp.signature = abi.encodePacked(srcUserOp.signature, srcUserOp.callData);
         destUserOp.signature = abi.encodePacked(destUserOp.signature, destUserOp.callData);
-        destUserOp.callData = abi.encodeWithSignature("transfer(address,uint256)", RECIPIENT_DEST, 0.00005 ether);
+
+        // Create batch parameters for source operation
+        uint256[] memory srcValues = new uint256[](1);
+        srcValues[0] = 0.05 ether;
+        address[] memory srcDest = new address[](1);
+        srcDest[0] = RECIPIENT_SRC;
+        bytes[] memory srcFunc = new bytes[](1);
+        srcFunc[0] = abi.encodeWithSignature("transfer(address,uint256)", RECIPIENT_SRC, 0.05 ether);
+
+        // Create batch parameters for destination operation
+        uint256[] memory destValues = new uint256[](1);
+        destValues[0] = 0.00005 ether;
+        address[] memory destDest = new address[](1);
+        destDest[0] = RECIPIENT_DEST;
+        bytes[] memory destFunc = new bytes[](1);
+        destFunc[0] = abi.encodeWithSignature("transfer(address,uint256)", RECIPIENT_DEST, 0.00005 ether);
+
+        // Update userOp calldata to use execValueBatch
+        srcUserOp.callData =
+            abi.encodeWithSelector(KernelIntentExecutor.execValueBatch.selector, srcValues, srcDest, srcFunc);
+
+        destUserOp.callData =
+            abi.encodeWithSelector(KernelIntentExecutor.execValueBatch.selector, destValues, destDest, destFunc);
+
+        // Register batch executor
+        registerBatchExecutor();
 
         // 6. Verify signatures on both chains
         vm.chainId(SOURCE_CHAIN_ID);
@@ -351,7 +375,23 @@ contract KernelXChainTest is Test {
 
         return result;
     }
-}    // default validation mode
+
+    function registerBatchExecutor() internal {
+        bytes4 batchSelector = KernelIntentExecutor.execValueBatch.selector;
+
+        vm.startPrank(address(account));
+        account.setExecution(
+            batchSelector,
+            address(intentExecutor),
+            intentValidator,
+            ValidUntil.wrap(0),
+            ValidAfter.wrap(0),
+            abi.encodePacked(ownerAddress)
+        );
+        vm.stopPrank();
+    }
+
+    // default validation mode
     uint256 constant VALIDATION_DEF_0 = 0;
     // plugin validation mode
     uint256 constant VALIDATION_PLUGIN_1 = 1;
@@ -395,3 +435,39 @@ contract KernelXChainTest is Test {
         return prefixedSignature;
     }
 
+    // Custom errors
+    error EndLessThanStart();
+    error EndOutOfBounds(uint256 dataLength, uint256 end);
+    error StartOutOfBounds(uint256 dataLength, uint256 start);
+
+    /**
+     * @dev Slices a bytes array to return a portion specified by the start and end indices.
+     * @param data The bytes array to be sliced.
+     * @param start The index in the bytes array where the slice begins.
+     * @param end The index in the bytes array where the slice ends (exclusive).
+     * @return result The sliced portion of the bytes array.
+     * Note: The function reverts if the start index is not less than the end index,
+     *       if start or end is out of the bounds of the data array.
+     */
+    function slice(bytes memory data, uint256 start, uint256 end) internal pure returns (bytes memory result) {
+        if (end <= start) revert EndLessThanStart();
+        if (end > data.length) revert EndOutOfBounds(data.length, end);
+        if (start >= data.length) revert StartOutOfBounds(data.length, start);
+
+        assembly {
+            // Allocate memory for the result
+            result := mload(0x40)
+            mstore(result, sub(end, start)) // Set the length of the result
+            let resultPtr := add(result, 0x20)
+
+            // Copy the data from the start to the end
+            for { let i := start } lt(i, end) { i := add(i, 0x20) } {
+                let dataPtr := add(add(data, 0x20), i)
+                mstore(add(resultPtr, sub(i, start)), mload(dataPtr))
+            }
+
+            // Update the free memory pointer
+            mstore(0x40, add(resultPtr, sub(end, start)))
+        }
+    }
+}
