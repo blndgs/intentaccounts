@@ -149,6 +149,16 @@ contract KernelIntentPluginsTest is Test {
         );
     }
 
+    /*
+     * This test verifies the registration of executors using APIs in a Kernel account.
+     * It checks:
+     * - Initial state has only default validator
+     * - Successful registration of intentExecutor and intentValidator
+     * - Updates to execution configuration for specific functions
+     * - Ability to execute registered functions (doNothing and execValueBatch)
+     * - Event emissions for function calls
+     * - Value handling in batch executions
+     */
     function testRegistrationByApi() public {
         _createAccount();
 
