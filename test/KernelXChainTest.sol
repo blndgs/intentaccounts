@@ -151,6 +151,7 @@ contract KernelXChainTest is Test {
         // 2. Create source/dest userOps
         UserOperation memory srcUserOp = createUserOp(address(account), srcIntent);
         UserOperation memory destUserOp = createUserOp(address(account), destIntent);
+        destUserOp.nonce = 1;
 
         // 3. Compute per-chain hashes
         bytes32 srcHash = intentValidator.getUserOpHash(srcUserOp, SOURCE_CHAIN_ID);
