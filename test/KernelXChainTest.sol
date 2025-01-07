@@ -29,37 +29,55 @@ import "forge-std/Test.sol";
 contract KernelXChainTest is Test {
     using ECDSA for bytes32;
 
+    // --------------------------------------------
+    // Constants
+    // --------------------------------------------
     address constant ENTRYPOINT_V06 = 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789;
     uint256 constant SOURCE_CHAIN_ID = 137; // Polygon
     uint256 constant DEST_CHAIN_ID = 56; // BSC
 
-    IEntryPoint entryPoint;
-    ECDSAValidator defaultValidator;
-    KernelIntentValidator intentValidator;
-    KernelIntentExecutor intentExecutor;
+    address constant RECIPIENT_SRC = 0xd7b21a844f3a41c91a73d3F87B83fA93bb6cb518;
+    address constant RECIPIENT_DEST = 0xE381bAB2e0C5b678F2FBb8D4b0949e41a6487c8f;
 
-    address factoryOwnerAddress;
-    address ownerAddress;
-    uint256 ownerPrivateKey;
-    IKernel account;
-    KernelFactory factory;
-    Kernel kernelImpl;
+    // Validation mode constants
+    uint256 constant VALIDATION_DEF_0 = 0; // default validation mode
+    uint256 constant VALIDATION_PLUGIN_1 = 1; // plugin validation mode
+    uint256 constant VALIATION_ENABLED_2 = 2; // "enable" validator mode
 
+    // --------------------------------------------
+    // State variables
+    // --------------------------------------------
+    IEntryPoint public entryPoint;
+    ECDSAValidator public defaultValidator;
+    KernelIntentValidator public intentValidator;
+    KernelIntentExecutor public intentExecutor;
+
+    address public factoryOwnerAddress;
+    address public ownerAddress;
+    uint256 public ownerPrivateKey;
+    IKernel public account;
+    KernelFactory public factory;
+    Kernel public kernelImpl;
+
+    // --------------------------------------------
+    // Setup
+    // --------------------------------------------
     function setUp() public {
         // Set up EntryPoint
         entryPoint = IEntryPoint(payable(ENTRYPOINT_V06));
         vm.etch(ENTRYPOINT_0_6_ADDRESS, ENTRYPOINT_0_6_BYTECODE);
         readEnvVars();
 
-        // Create default ECDSA account
+        // 1) Create a Kernel implementation
         vm.startPrank(factoryOwnerAddress);
         kernelImpl = new Kernel(entryPoint);
         factory = new KernelFactory(factoryOwnerAddress, entryPoint);
         factory.setImplementation(address(kernelImpl), true);
+
+        // 2) Default validator is ECDSA
         defaultValidator = new ECDSAValidator();
 
-        // Plugin setup and intent execution
-        defaultValidator = new ECDSAValidator();
+        // 3) Deploy our plugin (intent) validator + executor
         intentExecutor = new KernelIntentExecutor();
         intentValidator = new KernelIntentValidator();
 
@@ -69,7 +87,9 @@ contract KernelXChainTest is Test {
         account = Kernel(payable(address(factory.createAccount(address(kernelImpl), initData, 0))));
         vm.deal(address(account), 1e30);
 
-        // Enable validator
+        // The wallet is ECDSA-based. But we can still *enable* the plugin validator
+        // in a single userOp later. For completeness, we "enable" the plugin
+        // but that doesn't actually set it for execValueBatch yet:
         intentValidator.enable(abi.encodePacked(ownerAddress));
     }
 
@@ -85,29 +105,23 @@ contract KernelXChainTest is Test {
         ownerAddress = vm.addr(ownerPrivateKey);
 
         console2.log("Owner address:", ownerAddress);
-
         assertFalse(ownerAddress == address(0), "Owner address should not be the zero address");
     }
 
+    // --------------------------------------------
+    // Example: Basic test with cross-chain signing
+    // --------------------------------------------
     function testKernelCrossChainValidationBasic() public {
-        address RECIPIENT_SRC = 0xd7b21a844f3a41c91a73d3F87B83fA93bb6cb518;
-        address RECIPIENT_DEST = 0xE381bAB2e0C5b678F2FBb8D4b0949e41a6487c8f;
-
-        // Create source and destination intents
+        // Create source/dest userOps with "intents"
         bytes memory srcIntent = createIntent();
         bytes memory destIntent = createIntent();
 
-        // Create UserOperations
         UserOperation memory srcUserOp = createUserOp(address(account), srcIntent);
         UserOperation memory destUserOp = createUserOp(address(account), destIntent);
 
-        // Compute hashes
+        // Compute chain-specific hashes
         bytes32 srcHash = intentValidator.getUserOpHash(srcUserOp, SOURCE_CHAIN_ID);
-        console2.log("srcHash:");
-        console2.logBytes32(srcHash);
         bytes32 destHash = intentValidator.getUserOpHash(destUserOp, DEST_CHAIN_ID);
-        console2.log("destHash:");
-        console2.logBytes32(destHash);
 
         // UI signs the source and destination userOps
         // xSign(hash1, hash2, ownerPrivateKey, sourceUserOp, destUserOp);
@@ -118,16 +132,16 @@ contract KernelXChainTest is Test {
         // solve sourceUserOp
 
         // solve sourceUserOp which means the source userOp receives the EVM calldata solution
-        // after appending the cross-chain calldata value (Intent) to the signature
-        srcUserOp.signature = bytes(abi.encodePacked(srcUserOp.signature, srcUserOp.callData));
+        // Solver step: append callData => userOp.signature
+        srcUserOp.signature = abi.encodePacked(srcUserOp.signature, srcUserOp.callData);
         srcUserOp.callData = abi.encodeWithSignature("transfer(address,uint256)", RECIPIENT_SRC, 0.05 ether);
 
         // solve destUserOp: the source userOp receives the EVM calldata solution
         // after appending the cross-chain calldata value (Intent) to the signature
-        destUserOp.signature = bytes(abi.encodePacked(destUserOp.signature, destUserOp.callData));
+        destUserOp.signature = abi.encodePacked(destUserOp.signature, destUserOp.callData);
         destUserOp.callData = abi.encodeWithSignature("transfer(address,uint256)", RECIPIENT_DEST, 0.00005 ether);
 
-        // Verify signatures on both chains
+        // Validate them on each chain
         vm.chainId(SOURCE_CHAIN_ID);
         assertEq(SOURCE_CHAIN_ID, block.chainid, "Chain ID should match");
 
@@ -139,97 +153,103 @@ contract KernelXChainTest is Test {
         assertEq(ValidationData.unwrap(destResult), 0, "Destination chain validation failed");
     }
 
+    // --------------- Main Test ---------------
     function testKernelCrossChainValidationWithExecution() public {
-        // We'll do the same addresses used in the basic test
-        address RECIPIENT_SRC = 0xd7b21a844f3a41c91a73d3F87B83fA93bb6cb518;
-        address RECIPIENT_DEST = 0xE381bAB2e0C5b678F2FBb8D4b0949e41a6487c8f;
+        // (1) Create and sign the source/dest userOps
+        (UserOperation memory srcUserOp, UserOperation memory destUserOp) = prepareCrossChainUserOps();
 
-        // 1. Create source/dest intents
+        // (2) Register the batch executor once, so we can call execValueBatch
+        registerBatchExecutor();
+
+        // (3) Validate & Execute on source chain
+        validateAndExecute(srcUserOp, SOURCE_CHAIN_ID, 0.05 ether, RECIPIENT_SRC);
+
+        // (4) Validate & Execute on destination chain
+        validateAndExecute(destUserOp, DEST_CHAIN_ID, 0.00005 ether, RECIPIENT_DEST);
+    }
+
+    /**
+     * @dev Creates 2 userOps (src/dest), sets nonces, signs them cross-chain.
+     */
+    function prepareCrossChainUserOps() internal view returns (UserOperation memory, UserOperation memory) {
         bytes memory srcIntent = createIntent();
         bytes memory destIntent = createIntent();
 
-        // 2. Create source/dest userOps
         UserOperation memory srcUserOp = createUserOp(address(account), srcIntent);
         UserOperation memory destUserOp = createUserOp(address(account), destIntent);
+
+        // For demonstration, increment the dest nonce
         destUserOp.nonce = 1;
 
-        // 3. Compute per-chain hashes
+        // 1) Compute the chain-specific userOp hashes
         bytes32 srcHash = intentValidator.getUserOpHash(srcUserOp, SOURCE_CHAIN_ID);
         bytes32 destHash = intentValidator.getUserOpHash(destUserOp, DEST_CHAIN_ID);
 
-        // 4. Cross-chain sign (just like in testKernelCrossChainValidationBasic)
-        //    This sets userOp.signature and userOp.callData with XChainLib placeholders
+        // 2) Cross-chain sign sets userOp.signature + userOp.callData placeholders
         xSignCommon(srcHash, destHash, ownerPrivateKey, srcUserOp, destUserOp);
 
-        // 5. Simulate "solver" step, appending the final solver callData to each signature
-        //    (So the cross-chain data parser can read them from `signature[65:]` in `validateUserOp`)
-
+        // 3) The "solver" step: append final solver callData to signatures
         srcUserOp.signature = abi.encodePacked(srcUserOp.signature, srcUserOp.callData);
         destUserOp.signature = abi.encodePacked(destUserOp.signature, destUserOp.callData);
 
-        // Create batch parameters for source operation
-        uint256[] memory srcValues = new uint256[](1);
-        srcValues[0] = 0.05 ether;
-        address[] memory srcDest = new address[](1);
-        srcDest[0] = RECIPIENT_SRC;
-        bytes[] memory srcFunc = new bytes[](1);
-        srcFunc[0] = abi.encodeWithSignature("transfer(address,uint256)", RECIPIENT_SRC, 0.05 ether);
+        return (srcUserOp, destUserOp);
+    }
 
-        // Create batch parameters for destination operation
-        uint256[] memory destValues = new uint256[](1);
-        destValues[0] = 0.00005 ether;
-        address[] memory destDest = new address[](1);
-        destDest[0] = RECIPIENT_DEST;
-        bytes[] memory destFunc = new bytes[](1);
-        destFunc[0] = abi.encodeWithSignature("transfer(address,uint256)", RECIPIENT_DEST, 0.00005 ether);
+    /**
+     * @dev Verifies the signature of a userOp on the specified chain, then executes it.
+     *      We also handle the final prefixing and call handleOps to trigger the actual transaction.
+     * @param userOp    The userOp to be validated and executed.
+     * @param chainId   Which chain we’re “simulating” or “executing” on (source or dest).
+     * @param amount    Amount of Ether to transfer in the batch.
+     * @param recipient Who receives that Ether in the final callData.
+     */
+    function validateAndExecute(UserOperation memory userOp, uint256 chainId, uint256 amount, address recipient)
+        internal
+    {
+        // Switch chain context
+        vm.chainId(chainId);
+        require(block.chainid == chainId, "Chain ID mismatch");
 
-        // Update userOp calldata to use execValueBatch
-        srcUserOp.callData =
-            abi.encodeWithSelector(KernelIntentExecutor.execValueBatch.selector, srcValues, srcDest, srcFunc);
+        // 1) Replace userOp.callData with execValueBatch
+        userOp.callData = abi.encodeWithSelector(
+            KernelIntentExecutor.execValueBatch.selector,
+            _singleValueArray(amount),
+            _singleAddressArray(recipient),
+            _singleBytesArray(abi.encodeWithSignature("transfer(address,uint256)", recipient, amount))
+        );
 
-        destUserOp.callData =
-            abi.encodeWithSelector(KernelIntentExecutor.execValueBatch.selector, destValues, destDest, destFunc);
+        // 2) Verify signature
+        ValidationData result = intentValidator.validateUserOp(userOp, bytes32(0), 0);
+        require(ValidationData.unwrap(result) == 0, "Validation failed");
 
-        // Register batch executor
-        registerBatchExecutor();
+        // 3) Finally prefix signature to route through validator
+        userOp.signature = prefixSignature(userOp.signature, VALIDATION_PLUGIN_1);
 
-        // 6. Verify signatures on both chains
-        vm.chainId(SOURCE_CHAIN_ID);
-        assertEq(SOURCE_CHAIN_ID, block.chainid, "Chain ID should match");
+        // 4) Execute
+        UserOperation[] memory ops = new UserOperation[](1);
+        ops[0] = userOp;
 
-        ValidationData srcResult = intentValidator.validateUserOp(srcUserOp, bytes32(0), 0);
-        assertEq(ValidationData.unwrap(srcResult), 0, "Source chain validation failed");
-
-        vm.chainId(DEST_CHAIN_ID);
-        ValidationData destResult = intentValidator.validateUserOp(destUserOp, bytes32(0), 0);
-        assertEq(ValidationData.unwrap(destResult), 0, "Destination chain validation failed");
-
-        // 7. Execute on the source chain
-
-        // Add validation plugin mode prefix to route through our validator
-        srcUserOp.signature = prefixSignature(srcUserOp.signature, VALIDATION_PLUGIN_1);
-        destUserOp.signature = prefixSignature(destUserOp.signature, VALIDATION_PLUGIN_1);
-
-        vm.chainId(SOURCE_CHAIN_ID);
-        UserOperation[] memory srcOps = new UserOperation[](1);
-        srcOps[0] = srcUserOp;
-
-        // Expect the UserOperationEvent for the source chain
         vm.expectEmit(false, true, true, false);
-        emit IEntryPoint.UserOperationEvent(0, address(account), address(0), srcUserOp.nonce, true, 0, 0);
+        emit IEntryPoint.UserOperationEvent(0, address(account), address(0), userOp.nonce, true, 0, 0);
 
-        entryPoint.handleOps(srcOps, payable(ownerAddress));
+        entryPoint.handleOps(ops, payable(ownerAddress));
+    }
 
-        // 8. Execute on the destination chain
-        vm.chainId(DEST_CHAIN_ID);
-        UserOperation[] memory destOps = new UserOperation[](1);
-        destOps[0] = destUserOp;
+    // --------------- Helper functions ---------------
 
-        // Expect the UserOperationEvent for the destination chain
-        vm.expectEmit(false, true, true, false);
-        emit IEntryPoint.UserOperationEvent(0, address(account), address(0), destUserOp.nonce, true, 0, 0);
+    function _singleValueArray(uint256 val) internal pure returns (uint256[] memory arr) {
+        arr = new uint256[](1);
+        arr[0] = val;
+    }
 
-        entryPoint.handleOps(destOps, payable(ownerAddress));
+    function _singleAddressArray(address addr) internal pure returns (address[] memory arr) {
+        arr = new address[](1);
+        arr[0] = addr;
+    }
+
+    function _singleBytesArray(bytes memory data) internal pure returns (bytes[] memory arr) {
+        arr = new bytes[](1);
+        arr[0] = data;
     }
 
     function testCrossChainValidationWithInvalidHash() public {
