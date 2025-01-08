@@ -86,11 +86,6 @@ contract KernelXChainTest is Test {
             abi.encodeWithSelector(kernelImpl.initialize.selector, intentValidator, abi.encodePacked(ownerAddress));
         account = Kernel(payable(address(factory.createAccount(address(kernelImpl), initData, 0))));
         vm.deal(address(account), 1e30);
-
-        // The wallet is ECDSA-based. But we can still *enable* the plugin validator
-        // in a single userOp later. For completeness, we "enable" the plugin
-        // but that doesn't actually set it for execValueBatch yet:
-        intentValidator.enable(abi.encodePacked(ownerAddress));
     }
 
     function readEnvVars() public {
@@ -124,7 +119,6 @@ contract KernelXChainTest is Test {
         bytes32 destHash = intentValidator.getUserOpHash(destUserOp, DEST_CHAIN_ID);
 
         // UI signs the source and destination userOps
-        // xSign(hash1, hash2, ownerPrivateKey, sourceUserOp, destUserOp);
         xSignCommon(srcHash, destHash, ownerPrivateKey, srcUserOp, destUserOp);
 
         // Submit to the bundler
@@ -153,6 +147,24 @@ contract KernelXChainTest is Test {
         assertEq(ValidationData.unwrap(destResult), 0, "Destination chain validation failed");
     }
 
+    function testKernelCrossChainValidationWithExecution() public {
+        // (1) Create account with default validator
+        bytes memory initData =
+            abi.encodeWithSelector(kernelImpl.initialize.selector, defaultValidator, abi.encodePacked(ownerAddress));
+        account = Kernel(payable(address(factory.createAccount(address(kernelImpl), initData, 0))));
+        vm.deal(address(account), 1e30);
+
+        // (2) Create and sign the source/dest userOps
+        (UserOperation memory srcUserOp, UserOperation memory destUserOp) = prepareCrossChainUserOps();
+
+        // (3) Register the batch executor once, so we can call execValueBatch
+        registerBatchExecutor();
+
+        // (4) Validate & Execute on source chain
+        validateAndExecute(srcUserOp, SOURCE_CHAIN_ID, 0.05 ether, RECIPIENT_SRC);
+
+        // (5) Validate & Execute on destination chain
+        validateAndExecute(destUserOp, DEST_CHAIN_ID, 0.00005 ether, RECIPIENT_DEST);
     }
 
     /**
@@ -184,7 +196,7 @@ contract KernelXChainTest is Test {
 
     /**
      * @dev Verifies the signature of a userOp on the specified chain, then executes it.
-     *      We also handle the final prefixing and call handleOps to trigger the actual transaction.
+     * We also handle the final prefixing and call handleOps to trigger the actual transaction.
      * @param userOp    The userOp to be validated and executed.
      * @param chainId   Which chain we’re “simulating” or “executing” on (source or dest).
      * @param amount    Amount of Ether to transfer in the batch.
@@ -315,15 +327,12 @@ contract KernelXChainTest is Test {
         UserOperation memory destUserOp
     ) internal pure {
         // Compare hash values to determine order
-        // If hash1 is greater than hash2, we'll use reverse order (equivalent to reverseOrder = true)
         bool shouldReverse = uint256(hash1) > uint256(hash2);
 
-        // Create xChainHash based on the comparison result
-        // When hash1 > hash2, we put hash2 first (reverse order)
         bytes32 xChainHash =
             shouldReverse ? keccak256(abi.encodePacked(hash2, hash1)) : keccak256(abi.encodePacked(hash1, hash2));
 
-        // Sign the hash using the provided private key
+        // Sign
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, xChainHash.toEthSignedMessageHash());
         bytes memory signature = abi.encodePacked(r, s, v);
 
@@ -348,8 +357,6 @@ contract KernelXChainTest is Test {
             destHashList[0] = abi.encodePacked(hash1);
             destHashList[1] = placeholder;
         }
-
-        // Optional: Add assertions or logging if necessary
 
         // Set the cross-chain calldata value after signing
         sourceUserOp.callData = createCrossChainCallData(sourceUserOp.callData, srcHashList);
@@ -399,13 +406,6 @@ contract KernelXChainTest is Test {
         vm.stopPrank();
     }
 
-    // default validation mode
-    uint256 constant VALIDATION_DEF_0 = 0;
-    // plugin validation mode
-    uint256 constant VALIDATION_PLUGIN_1 = 1;
-    // enable validator mode
-    uint256 constant VALIATION_ENABLED_2 = 2;
-
     function prefixSignature(bytes memory signature, uint256 prefixValue) internal pure returns (bytes memory) {
         require(prefixValue <= 2, "Invalid prefix value");
         require(signature.length > 4, "Invalid signature length");
@@ -417,15 +417,13 @@ contract KernelXChainTest is Test {
         // Get the actual signature without prefix
         bytes memory sigWithoutPrefix = hasPrefix ? slice(signature, 4, signature.length) : signature;
 
-        // Create new prefix based on prefixValue
         bytes4 newPrefix;
-        if (prefixValue == 0) {
-            newPrefix = 0x00000000;
-        } else if (prefixValue == 1) {
-            newPrefix = 0x00000001;
-        } else if (prefixValue == 2) {
-            newPrefix = 0x00000002;
-        }
+        // VALIDATION_DEF_0 = 0;
+        // VALIDATION_PLUGIN_1 = 1;
+        // VALIATION_ENABLED_2 = 2;
+        if (prefixValue == 0) newPrefix = 0x00000000;
+        else if (prefixValue == 1) newPrefix = 0x00000001;
+        else if (prefixValue == 2) newPrefix = 0x00000002;
 
         // Create new signature with desired prefix
         bytes memory prefixedSignature = new bytes(sigWithoutPrefix.length + 4);
