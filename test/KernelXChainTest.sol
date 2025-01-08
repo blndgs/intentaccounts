@@ -81,7 +81,7 @@ contract KernelXChainTest is Test {
         intentExecutor = new KernelIntentExecutor();
         intentValidator = new KernelIntentValidator();
 
-        // Create account with intent validator
+        // Create account with intent validator by default
         bytes memory initData =
             abi.encodeWithSelector(kernelImpl.initialize.selector, intentValidator, abi.encodePacked(ownerAddress));
         account = Kernel(payable(address(factory.createAccount(address(kernelImpl), initData, 0))));
@@ -121,17 +121,12 @@ contract KernelXChainTest is Test {
         // UI signs the source and destination userOps
         xSignCommon(srcHash, destHash, ownerPrivateKey, srcUserOp, destUserOp);
 
-        // Submit to the bundler
-        // Bundler to the solver
-        // solve sourceUserOp
-
         // solve sourceUserOp which means the source userOp receives the EVM calldata solution
         // Solver step: append callData => userOp.signature
+        // Bundler => solver => solve sourceUserOp
         srcUserOp.signature = abi.encodePacked(srcUserOp.signature, srcUserOp.callData);
         srcUserOp.callData = abi.encodeWithSignature("transfer(address,uint256)", RECIPIENT_SRC, 0.05 ether);
 
-        // solve destUserOp: the source userOp receives the EVM calldata solution
-        // after appending the cross-chain calldata value (Intent) to the signature
         destUserOp.signature = abi.encodePacked(destUserOp.signature, destUserOp.callData);
         destUserOp.callData = abi.encodeWithSignature("transfer(address,uint256)", RECIPIENT_DEST, 0.00005 ether);
 
@@ -148,23 +143,89 @@ contract KernelXChainTest is Test {
     }
 
     function testKernelCrossChainValidationWithExecution() public {
-        // (1) Create account with default validator
+        // -----------------------
+        // (1) Deploy account w/ default validator, initial nonce = 0
+        // -----------------------
         bytes memory initData =
             abi.encodeWithSelector(kernelImpl.initialize.selector, defaultValidator, abi.encodePacked(ownerAddress));
-        account = Kernel(payable(address(factory.createAccount(address(kernelImpl), initData, 0))));
+        account = Kernel(payable(factory.createAccount(address(kernelImpl), initData, 0)));
         vm.deal(address(account), 1e30);
 
-        // (2) Create and sign the source/dest userOps
+        // Confirm fresh
+        uint256 currentNonce = IKernel(address(account)).getNonce();
+        assertEq(currentNonce, 0, "initial nonce must be 0 for fresh kernel");
+
+        // -----------------------
+        // (2) Build + handle the “enable” userOp => calls setExecution() for execValueBatch
+        // -----------------------
+        UserOperation memory enableUserOp = buildEnableExecValueBatchOp();
+        // set userOp.nonce to the current account nonce (which is 0 for brand new account)
+        enableUserOp.nonce = currentNonce;
+
+        // sign it
+        enableUserOp.signature = buildEnableSignature(
+            enableUserOp,
+            IKernel.setExecution.selector,
+            0, // validAfter
+            0, // validUntil
+            intentValidator,
+            address(intentExecutor),
+            ownerPrivateKey
+        );
+
+        // Execute the enable userOp
+        UserOperation[] memory ops = new UserOperation[](1);
+        ops[0] = enableUserOp;
+
+        vm.expectEmit(false, true, true, false);
+        emit IEntryPoint.UserOperationEvent(0, address(account), address(0), enableUserOp.nonce, true, 0, 0);
+
+        entryPoint.handleOps(ops, payable(ownerAddress));
+
+        // after the first handleOps, the kernel’s nonce is incremented by 1
+        uint256 nextNonce = IKernel(address(account)).getNonce();
+        assertEq(nextNonce, currentNonce + 1, "nonce should have incremented by 1");
+        // now nextNonce = 1
+
+        // -----------------------
+        // (3) Create your cross-chain userOps (source, dest)
+        //     and ensure they have up-to-date nonces
+        // -----------------------
         (UserOperation memory srcUserOp, UserOperation memory destUserOp) = prepareCrossChainUserOps();
 
-        // (3) Register the batch executor once, so we can call execValueBatch
-        registerBatchExecutor();
+        // The first cross-chain userOp uses the new nonce (1)
+        srcUserOp.nonce = nextNonce;
+        // sign it if not already signed
+        // ...
+        // do your normal “solver” finalization, etc.
 
-        // (4) Validate & Execute on source chain
+        // 3a) Execute on the “source” chain
         validateAndExecute(srcUserOp, SOURCE_CHAIN_ID, 0.05 ether, RECIPIENT_SRC);
 
-        // (5) Validate & Execute on destination chain
-        validateAndExecute(destUserOp, DEST_CHAIN_ID, 0.00005 ether, RECIPIENT_DEST);
+        // kernel nonce after that handleOps is now 2
+        nextNonce = IKernel(address(account)).getNonce();
+        assertEq(nextNonce, 2, "nonce should be 2 after the second userOp");
+    }
+
+    /**
+     * @dev Constructs a UserOperation that calls Kernel.setExecution(...) to enable
+     *      the execValueBatch selector with {intentExecutor} and {intentValidator}.
+     */
+    function buildEnableExecValueBatchOp() internal view returns (UserOperation memory) {
+        bytes memory callData = abi.encodeWithSelector(
+            IKernel.setExecution.selector,
+            KernelIntentExecutor.execValueBatch.selector,
+            address(intentExecutor),
+            address(intentValidator),
+            ValidUntil.wrap(0),
+            ValidAfter.wrap(0),
+            abi.encodePacked(ownerAddress)
+        );
+
+        UserOperation memory userOp = createUserOp(address(account), callData);
+        // For cleanliness, set a distinct nonce just in case
+        userOp.nonce = IKernel(address(account)).getNonce();
+        return userOp;
     }
 
     /**
@@ -221,7 +282,7 @@ contract KernelXChainTest is Test {
         ValidationData result = intentValidator.validateUserOp(userOp, bytes32(0), 0);
         require(ValidationData.unwrap(result) == 0, "Validation failed");
 
-        // 3) Finally prefix signature to route through validator
+        // 3) Finally prefix signature to route through the plugin validator
         userOp.signature = prefixSignature(userOp.signature, VALIDATION_PLUGIN_1);
 
         // 4) Execute
@@ -285,7 +346,6 @@ contract KernelXChainTest is Test {
     }
 
     // Helper functions
-
     function createIntent() internal pure returns (bytes memory) {
         return bytes(
             '{"fromAsset":{"address":"0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",'
@@ -309,14 +369,6 @@ contract KernelXChainTest is Test {
             paymasterAndData: "",
             signature: ""
         });
-    }
-
-    function _encodeHashList(bytes[] memory hashList) internal pure returns (bytes memory) {
-        bytes memory encoded;
-        for (uint256 i = 0; i < hashList.length; i++) {
-            encoded = abi.encodePacked(encoded, hashList[i]);
-        }
-        return encoded;
     }
 
     function xSignCommon(
@@ -343,7 +395,7 @@ contract KernelXChainTest is Test {
 
         // Organize hash lists based on the comparison result
         if (shouldReverse) {
-            // When hash1 > hash2, use the reverse order logic
+            // When hash1 > hash2, reverse order logic
             srcHashList[0] = abi.encodePacked(hash2);
             srcHashList[1] = placeholder;
 
@@ -387,23 +439,7 @@ contract KernelXChainTest is Test {
         for (uint256 i = 0; i < hashList.length; i++) {
             result = abi.encodePacked(result, hashList[i]);
         }
-
         return result;
-    }
-
-    function registerBatchExecutor() internal {
-        bytes4 batchSelector = KernelIntentExecutor.execValueBatch.selector;
-
-        vm.startPrank(address(account));
-        account.setExecution(
-            batchSelector,
-            address(intentExecutor),
-            intentValidator,
-            ValidUntil.wrap(0),
-            ValidAfter.wrap(0),
-            abi.encodePacked(ownerAddress)
-        );
-        vm.stopPrank();
     }
 
     function prefixSignature(bytes memory signature, uint256 prefixValue) internal pure returns (bytes memory) {
@@ -432,12 +468,10 @@ contract KernelXChainTest is Test {
         for (uint256 i = 0; i < 4; i++) {
             prefixedSignature[i] = newPrefix[i];
         }
-
         // Add signature
         for (uint256 i = 0; i < sigWithoutPrefix.length; i++) {
             prefixedSignature[i + 4] = sigWithoutPrefix[i];
         }
-
         return prefixedSignature;
     }
 
@@ -476,4 +510,75 @@ contract KernelXChainTest is Test {
             mstore(0x40, add(resultPtr, sub(end, start)))
         }
     }
+
+    function buildEnableSignature(
+        UserOperation memory op,
+        bytes4 selector,
+        uint48 validAfter,
+        uint48 validUntil,
+        IKernelValidator validator,
+        address executor,
+        uint256 signerPrvKey
+    ) internal view returns (bytes memory sig) {
+        require(address(validator) != address(0), "validator not set");
+        require(executor != address(0), "executor not set");
+        bytes memory enableData = abi.encodePacked(ownerAddress);
+        bytes32 permitHash =
+            EIP712Library.getStructHash(selector, validUntil, validAfter, address(validator), executor, enableData);
+        bytes32 digest = EIP712Library.hashTypedData(KERNEL_NAME, KERNEL_VERSION, permitHash, op.sender);
+        bytes memory enableSig = signHash(digest);
+        sig = generateSignature(op, block.chainid, signerPrvKey);
+
+        // Attach the "enable" prefix (0x00000002) plus the rest of the data
+        sig = abi.encodePacked(
+            bytes4(0x00000002),
+            validAfter,
+            validUntil,
+            address(validator),
+            executor,
+            uint256(enableData.length),
+            enableData,
+            enableSig.length,
+            enableSig,
+            sig
+        );
+    }
+
+    function signHash(bytes32 hash) internal view returns (bytes memory) {
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(ownerPrivateKey, ECDSA.toEthSignedMessageHash(hash));
+        return abi.encodePacked(r, s, v);
+    }
+
+    function generateSignature(UserOperation memory userOp, uint256 chainID, uint256 signerPrvKey)
+        internal
+        view
+        returns (bytes memory)
+    {
+        bytes32 userOpHash = intentValidator.getUserOpHash(userOp, chainID);
+        console2.log("userOp hash generating sig:");
+        console2.logBytes32(userOpHash);
+
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(signerPrvKey, ECDSA.toEthSignedMessageHash(userOpHash));
+        return abi.encodePacked(r, s, v);
+    }
+
+    // ============== Events ==============
+    event IKernelEvent(string message);
+    event IKernelInfo(address account, bytes data);
+
+    // The IEntryPoint emits this after handleOps:
+    event IEntryPointUserOpRevertReason(
+        bytes32 indexed userOpHash, address indexed sender, uint256 nonce, bytes revertReason
+    );
+
+    // Must match the IEntryPoint interface
+    event UserOperationEvent(
+        bytes32 indexed userOpHash,
+        address indexed sender,
+        address paymaster,
+        uint256 nonce,
+        bool success,
+        uint256 actualGasCost,
+        uint256 actualGasUsed
+    );
 }
