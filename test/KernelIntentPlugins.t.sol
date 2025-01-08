@@ -481,7 +481,7 @@ contract KernelIntentPluginsTest is Test {
                 ValidUntil.wrap(0),
                 /// @param _validAfter The timestamp after which the execution details are valid
                 ValidAfter.wrap(0),
-                getEnableData()
+                abi.encodePacked(_ownerAddress)
             )
         );
 
