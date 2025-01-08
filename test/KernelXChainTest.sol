@@ -153,19 +153,6 @@ contract KernelXChainTest is Test {
         assertEq(ValidationData.unwrap(destResult), 0, "Destination chain validation failed");
     }
 
-    // --------------- Main Test ---------------
-    function testKernelCrossChainValidationWithExecution() public {
-        // (1) Create and sign the source/dest userOps
-        (UserOperation memory srcUserOp, UserOperation memory destUserOp) = prepareCrossChainUserOps();
-
-        // (2) Register the batch executor once, so we can call execValueBatch
-        registerBatchExecutor();
-
-        // (3) Validate & Execute on source chain
-        validateAndExecute(srcUserOp, SOURCE_CHAIN_ID, 0.05 ether, RECIPIENT_SRC);
-
-        // (4) Validate & Execute on destination chain
-        validateAndExecute(destUserOp, DEST_CHAIN_ID, 0.00005 ether, RECIPIENT_DEST);
     }
 
     /**

@@ -50,6 +50,9 @@ contract KernelIntentValidator is IKernelValidator {
      * @param _data The owner address encoded as bytes
      */
     function enable(bytes calldata _data) external payable override {
+        // Protect against accidental ETH transfers
+        require(msg.value == 0, "ETH transfers not supported");
+
         address owner = address(bytes20(_data[0:20]));
         address oldOwner = ecdsaValidatorStorage[msg.sender].owner;
         ecdsaValidatorStorage[msg.sender].owner = owner;
