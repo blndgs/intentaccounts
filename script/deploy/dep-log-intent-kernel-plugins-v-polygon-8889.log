@@ -1,0 +1,84 @@
+forge script script/deploy/KernelPlugins.s.sol \
+   --rpc-url $V_POLYGON_RPC_URL \
+    --broadcast \
+    --slow \
+    --private-key $TEST_PRIVATE_KEY \
+    --etherscan-api-key $TENDERLY_ACCESS_TOKEN \
+    --verify \
+    --verifier-url $V_POLYGON_RPC_URL/verify/etherscan \
+    --ffi
+[⠊] Compiling...
+No files changed, compilation skipped
+Script ran successfully.
+
+== Logs ==
+  Deployer address: 0x1E13289c8d59947b5959E74415F68Ef56805ffeC
+  KernelIntentValidator deployed at: 0x656520570a2809e693a8202eE50D26A680e7C49D
+  KernelIntentExecutor deployed at: 0xc334DED813763b44ad7855E0CAA99aA90D3fd795
+
+## Setting up 1 EVM.
+
+==========================
+
+Chain 8889
+
+Estimated gas price: 0.000000003 gwei
+
+Estimated total gas used for script: 1363278
+
+Estimated amount required: 0.000000000004089834 ETH
+
+==========================
+
+##### 8889
+✅  [Success] Hash: 0xc665bab1693899b5b7bc28bc71d0a0b31596737d2216d9d5f9259060b7e83b6c
+Contract Address: 0x656520570a2809e693a8202eE50D26A680e7C49D
+Block: 62753176
+Paid: 0.00000000000234708 ETH (782360 gas * 0.000000003 gwei)
+
+
+##### 8889
+✅  [Success] Hash: 0x9b8f4b3104da328195467c46299f9bc9619ab68e39e5d70d571945a5da085dc8
+Contract Address: 0xc334DED813763b44ad7855E0CAA99aA90D3fd795
+Block: 62753177
+Paid: 0.000000000000798948 ETH (266316 gas * 0.000000003 gwei)
+
+✅ Sequence #1 on 8889 | Total Paid: 0.000000000003146028 ETH (1048676 gas * avg 0.000000003 gwei)
+                                                                                                              
+
+==========================
+
+ONCHAIN EXECUTION COMPLETE & SUCCESSFUL.
+##
+Start verification for (2) contracts
+Start verifying contract `0x656520570a2809e693a8202eE50D26A680e7C49D` deployed on 8889
+Compiler version: 0.8.28
+Optimizations:    200
+
+Submitting verification for [src/KernelIntentECDSAValidator.sol:KernelIntentValidator] 0x656520570a2809e693a8202eE50D26A680e7C49D.
+Submitted contract for verification:
+	Response: `OK`
+	GUID: `0x656520570a2809e693a8202ee50d26a680e7c49d`
+	URL: https://virtual.polygon.rpc.tenderly.co/f359f5fb-6bf7-4a0b-a1c9-61f72e6dc0a7/verify/address/0x656520570a2809e693a8202ee50d26a680e7c49d
+Contract verification status:
+Response: `OK`
+Details: `Pass - Verified`
+Contract successfully verified
+Start verifying contract `0xc334DED813763b44ad7855E0CAA99aA90D3fd795` deployed on 8889
+Compiler version: 0.8.28
+Optimizations:    200
+
+Submitting verification for [src/KernelIntentExecutor.sol:KernelIntentExecutor] 0xc334DED813763b44ad7855E0CAA99aA90D3fd795.
+Submitted contract for verification:
+	Response: `OK`
+	GUID: `0xc334ded813763b44ad7855e0caa99aa90d3fd795`
+	URL: https://virtual.polygon.rpc.tenderly.co/f359f5fb-6bf7-4a0b-a1c9-61f72e6dc0a7/verify/address/0xc334ded813763b44ad7855e0caa99aa90d3fd795
+Contract verification status:
+Response: `OK`
+Details: `Pass - Verified`
+Contract successfully verified
+All (2) contracts were verified!
+
+Transactions saved to: /Users/mar/src/github.com/blndgs/intentaccounts/broadcast/KernelPlugins.s.sol/8889/run-latest.json
+
+Sensitive values saved to: /Users/mar/src/github.com/blndgs/intentaccounts/cache/KernelPlugins.s.sol/8889/run-latest.json

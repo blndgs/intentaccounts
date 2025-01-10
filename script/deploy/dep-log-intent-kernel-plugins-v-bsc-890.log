@@ -1,0 +1,83 @@
+forge script script/deploy/KernelPlugins.s.sol \
+   --rpc-url $V_BSC_RPC_URL \
+    --broadcast \
+    --slow \
+    --private-key $TEST_PRIVATE_KEY \
+    --etherscan-api-key $TENDERLY_ACCESS_TOKEN \
+    --verify \
+    --verifier-url $V_BSC_RPC_URL/verify/etherscan \
+    --ffi
+[⠊] Compiling...
+No files changed, compilation skipped
+Script ran successfully.
+
+== Logs ==
+  Predicted Validator Address: 0x80219c1D4cF82B1743899a5a87d7ffeb84eDe42f
+  Predicted Executor Address: 0x52842F91476406b0EE815e64AAabb9eD07F73aD1
+  Deployed Validator Address: 0x80219c1D4cF82B1743899a5a87d7ffeb84eDe42f
+  Deployed Validator Address: 0x52842F91476406b0EE815e64AAabb9eD07F73aD1
+
+## Setting up 1 EVM.
+
+==========================
+
+Chain 890
+
+Estimated gas price: 0.000000003 gwei
+
+Estimated total gas used for script: 1514282
+
+Estimated amount required: 0.000000000004542846 ETH
+
+==========================
+
+##### 890
+✅  [Success] Hash: 0x79397d28ac0a95bcab25763c7f30b4c8ca9ea41b4957704ef9915a6390318bb9
+Block: 41705537
+Paid: 0.000000000002348889 ETH (782963 gas * 0.000000003 gwei)
+
+
+##### 890
+✅  [Success] Hash: 0x380564f69cc8a51d03c19c0f03bef404c2e520f900ccf8b686f5d94ed0626c08
+Block: 41705538
+Paid: 0.000000000000801885 ETH (267295 gas * 0.000000003 gwei)
+
+✅ Sequence #1 on 890 | Total Paid: 0.000000000003150774 ETH (1050258 gas * avg 0.000000003 gwei)
+
+
+==========================
+
+ONCHAIN EXECUTION COMPLETE & SUCCESSFUL.
+##
+Start verification for (2) contracts
+Start verifying contract `0x80219c1D4cF82B1743899a5a87d7ffeb84eDe42f` deployed on 890
+Compiler version: 0.8.28
+Optimizations:    200
+
+Submitting verification for [src/KernelIntentECDSAValidator.sol:KernelIntentValidator] 0x80219c1D4cF82B1743899a5a87d7ffeb84eDe42f.
+Submitted contract for verification:
+	Response: `OK`
+	GUID: `0x80219c1d4cf82b1743899a5a87d7ffeb84ede42f`
+	URL: https://virtual.binance.rpc.tenderly.co/4e9d15b6-3c42-43b7-a254-359a7893e8e6/verify/address/0x80219c1d4cf82b1743899a5a87d7ffeb84ede42f
+Contract verification status:
+Response: `OK`
+Details: `Pass - Verified`
+Contract successfully verified
+Start verifying contract `0x52842F91476406b0EE815e64AAabb9eD07F73aD1` deployed on 890
+Compiler version: 0.8.28
+Optimizations:    200
+
+Submitting verification for [src/KernelIntentExecutor.sol:KernelIntentExecutor] 0x52842F91476406b0EE815e64AAabb9eD07F73aD1.
+Submitted contract for verification:
+	Response: `OK`
+	GUID: `0x52842f91476406b0ee815e64aaabb9ed07f73ad1`
+	URL: https://virtual.binance.rpc.tenderly.co/4e9d15b6-3c42-43b7-a254-359a7893e8e6/verify/address/0x52842f91476406b0ee815e64aaabb9ed07f73ad1
+Contract verification status:
+Response: `OK`
+Details: `Pass - Verified`
+Contract successfully verified
+All (2) contracts were verified!
+
+Transactions saved to: /Users/mar/src/github.com/blndgs/intentaccounts/broadcast/KernelPlugins.s.sol/890/run-latest.json
+
+Sensitive values saved to: /Users/mar/src/github.com/blndgs/intentaccounts/cache/KernelPlugins.s.sol/890/run-latest.json
