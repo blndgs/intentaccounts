@@ -70,7 +70,7 @@ jobs:
 
       - name: Initialize and Patch Submodules
         run: |
-          chmod +x scripts/patch-kernel-submod.sh
+          chmod +x script/patch-kernel-submod.sh
           ./script/patch-kernel-submod.sh
 
       - name: Install Foundry
