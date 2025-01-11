@@ -11,7 +11,7 @@ on:
       - main
       - testnet
       - live
-  workflow_dispatch:      
+  workflow_dispatch:
 
 jobs:
   tests:
@@ -71,7 +71,7 @@ jobs:
       - name: Initialize and Patch Submodules
         run: |
           chmod +x scripts/patch-kernel-submod.sh
-          ./scripts/patch-kernel-submod.sh
+          ./script/patch-kernel-submod.sh
 
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
