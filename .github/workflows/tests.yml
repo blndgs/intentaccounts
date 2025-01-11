@@ -16,7 +16,7 @@ on:
 jobs:
   tests:
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Display branch information
         run: |
@@ -35,7 +35,7 @@ jobs:
           PREFIX=$(echo $BRANCH | awk -F'-' '{print toupper($1)}')  # Extract prefix and convert to upper case
           echo "PREFIX=$PREFIX" >> $GITHUB_ENV
           echo "PREFIX=$PREFIX"
-      
+
       - name: Set environment variables
         run: |
           # echo env variables
@@ -68,18 +68,10 @@ jobs:
         with:
           submodules: false
 
-      - name: Initialize Top-Level Submodules
-        run: git submodule update --init
-
-      - name: Manually Handle Missing Submodule URL
+      - name: Initialize and Patch Submodules
         run: |
-          cd lib/kernel
-          git submodule deinit -f -- lib/ExcessivelySafeCall
-          rm -rf .git/modules/lib/ExcessivelySafeCall
-          git rm -f lib/ExcessivelySafeCall
-          git submodule add https://github.com/nomad-xyz/ExcessivelySafeCall lib/ExcessivelySafeCall
-          git submodule update --init --recursive
-          cd ../..
+          chmod +x scripts/patch-kernel-submod.sh
+          ./scripts/patch-kernel-submod.sh
 
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
@@ -97,7 +89,7 @@ jobs:
         run: |
           TEST_RESULT=0
           forge test -vvv || TEST_RESULT=$?
-          
+
           if [ $TEST_RESULT -eq 0 ]; then
             echo "Tests passed"
             forge coverage --report lcov
@@ -113,12 +105,12 @@ jobs:
         with:
           app-id: ${{ vars.APP_ID }}
           private-key: ${{ secrets.PRIVATE_KEY }}
-      
+
       - name: Upload coverage reports to Codecov
         uses: codecov/codecov-action@v4.0.1
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          
+
       - name: Check test results
         if: github.event_name == 'pull_request' && (github.event.pull_request.base.ref == 'testnet' || github.event.pull_request.base.ref == 'live')
         run: |
