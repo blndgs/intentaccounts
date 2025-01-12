@@ -29,7 +29,7 @@ contract SimpleAccountXChainTest is Test {
     IERC20 public token;
 
     function setUp() public {
-        string memory privateKeyString = vm.envString("TEST_PRIVATE_KEY");
+        string memory privateKeyString = vm.envString("WALLET_OWNER_KEY");
         ownerPrivateKey = vm.parseUint(privateKeyString);
         ownerAddress = vm.addr(ownerPrivateKey);
         console2.log("Owner address:", ownerAddress);
