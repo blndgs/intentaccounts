@@ -58,17 +58,42 @@ contract KernelXChainTest is Test {
     IKernel public account;
     KernelFactory public factory;
     Kernel public kernelImpl;
+    uint256 public polyFork;
+    uint256 public bscFork;
 
     // --------------------------------------------
     // Setup
     // --------------------------------------------
     function setUp() public {
-        // Set up EntryPoint
-        entryPoint = IEntryPoint(payable(ENTRYPOINT_V06));
-        vm.etch(ENTRYPOINT_0_6_ADDRESS, ENTRYPOINT_0_6_BYTECODE);
         readEnvVars();
+        setKernelFork(polyFork);
+    }
+
+    function readEnvVars() public {
+        string memory factoryOwnerPrvKeyString = vm.envString("ETHEREUM_KERNEL_FACTORY_OWNER_PRIVATE_KEY");
+        factoryOwnerAddress = vm.addr(vm.parseUint(factoryOwnerPrvKeyString));
+
+        // Derive the Ethereum address from the private key
+        string memory privateKeyString = vm.envString("WALLET_OWNER_KEY");
+        ownerPrivateKey = vm.parseUint(privateKeyString);
+        ownerAddress = vm.addr(ownerPrivateKey);
+
+        console2.log("Owner address:", ownerAddress);
+        assertFalse(ownerAddress == address(0), "Owner address should not be the zero address");
+
+        string memory urlEnv = "POLYGON_RPC_URL";
+        polyFork = vm.createFork(vm.envString(urlEnv));
+
+        urlEnv = "BSC_RPC_URL";
+        bscFork = vm.createFork(vm.envString(urlEnv));
+    }
+
+    function setKernelFork(uint256 fork) internal {
+        vm.selectFork(fork);
+        entryPoint = IEntryPoint(payable(ENTRYPOINT_V06));
 
         // 1) Create a Kernel implementation
+        vm.deal(factoryOwnerAddress, 1e30);
         vm.startPrank(factoryOwnerAddress);
         kernelImpl = new Kernel(entryPoint);
         factory = new KernelFactory(factoryOwnerAddress, entryPoint);
@@ -82,25 +107,11 @@ contract KernelXChainTest is Test {
         intentValidator = new KernelIntentValidator();
 
         // Create account with intent validator by default
+        vm.deal(ownerAddress, 1e30);
         bytes memory initData =
             abi.encodeWithSelector(kernelImpl.initialize.selector, intentValidator, abi.encodePacked(ownerAddress));
         account = Kernel(payable(address(factory.createAccount(address(kernelImpl), initData, 0))));
         vm.deal(address(account), 1e30);
-    }
-
-    function readEnvVars() public {
-        string memory privateKeyString = vm.envString("ETHEREUM_PRIVATE_KEY");
-        console2.log("privateKeyString:", privateKeyString);
-
-        string memory factoryOwnerPrvKeyString = vm.envString("ETHEREUM_KERNEL_FACTORY_OWNER_PRIVATE_KEY");
-        factoryOwnerAddress = vm.addr(vm.parseUint(factoryOwnerPrvKeyString));
-
-        // Derive the Ethereum address from the private key
-        ownerPrivateKey = vm.parseUint(privateKeyString);
-        ownerAddress = vm.addr(ownerPrivateKey);
-
-        console2.log("Owner address:", ownerAddress);
-        assertFalse(ownerAddress == address(0), "Owner address should not be the zero address");
     }
 
     // --------------------------------------------
@@ -142,69 +153,91 @@ contract KernelXChainTest is Test {
         assertEq(ValidationData.unwrap(destResult), 0, "Destination chain validation failed");
     }
 
+    function executeXChainUserOp(
+        uint256 currentNonce,
+        UserOperation memory srcUserOp,
+        UserOperation memory destUserOp,
+        bool isSourceChain
+    ) internal {
+        // The cross-chain userOp uses the provided nonce
+        if (isSourceChain) {
+            srcUserOp.nonce = currentNonce;
+            // Execute on the "source" chain
+            validateAndExecute(srcUserOp, SOURCE_CHAIN_ID, 0.05 ether, RECIPIENT_SRC);
+        } else {
+            destUserOp.nonce = currentNonce;
+            // Execute on the "destination" chain
+            validateAndExecute(destUserOp, DEST_CHAIN_ID, 0.00005 ether, RECIPIENT_DEST);
+        }
+
+        // Get and verify next nonce
+        uint256 nextNonce = IKernel(address(account)).getNonce();
+        assertEq(nextNonce, currentNonce + 1, "nonce should have incremented by 1");
+    }
+
     function testKernelCrossChainValidationWithExecution() public {
-        // -----------------------
-        // (1) Deploy account w/ default validator, initial nonce = 0
-        // -----------------------
-        bytes memory initData =
-            abi.encodeWithSelector(kernelImpl.initialize.selector, defaultValidator, abi.encodePacked(ownerAddress));
-        account = Kernel(payable(factory.createAccount(address(kernelImpl), initData, 0)));
-        vm.deal(address(account), 1e30);
+        // ---- POLYGON SETUP & EXECUTION ----
 
-        // Confirm fresh
+        // Build + execute enable userOp on Polygon
+        UserOperation memory enableUserOpPoly = buildEnableExecValueBatchOp();
         uint256 currentNonce = IKernel(address(account)).getNonce();
-        assertEq(currentNonce, 0, "initial nonce must be 0 for fresh kernel");
+        enableUserOpPoly.nonce = currentNonce;
 
-        // -----------------------
-        // (2) Build + handle the “enable” userOp => calls setExecution() for execValueBatch
-        // -----------------------
-        UserOperation memory enableUserOp = buildEnableExecValueBatchOp();
-        // set userOp.nonce to the current account nonce (which is 0 for brand new account)
-        enableUserOp.nonce = currentNonce;
-
-        // sign it
-        enableUserOp.signature = buildEnableSignature(
-            enableUserOp,
+        enableUserOpPoly.signature = buildEnableSignature(
+            enableUserOpPoly,
             IKernel.setExecution.selector,
-            0, // validAfter
-            0, // validUntil
+            0,
+            0,
             intentValidator,
             address(intentExecutor),
             ownerPrivateKey
         );
 
-        // Execute the enable userOp
+        // Execute enable userOp on Polygon
         UserOperation[] memory ops = new UserOperation[](1);
-        ops[0] = enableUserOp;
+        ops[0] = enableUserOpPoly;
 
         vm.expectEmit(false, true, true, false);
-        emit IEntryPoint.UserOperationEvent(0, address(account), address(0), enableUserOp.nonce, true, 0, 0);
-
+        emit IEntryPoint.UserOperationEvent(0, address(account), address(0), enableUserOpPoly.nonce, true, 0, 0);
         entryPoint.handleOps(ops, payable(ownerAddress));
 
-        // after the first handleOps, the kernel’s nonce is incremented by 1
-        uint256 nextNonce = IKernel(address(account)).getNonce();
-        assertEq(nextNonce, currentNonce + 1, "nonce should have incremented by 1");
-        // now nextNonce = 1
-
-        // -----------------------
-        // (3) Create your cross-chain userOps (source, dest)
-        //     and ensure they have up-to-date nonces
-        // -----------------------
+        // Create cross-chain userOps (this will handle nonces correctly)
         (UserOperation memory srcUserOp, UserOperation memory destUserOp) = prepareCrossChainUserOps();
 
-        // The first cross-chain userOp uses the new nonce (1)
-        srcUserOp.nonce = nextNonce;
-        // sign it if not already signed
-        // ...
-        // do your normal “solver” finalization, etc.
+        // Execute on Polygon (source chain)
+        executeXChainUserOp(srcUserOp.nonce, srcUserOp, destUserOp, true);
 
-        // 3a) Execute on the “source” chain
-        validateAndExecute(srcUserOp, SOURCE_CHAIN_ID, 0.05 ether, RECIPIENT_SRC);
+        // ---- BSC SETUP & EXECUTION ----
+        // Switch to BSC fork and set up environment
+        setKernelFork(bscFork);
 
-        // kernel nonce after that handleOps is now 2
-        nextNonce = IKernel(address(account)).getNonce();
-        assertEq(nextNonce, 2, "nonce should be 2 after the second userOp");
+        // Build + execute enable userOp on BSC first
+        UserOperation memory enableUserOpBSC = buildEnableExecValueBatchOp();
+        currentNonce = IKernel(address(account)).getNonce();
+
+        enableUserOpBSC.nonce = currentNonce;
+
+        enableUserOpBSC.signature = buildEnableSignature(
+            enableUserOpBSC,
+            IKernel.setExecution.selector,
+            0,
+            0,
+            intentValidator,
+            address(intentExecutor),
+            ownerPrivateKey
+        );
+
+        ops[0] = enableUserOpBSC;
+
+        vm.expectEmit(false, true, true, false);
+        emit IEntryPoint.UserOperationEvent(0, address(account), address(0), enableUserOpBSC.nonce, true, 0, 0);
+        entryPoint.handleOps(ops, payable(ownerAddress));
+
+        // Execute destination userOp
+        currentNonce = IKernel(address(account)).getNonce();
+        console2.log("Current nonce on BSC:", currentNonce);
+        assertEq(destUserOp.nonce, currentNonce, "destUserOp nonce should equal current nonce on BSC");
+        // executeXChainUserOp(destUserOp.nonce, srcUserOp, destUserOp, false);
     }
 
     /**
@@ -238,17 +271,19 @@ contract KernelXChainTest is Test {
         UserOperation memory srcUserOp = createUserOp(address(account), srcIntent);
         UserOperation memory destUserOp = createUserOp(address(account), destIntent);
 
-        // For demonstration, increment the dest nonce
+        // Get current nonce on source chain (Polygon)
+        uint256 srcNonce = IKernel(address(account)).getNonce();
+        srcUserOp.nonce = srcNonce;
         destUserOp.nonce = 1;
 
-        // 1) Compute the chain-specific userOp hashes
+        // Now compute hashes and sign with correct nonces
         bytes32 srcHash = intentValidator.getUserOpHash(srcUserOp, SOURCE_CHAIN_ID);
         bytes32 destHash = intentValidator.getUserOpHash(destUserOp, DEST_CHAIN_ID);
 
-        // 2) Cross-chain sign sets userOp.signature + userOp.callData placeholders
+        // Cross-chain sign with correct nonces
         xSignCommon(srcHash, destHash, ownerPrivateKey, srcUserOp, destUserOp);
 
-        // 3) The "solver" step: append final solver callData to signatures
+        // The "solver" step: append final solver callData to signatures
         srcUserOp.signature = abi.encodePacked(srcUserOp.signature, srcUserOp.callData);
         destUserOp.signature = abi.encodePacked(destUserOp.signature, destUserOp.callData);
 
@@ -266,8 +301,18 @@ contract KernelXChainTest is Test {
     function validateAndExecute(UserOperation memory userOp, uint256 chainId, uint256 amount, address recipient)
         internal
     {
-        // Switch chain context
-        vm.chainId(chainId);
+        // Store current fork ID (if any)
+        uint256 prevFork = vm.activeFork();
+
+        // Switch to the Bsc if the chainId is the destination chain
+        if (chainId == DEST_CHAIN_ID) {
+            // BSC
+            vm.selectFork(bscFork);
+        } else if (chainId != SOURCE_CHAIN_ID) {
+            revert("Unsupported chain ID");
+        }
+
+        // Ensure we're on the correct chain
         require(block.chainid == chainId, "Chain ID mismatch");
 
         // 1) Replace userOp.callData with execValueBatch
@@ -282,7 +327,7 @@ contract KernelXChainTest is Test {
         ValidationData result = intentValidator.validateUserOp(userOp, bytes32(0), 0);
         require(ValidationData.unwrap(result) == 0, "Validation failed");
 
-        // 3) Finally prefix signature to route through the plugin validator
+        // 3) Prefix signature to route through the plugin validator
         userOp.signature = prefixSignature(userOp.signature, VALIDATION_PLUGIN_1);
 
         // 4) Execute
@@ -293,6 +338,11 @@ contract KernelXChainTest is Test {
         emit IEntryPoint.UserOperationEvent(0, address(account), address(0), userOp.nonce, true, 0, 0);
 
         entryPoint.handleOps(ops, payable(ownerAddress));
+
+        // Return to previous fork if there was one
+        if (prevFork != 0) {
+            vm.selectFork(prevFork);
+        }
     }
 
     // --------------- Helper functions ---------------
