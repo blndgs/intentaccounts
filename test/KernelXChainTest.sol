@@ -102,16 +102,15 @@ contract KernelXChainTest is Test {
         address entryPointV06 = 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789;
         entryPoint = IEntryPoint(payable(entryPointV06));
 
-        // 1) Create a Kernel implementation
-        vm.deal(factoryOwnerAddress, 1e30);
-        vm.startPrank(factoryOwnerAddress);
-        kernelImpl = new Kernel(entryPoint);
-        factory = new KernelFactory(factoryOwnerAddress, entryPoint);
-        factory.setImplementation(address(kernelImpl), true);
-        vm.stopPrank();
+        // 1) Initialize the factory and kernel
+        // at v2.4 known deployed addresses
+        factory = KernelFactory(0x5de4839a76cf55d0c90e2061ef4386d962E15ae3);
+        kernelImpl = Kernel(payable (0xd3082872F8B06073A021b4602e022d5A070d7cfC));
 
-        // 2) Default validator is ECDSA
-        defaultValidator = new ECDSAValidator();
+        // 2) Default validator ECDSA
+        // v2 0xd9AB5096a832b9ce79914329DAEE236f8Eea0390
+        // v3 0x845ADb2C711129d4f3966735eD98a9F09fC4cE57
+        defaultValidator = ECDSAValidator(0xd9AB5096a832b9ce79914329DAEE236f8Eea0390);
 
         // 3) Deploy our plugin (intent) validator + executor
         intentExecutor = new KernelIntentExecutor();
