@@ -75,10 +75,6 @@ contract KernelXChainTest is Test {
     }
 
     function readEnvVars() public {
-        // Load the factory owner's private key from env
-        string memory factoryOwnerPrvKeyString = vm.envString("ETHEREUM_KERNEL_FACTORY_OWNER_PRIVATE_KEY");
-        factoryOwnerAddress = vm.addr(vm.parseUint(factoryOwnerPrvKeyString));
-
         // Derive the Ethereum address from the private key
         string memory privateKeyString = vm.envString("WALLET_OWNER_KEY");
         ownerPrivateKey = vm.parseUint(privateKeyString);
