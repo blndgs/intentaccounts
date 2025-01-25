@@ -2,56 +2,64 @@
 pragma solidity ^0.8.24;
 
 import "forge-std/Script.sol";
-import "../../src/KernelIntentECDSAValidator.sol";
-import "../../src/KernelIntentExecutor.sol";
+import "./DeployKernelLib.sol";
 
 /**
- * @title DeployKernelPlugins
- * @dev This contract deploys KernelIntentValidator and KernelIntentExecutor.
- * Make sure you have installed and logged-in to Tenderly CLI if you are deploying at Tenderly.
+ * @title DeployValidator
+ * @dev Deploys the KernelIntentECDSAValidator only, using the library for common logic.
  *
- * NETWORK=ETHEREUM (.env)
- * ETHEREUM_PRIVATE_KEY (.env)
+ * Example usage:
+ * forge script scripts/deploy/DeployValidator.s.sol \
+ *     --rpc-url $RPC_URL \
+ *     --broadcast \
+ *     --private-key $PRIVATE_KEY \
+ *     --etherscan-api-key $ETHERSCAN_KEY \
+ *     --verify \
+ *     -vvvv
  *
- * export TENDERLY_VERIFIER_URL=https://virtual.mainnet.rpc.tenderly.co/c5ed9a3b-7ad5-4d6a-8e4b-76a4b00ba6ea/verify/etherscan
- * RPC_URL=https://virtual.mainnet.rpc.tenderly.co/c5ed9a3b-7ad5-4d6a-8e4b-76a4b00ba6ea
- * PRIVATE_KEY=
- * TENDERLY_ACCESS_TOKEN=
+ *  Unknownligly, the executor is not verified on Tenderly v-nets
+ *  if so use the following command to verify the executor plugin
  *
- * forge script script/deploy/KernelPlugins.s.sol \
- *   --rpc-url $RPC_URL \
- *    --broadcast \
- *    --slow \
- *    --private-key $PRIVATE_KEY \
+ *  forge verify-contract \
+ *    --chain-id 8889 \
+ *    --compiler-version 0.8.28 \
+ *    --optimizer-runs 200 \
+ *    <deployed-Executor-address> \
+ *    src/KernelIntentExecutor.sol:KernelIntentExecutor \
  *    --etherscan-api-key $TENDERLY_ACCESS_TOKEN \
- *    --verify \
- *    --verifier-url $TENDERLY_VERIFIER_URL \
- *    --ffi
+ *    -vvvvv
  */
-contract DeployKernelPlugins is Script {
-    string internal _network;
-    uint256 internal deployerPrivateKey;
+contract KernelPlugins is Script {
+    // *********************************************
 
-    function setUp() public {
-        _network = vm.envString("NETWORK");
+    /* Pick the salt value */
 
-        string memory privateKeyEnv = string(abi.encodePacked(_network, "_PRIVATE_KEY"));
-        string memory privateKeyString = vm.envString(privateKeyEnv);
-        deployerPrivateKey = vm.parseUint(privateKeyString);
-        address deployer = vm.addr(deployerPrivateKey);
-        console2.log("Deployer address:", deployer);
-    }
+    bytes32 constant SALT = bytes32(keccak256("KERNEL_PLUGINS_V0"));
+
+    // *********************************************
 
     function run() external {
-        vm.startBroadcast(deployerPrivateKey);
+        vm.startBroadcast();
 
-        // Deploy KernelIntentValidator
-        KernelIntentValidator validator = new KernelIntentValidator();
-        console.log("KernelIntentValidator deployed at:", address(validator));
+        // 1. Get init code
+        bytes memory validatorInitCode = DeployKernelLib.getValidatorInitCode();
+        bytes memory executorInitCode = DeployKernelLib.getExecutorInitCode();
 
-        // Deploy KernelIntentExecutor
-        KernelIntentExecutor executor = new KernelIntentExecutor();
-        console.log("KernelIntentExecutor deployed at:", address(executor));
+        // 2. Predict address
+        address predictedVal = DeployKernelLib.computeCreate2Address(SALT, keccak256(validatorInitCode));
+        console2.log("Predicted Validator Address:", predictedVal);
+
+        address predictedExec = DeployKernelLib.computeCreate2Address(SALT, keccak256(executorInitCode));
+        console2.log("Predicted Executor Address:", predictedExec);
+
+        // 3. Deploy
+        address validator = DeployKernelLib.deployContract(SALT, validatorInitCode);
+        console2.log("Deployed Validator Address:", validator);
+        require(validator == predictedVal, "Validator address mismatch with prediction");
+
+        address executor = DeployKernelLib.deployContract(SALT, executorInitCode);
+        console2.log("Deployed Validator Address:", executor);
+        require(executor == predictedExec, "Executor address mismatch with prediction");
 
         vm.stopBroadcast();
     }

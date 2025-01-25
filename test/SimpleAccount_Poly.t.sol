@@ -37,7 +37,7 @@ contract SimpleAccounPolygonTest is Test {
         ownerPrivateKey = vm.parseUint(privateKeyString);
         ownerAddress = vm.addr(ownerPrivateKey);
 
-        // Create a VM instance for the MUMBAI fork
+        // Create a VM instance for the fork
         string memory urlEnv = "POLYGON_RPC_URL";
         polyFork = vm.createSelectFork(vm.envString(urlEnv));
 
@@ -56,7 +56,7 @@ contract SimpleAccounPolygonTest is Test {
 
         uint256 startGas = gasleft();
 
-        // Sync the factory with the deployed contract at Mannet
+        // Sync the factory with the deployed contract at Mainnet
         factory = new IntentSimpleAccountFactory(entryPoint);
         console2.log("IntentSimpleAccountFactory synced at:", address(factory));
         uint256 endGas = gasleft();

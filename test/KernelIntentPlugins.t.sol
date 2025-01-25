@@ -149,6 +149,16 @@ contract KernelIntentPluginsTest is Test {
         );
     }
 
+    /*
+     * This test verifies the registration of executors using APIs in a Kernel account.
+     * It checks:
+     * - Initial state has only default validator
+     * - Successful registration of intentExecutor and intentValidator
+     * - Updates to execution configuration for specific functions
+     * - Ability to execute registered functions (doNothing and execValueBatch)
+     * - Event emissions for function calls
+     * - Value handling in batch executions
+     */
     function testRegistrationByApi() public {
         _createAccount();
 
@@ -403,14 +413,10 @@ contract KernelIntentPluginsTest is Test {
 
     /**
      * Comprehensive Kernel Account Validation and Execution Test
-     * This test demonstrates the advanced capabilities of the Kernel account,
-     *      showcasing its ability to support both traditional and intent-based transactions.
      *
      * The test illustrates the flexibility of the Kernel account in handling different
      *         validation and execution modes, emphasizing the role of signature prefixes in
      *         determining the transaction path.
-     *
-     * Key phases and aspects of the test:
      *
      * 1. Initial Setup and Configuration:
      *    - Creates a Kernel account with the default validator.
@@ -447,9 +453,6 @@ contract KernelIntentPluginsTest is Test {
      *         - The significance of signature prefixes in routing transactions.
      *         - The flexibility to switch between traditional and intent-based transactions.
      *         - The process of updating execution configurations and default validators.
-     *
-     * These capabilities allow for a highly adaptable account system that can evolve with
-     * new transaction types while maintaining compatibility with existing systems.
      */
     function testDualValidator() public {
         // 1. create account with the default validator
@@ -460,18 +463,25 @@ contract KernelIntentPluginsTest is Test {
         assertEq(detail.executor, address(0x0));
         assertEq(address(detail.validator), address(0x0));
 
+        /// IKernel.setExecution Changes the execution details for a specific function selector
+        /// @dev This function can only be called from the EntryPoint contract, the contract owner, or itself
         bytes4 selector = IKernel.setExecution.selector;
 
         UserOperation memory intentUserOp = createUserOp(
             address(_account),
             abi.encodeWithSelector(
                 selector,
+                /// @param _selector The selector of the function for which execution details are being set
                 KernelIntentExecutor.execValueBatch.selector,
+                /// @param _executor The executor to be associated with the function selector
                 address(intentExecutor),
+                /// @param _validator The validator contract that will be responsible for validating operations associated with this function selector
                 address(intentValidator),
+                /// @param _validUntil The timestamp until which the execution details are valid
                 ValidUntil.wrap(0),
+                /// @param _validAfter The timestamp after which the execution details are valid
                 ValidAfter.wrap(0),
-                getEnableData()
+                abi.encodePacked(_ownerAddress)
             )
         );
 

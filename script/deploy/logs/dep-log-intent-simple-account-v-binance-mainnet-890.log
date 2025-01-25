@@ -11,10 +11,6 @@ forge script script/deploy/IntentSimpleAccount.s.sol \
 No files changed, compilation skipped
 Traces:
   [2449407] DeploySimpleAccount::run()
-    ├─ [0] VM::envString("ETHEREUM_PRIVATE_KEY") [staticcall]
-    │   └─ ← [Return] <env var value>
-    ├─ [0] VM::parseUint("0x4027cec6a8528e80b7d56cd0e12644b1e5611316854401ee445110f3b2dbf663") [staticcall]
-    │   └─ ← [Return] 29018356460398711633634973757124322879517115962043063477273052359183044441699 [2.901e76]
     ├─ [0] VM::addr(<pk>) [staticcall]
     │   └─ ← [Return] 0xE381bAB2e0C5b678F2FBb8D4b0949e41a6487c8f
     ├─ [0] console::log("Deployer address:", 0xE381bAB2e0C5b678F2FBb8D4b0949e41a6487c8f) [staticcall]
@@ -48,11 +44,11 @@ Traces:
     ├─ [0] VM::stopBroadcast()
     │   └─ ← [Return]
     └─ ← [Stop]
-    
+
     [129489] Create2Deployer::create2()
       ├─ [97170] → new XChainLib@0xE991be2607DFB0Fa25DC6B31e44b6c5C046e9C14
       │   └─ ← [Return] 485 bytes of code
-      └─ ← [Return] 0xe991be2607dfb0fa25dc6b31e44b6c5c046e9c14    
+      └─ ← [Return] 0xe991be2607dfb0fa25dc6b31e44b6c5c046e9c14
 
 Script ran successfully.
 
